@@ -1,0 +1,109 @@
+---
+title: "AI-Assisted Development"
+description: "Build faster with AI coding assistants"
+sidebarTitle: "AI Coding"
+---
+
+## Overview
+
+stk is built for AI-assisted development. It ships with `AGENTS.md`, a comprehensive guide that AI assistants (Claude Code, Cursor, GitHub Copilot) use to understand the codebase instantly.
+
+## How It Works
+
+When you open the project in an AI-powered IDE or use Claude Code, the AI reads `AGENTS.md` and immediately understands:
+
+- Project structure and conventions
+- Database patterns (async SQLAlchemy 2.x)
+- Frontend patterns (Vue 3 + Vuetify 3 without build tools)
+- Authentication system (quart-security)
+- CLI commands available
+- How to create new features
+
+## Using Claude Code
+
+```bash
+# Claude Code understands stk out of the box
+claude
+
+# Example prompts:
+> "Add a new Post model with title and content"
+> "Create an API endpoint to list all users"
+> "Add a new page to the dashboard"
+```
+
+## Using Cursor
+
+Open the project in Cursor. The AI will automatically read `AGENTS.md` and provide context-aware suggestions.
+
+Example prompts:
+- "Create a data table for products following our patterns"
+- "Add OAuth login with Microsoft"
+- "Generate a RESTful endpoint for orders"
+
+## What AGENTS.md Contains
+
+### Development Commands
+```bash
+./setup.sh                    # Setup environment
+uv run quart create-db        # Initialize database
+uv run quart install          # Create admin user
+uv run quart run              # Start server
+```
+
+### Architecture Overview
+- Quart async factory pattern in `stk/app.py`
+- Blueprint organization (public, portal, user)
+- Async SQLAlchemy setup in `extensions.py`
+- Per-request `g.db_session` lifecycle
+
+### Code Patterns
+```python
+# Query pattern (async SQLAlchemy)
+from quart import g
+from sqlalchemy import select
+
+result = await g.db_session.execute(select(User))
+users = result.scalars().all()
+
+# Paginated query
+from sqlalchemy import func
+
+total = await g.db_session.scalar(select(func.count()).select_from(User))
+result = await g.db_session.execute(
+    select(User).offset(offset).limit(per_page)
+)
+
+# Response pattern
+return {
+    "items": [item.to_dict() for item in result.scalars().all()],
+    "total": total
+}
+```
+
+### Frontend Patterns
+- Vue 3 with custom `${}` delimiters (avoids Jinja conflicts)
+- Vuetify 3 components
+- Per-page Vue instances
+
+## Customizing for Your Project
+
+Add project-specific patterns to `AGENTS.md`:
+
+```markdown
+## Custom Patterns
+
+### Order Processing
+Orders follow this flow:
+1. Create order via POST /api/orders
+2. Process payment via Stripe
+3. Update status to 'paid'
+```
+
+The AI will incorporate your additions when generating code.
+
+## Benefits
+
+1. **Instant Context** - AI understands your codebase immediately
+2. **Consistent Code** - Generated code follows your async patterns
+3. **Faster Development** - Less time explaining, more time building
+4. **Team Knowledge** - Document patterns once, AI applies everywhere

@@ -1,0 +1,218 @@
+---
+title: "Development"
+description: "Development guidelines and best practices for stk"
+sidebarTitle: "Development"
+---
+
+## Project Structure
+
+```
+stk/
+├── stk/                # Main application package
+│   ├── app.py             # Application factory
+│   ├── settings.py        # Configuration
+│   ├── extensions.py      # Async SQLAlchemy setup
+│   ├── commands.py        # CLI commands
+│   ├── tasks.py           # Async background tasks
+│   ├── websocket.py       # WebSocket endpoint
+│   ├── portal/            # Blueprint: Protected routes
+│   ├── public/            # Blueprint: Public routes
+│   ├── user/              # Blueprint: User management
+│   ├── utils/             # Utility functions
+│   ├── static/            # Static assets (Vue, Vuetify, CSS)
+│   └── templates/         # Jinja2 templates
+├── docs/                  # Documentation
+├── instance/             # SQLite database
+├── pyproject.toml        # Dependencies and project config
+├── setup.sh              # Setup script
+├── run.py                # Entry point
+├── AGENTS.md             # AI coding instructions
+└── docker-compose.yml    # Docker configuration
+```
+
+## Blueprints
+
+stk uses a three-blueprint architecture:
+
+### 1. Portal Blueprint (`portal/`)
+Protected routes requiring authentication. Uses `before_request` to protect all routes automatically:
+
+```python
+from quart import Blueprint
+from quart_security import auth_required
+
+portal = Blueprint('portal', __name__)
+
+@portal.before_request
+@auth_required("session")
+async def before_request():
+    pass
+
+@portal.route('/dashboard')
+async def dashboard():
+    return await render_template('portal/dashboard.html')
+```
+
+### 2. User Blueprint (`user/`)
+Handles user management, authentication, and profile routes:
+
+```python
+from quart import Blueprint
+from quart_security import auth_required
+
+user = Blueprint('user', __name__)
+
+@user.route('/profile')
+@auth_required("session")
+async def profile():
+    return await render_template('user/profile.html')
+```
+
+### 3. Public Blueprint (`public/`)
+Publicly accessible routes:
+
+```python
+from quart import Blueprint
+
+public = Blueprint('public', __name__)
+
+@public.route('/')
+async def index():
+    return await render_template('public/index.html')
+```
+
+## Database Operations
+
+stk uses async SQLAlchemy with `g.db_session` (created per-request).
+
+### Model Definition
+
+```python
+from datetime import datetime
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+from stk.extensions import Base
+
+class Post(Base):
+    __tablename__ = "post"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(80), nullable=False)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship('User', back_populates='posts', lazy="selectin")
+```
+
+### Database Operations
+
+```python
+from quart import g
+from sqlalchemy import select
+
+# Create
+post = Post(title='New Post', content='Content here')
+g.db_session.add(post)
+await g.db_session.commit()
+
+# Query
+result = await g.db_session.execute(select(Post))
+posts = result.scalars().all()
+
+# Get by ID
+post = await g.db_session.get(Post, 1)
+
+# Filtered query
+result = await g.db_session.execute(
+    select(Post).where(Post.title.like('%python%'))
+)
+posts = result.scalars().all()
+
+# Update
+post.title = 'Updated Title'
+await g.db_session.commit()
+
+# Delete
+await g.db_session.delete(post)
+await g.db_session.commit()
+```
+
+## Background Tasks
+
+Use `run_in_background()` for fire-and-forget async tasks (no Celery/Redis needed):
+
+```python
+from stk.tasks import run_in_background
+
+async def send_email(user_id):
+    # async email logic here
+    pass
+
+await run_in_background(send_email(user.id))
+```
+
+For tasks that need their own DB session:
+
+```python
+from stk.tasks import run_with_session
+
+async def cleanup_old_records(session):
+    await session.execute(...)
+
+await run_with_session(cleanup_old_records)
+```
+
+## API Development
+
+```python
+from quart import Blueprint, g
+from sqlalchemy import select
+
+api = Blueprint('api', __name__)
+
+@api.route('/api/posts')
+async def get_posts():
+    result = await g.db_session.execute(
+        select(Post).order_by(Post.created_at.desc())
+    )
+    posts = result.scalars().all()
+    return {"items": [p.to_dict() for p in posts]}
+```
+
+## Development Server
+
+```bash
+uv run quart run              # Start server
+uv run ruff check --fix .     # Lint and auto-fix
+uv run ruff format .          # Format code
+```
+
+## Security Best Practices
+
+1. **Input Validation**
+   ```python
+   from wtforms import Form, StringField, validators
+
+   class PostForm(Form):
+       title = StringField('Title', [
+           validators.DataRequired(),
+           validators.Length(max=80)
+       ])
+   ```
+
+2. **Authentication**
+   ```python
+   from quart_security import auth_required
+
+   @app.route('/protected')
+   @auth_required("session")
+   async def protected_route():
+       return 'Protected content'
+   ```
+
+3. **Database Debugging**
+   ```python
+   # Enable SQLAlchemy query logging
+   import logging
+   logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+   ```

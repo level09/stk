@@ -1,0 +1,265 @@
+{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
+{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% block content %}
+
+    <v-card class="ma-2 mt-12 w-100 h-100">
+        <v-toolbar>
+            <v-toolbar-title>Users Dashboard</v-toolbar-title>
+            <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card-text>
+
+            <v-data-table-server 
+            :items="items" 
+            :items-length="itemsLength"
+            :headers="headers"
+            :page="options.page"
+            :items-per-page="options.itemsPerPage"
+            @update:options="refresh"
+            hover
+            >
+
+                <template v-slot:top>
+                    <v-toolbar class="mb-4" dense elevation="0" color="transparent">
+                        <v-btn class="ml-auto" @click="createItem" size="small" color="primary" variant="elevated">
+                            <template v-slot:prepend><i class="ti ti-plus"></i></template>
+                            Add User
+                        </v-btn>
+                        
+                    </v-toolbar>
+                </template>
+                <template v-slot:item.roles="{ item }">
+                    <v-chip v-for="role in item.roles" :key="role.id" color="primary" class="mr-2">
+                        ${role.name}
+                    </v-chip>
+
+                </template>
+
+                 <template v-slot:item.active="{ item }">
+                    <v-avatar size="16" v-if="item.active" color="green"></v-avatar>
+                     <v-avatar size="16" v-if="!item.active" color="grey"></v-avatar>
+
+                </template>
+
+                <template v-slot:item.actions="{ item }">
+                    <v-icon
+                            small
+                            class="mr-2"
+                            @click="editItem(item)"
+                    >
+                        ti ti-pencil
+                    </v-icon>
+                    <v-icon
+                            small
+                            @click="deleteItem(item)"
+                    >
+                        ti ti-trash
+                    </v-icon>
+                </template>
+
+            </v-data-table-server>
+
+
+        </v-card-text>
+    </v-card>
+
+
+    <!--Edit Dialog-->
+    <v-dialog v-model="edialog" width="660">
+        <v-card v-if="edialog">
+            <v-toolbar>
+                <v-toolbar-title>User Editor</v-toolbar-title>
+                <template v-slot:append>
+                    <v-btn @click="edialog=false" size="small" icon="ti ti-x" variant="text"></v-btn>
+                </template>
+            </v-toolbar>
+            
+            
+
+            <v-card-text>
+                <!-- fields go here -->
+                <v-text-field label="Name" v-model="eitem.name"></v-text-field>
+                <v-text-field type="email" v-model="eitem.email" label="Email" required></v-text-field>
+
+                <v-text-field placeholder="Password" type="password" v-model="eitem.password"></v-text-field>
+
+                <v-select label="Roles"
+                          item-title="name"
+                          multiple
+                          v-model="eitem.roles"
+                          return-object
+                          chips
+                          clearable
+                          :items="roles"
+                ></v-select>
+
+                <v-switch color="primary" label="Active" v-model="eitem.active"></v-switch>
+
+            </v-card-text>
+
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" @click="saveItem" variant="elevated">Save</v-btn>
+            </v-card-actions>
+        </v-card>
+
+    </v-dialog>
+
+
+    <v-snackbar size="small" class="d-flex" v-model="snackBar" rounded="pill" elevation="25">
+
+        ${snackMessage}
+        <template v-slot:actions>
+            <v-btn @click="snackBar=false" icon="ti ti-x" class="ml-auto" size="small" variant="text"></v-btn>
+        </template>
+    </v-snackbar>
+
+
+{% endblock %} {% block js %}
+
+    <script type="application/json" id="roles-data">
+    {{ roles|tojson|safe }}
+
+    </script>
+
+    <script>
+        const {createApp, toRaw} = Vue;
+        const {createVuetify} = Vuetify;
+
+        const vuetify = createVuetify(config.vuetifyConfig);
+
+        window.app = createApp({
+            mixins: [layoutMixin],
+            data() {
+                return {
+                    errors: "",
+                    snackBar: false,
+                    snackMessage: "",
+                    items: [],
+                    itemsLength: 0,
+                    options: {
+                        page: 1,
+                        itemsPerPage: 25
+                    },
+
+                    headers: [
+                        {title: 'ID', value: 'id'},
+                        {title: 'Name', value: 'name'},
+                        {title: 'Email', value: 'email'},
+                        {title: 'Roles', value: 'roles', sortable: false},
+                        {title: 'Active', value: 'active', sortable: false},
+                        {title: 'Actions', value: 'actions', sortable: false}
+                    ],
+                    edialog: false,
+                    eitem: {
+                        id: "",
+                        name: "",
+                        email: "",
+                        password: "",
+                        roles: [],
+                        active: true
+                    },
+                    roles: JSON.parse(document.querySelector('#roles-data').textContent)
+                };
+            },
+
+            mounted() {
+                // No refresh on mount
+            },
+            delimiters: config.delimiters,
+
+            methods: {
+
+                showSnack(message) {
+                    this.snackMessage = message;
+                    this.snackBar = true;
+                },
+
+                refresh(options) {
+                    // Use options from parameter or component state
+                    if (options) {
+                        // Update options with the values from the event
+                        this.options = {
+                            ...this.options,
+                            page: options.page,
+                            itemsPerPage: options.itemsPerPage
+                        };
+                    }
+                    
+                    // Make API request with pagination parameters
+                    axios.get(`/api/users?page=${this.options.page}&per_page=${this.options.itemsPerPage}`)
+                        .then(res => {
+                            this.items = res.data.items;
+                            this.itemsLength = res.data.total;
+                            // Update itemsPerPage from API response if provided
+                            if (res.data.perPage) {
+                                this.options.itemsPerPage = res.data.perPage;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching users:', error);
+                            this.showSnack('Failed to load users');
+                        });
+                },
+                
+                createItem() {
+                    this.edialog = true;
+                    this.eitem = {};
+
+                },
+
+                editItem(item) {
+
+                    this.eitem = toRaw(item);
+
+                    this.$nextTick(() => {
+                        this.edialog = true;
+                    });
+
+                },
+
+                saveItem(item) {
+                    if (this.eitem.id) {
+                        // edit mode
+                        axios.post(`/api/user/${this.eitem.id}`, {item: this.eitem})
+                            .then(res => {
+                                this.showSnack(res.data?.message);
+                                this.refresh();
+                            })
+                            .catch(err => {
+                                this.showSnack(err.response?.data);
+                            });
+                    } else {
+                        // create mode
+                        axios.post('/api/user/', {item: this.eitem})
+                            .then(res => {
+                                this.showSnack(res.data?.message);
+                                this.refresh();
+                            })
+                            .catch(err => {
+                                this.showSnack(err.response?.data);
+                            });
+                    }
+                    this.edialog = false;
+                },
+
+                deleteItem(item) {
+                    if (confirm('Are you sure?')) {
+                        axios.delete(`/api/user/${item.id}`)
+                            .then(res => {
+                                this.showSnack(res.data?.message);
+                                this.refresh();
+                            })
+                            .catch(err => {
+                                this.showSnack(err.response?.data);
+                            });
+                    }
+                }
+            }
+
+        });
+
+        registerStkComponents(app);
+        app.use(vuetify).mount("#app");
+    </script>
+{% endblock %}

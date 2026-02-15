@@ -1,0 +1,63 @@
+---
+title: "Quick Start"
+description: "Get up and running with stk"
+sidebarTitle: "Quick Start"
+---
+
+## Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (fast Python package manager)
+
+**Optional:**
+- Redis (for session store)
+- PostgreSQL (SQLite works by default)
+
+## Local Setup
+
+```bash
+# Install uv
+pip install uv  # or: curl -sSf https://astral.sh/uv/install.sh | bash
+
+# Clone and setup
+git clone git@github.com:level09/stk.git
+cd stk
+./setup.sh                # Installs deps + generates secure .env
+uv run quart create-db    # Setup database
+uv run quart install      # Create admin user
+uv run quart run          # Start server
+```
+
+Visit `http://localhost:5000` to see your application.
+
+## Docker Setup
+
+Full production stack with one command:
+
+```bash
+docker compose up --build
+```
+
+Includes Redis, PostgreSQL, and Nginx.
+
+## Environment Configuration
+
+Key variables in `.env`:
+
+```bash
+SECRET_KEY=your_secret_key
+QUART_APP=run:app
+QUART_DEBUG=1                    # 0 in production
+
+# PostgreSQL (optional - SQLite works by default)
+# SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
+
+# Redis session store (optional)
+# REDIS_URL=redis://localhost:6379/1
+```
+
+## Next Steps
+
+- [Authentication](/authentication) - User management and OAuth setup
+- [Deployment](/deployment) - Production deployment guide
+- [Development](/development) - Development guidelines and best practices

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Project stk</title>
+    <meta name="description" content="A framework for the next decade">
+    <meta name="author" content="stk">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href="/static/css/vuetify.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/app.css">
+
+    {% block css %}{% endblock %}
+    {% block head_js %}{% endblock %}
+</head>
+
+<body class="{% block body_class %} {% endblock %}">
+<v-app id="app">
+    <v-layout class="rounded rounded-md">
+        <!-- App Bar -->
+        <v-app-bar color="surface" density="comfortable" elevation="1">
+            {% if current_user.is_authenticated %}
+            <v-btn icon variant="text" @click="drawer = !drawer" class="d-md-none">
+                <i class="ti ti-menu-2" style="font-size: 24px;"></i>
+            </v-btn>
+            {% endif %}
+
+            <v-app-bar-title>
+                <a href="/" class="d-flex align-center text-decoration-none">
+                    <img class="logo-adaptive" style="height: 40px;" src="/static/img/stk.svg">
+                </a>
+            </v-app-bar-title>
+
+            <v-spacer></v-spacer>
+
+            {% if not current_user.is_authenticated %}
+            <v-btn href="/login" variant="text">Sign in</v-btn>
+            {% else %}
+            <!-- Theme Switcher -->
+            <theme-switcher></theme-switcher>
+
+            <!-- Notifications -->
+            <notification-dropdown
+                :notifications="notifications"
+                @click="handleNotificationClick"
+                @mark-read="markNotificationRead"
+                @mark-all-read="markAllNotificationsRead"
+                @remove="removeNotification"
+            ></notification-dropdown>
+
+            <!-- Connection Status -->
+            <v-tooltip :text="wsConnected ? 'Real-time connected' : 'Reconnecting...'" location="bottom">
+                <template v-slot:activator="{ props }">
+                    <div v-bind="props" :style="{width: '8px', height: '8px', borderRadius: '50%', backgroundColor: wsConnected ? '#4caf50' : '#9e9e9e', transition: 'background-color 0.3s'}" class="mr-1"></div>
+                </template>
+            </v-tooltip>
+
+            <!-- User Menu -->
+            <v-menu :close-on-content-click="false" location="bottom end" transition="fade-transition">
+                <template v-slot:activator="{ props }">
+                    <v-btn v-bind="props" icon variant="text" size="small" class="ml-1">
+                        <v-avatar color="primary" size="32">
+                            <span class="text-body-2">{{ current_user.name[:2]|upper if current_user.name else 'U' }}</span>
+                        </v-avatar>
+                    </v-btn>
+                </template>
+
+                <v-card min-width="280">
+                    <v-list>
+                        <v-list-item
+                            title="{{ current_user.name }}"
+                            subtitle="{{ current_user.email }}"
+                        >
+                            <template v-slot:prepend><i class="ti ti-user mr-3" style="font-size: 20px;"></i></template>
+                        </v-list-item>
+                    </v-list>
+
+                    <v-divider></v-divider>
+
+                    <v-list density="compact">
+                        <v-list-item href="/dashboard">
+                            <template v-slot:prepend><i class="ti ti-layout-dashboard mr-3" style="font-size: 18px;"></i></template>
+                            <v-list-item-title>My Account</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item href="/change">
+                            <template v-slot:prepend><i class="ti ti-key mr-3" style="font-size: 18px;"></i></template>
+                            <v-list-item-title>Change Password</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item href="/tf-setup">
+                            <template v-slot:prepend><i class="ti ti-shield-lock mr-3" style="font-size: 18px;"></i></template>
+                            <v-list-item-title>Two-Factor Auth</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+
+                    <v-divider></v-divider>
+
+                    <v-list density="compact">
+                        <v-list-item href="/logout" base-color="error">
+                            <template v-slot:prepend><i class="ti ti-logout mr-3" style="font-size: 18px;"></i></template>
+                            <v-list-item-title>Logout</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-card>
+            </v-menu>
+            {% endif %}
+        </v-app-bar>
+
+        {% if current_user.is_authenticated %}
+        <!-- Navigation Drawer (authenticated users only) -->
+        <v-navigation-drawer v-model="drawer" :rail="isNavCollapsed" :rail-width="68" width="260">
+            <!-- Nav Header -->
+            <div class="nav-header">
+                <span v-show="!isNavCollapsed" class="app-title">Navigation</span>
+                <v-spacer></v-spacer>
+                <v-btn
+                    v-show="!isMobile"
+                    icon
+                    variant="text"
+                    size="small"
+                    @click="toggleNavCollapse"
+                    :title="isNavCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'"
+                >
+                    <i :class="isNavCollapsed ? 'ti ti-layout-sidebar-right' : 'ti ti-layout-sidebar-left-collapse'" style="font-size: 20px;"></i>
+                </v-btn>
+            </div>
+
+            <v-divider></v-divider>
+
+            <!-- Navigation Items -->
+            <ul class="nav-items" style="overflow-y: auto; flex: 1;">
+                <component
+                    v-for="item in filteredNavItems"
+                    :key="item.title || item.heading"
+                    :is="resolveNavComponent(item)"
+                    :item="item"
+                />
+            </ul>
+        </v-navigation-drawer>
+        {% endif %}
+
+        <!-- Main Content -->
+        <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
+            {% block content %}
+            {% endblock %}
+        </v-main>
+
+        <!-- Flash messages (plain HTML - renders before Vue mounts) -->
+        {% set messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-messages" class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category if category in ['success', 'warning', 'error', 'info'] else 'primary' }}">
+                        <span>{{ message }}</span>
+                        <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </v-layout>
+</v-app>
+
+<!-- Flash message auto-hide (outside Vue template) -->
+{% if messages %}
+<script>
+    // Auto-hide flash messages after 5 seconds
+    setTimeout(function() {
+        const flashMessages = document.getElementById('flash-messages');
+        if (flashMessages) {
+            flashMessages.style.display = 'none';
+        }
+    }, 5000);
+</script>
+{% endif %}
+
+<!-- Core Scripts -->
+<script src="/static/js/vue.min.js"></script>
+<script src="/static/js/config.js"></script>
+<script src="/static/js/vuetify.min.js"></script>
+<script src="/static/js/axios.min.js"></script>
+
+<!-- Navigation Data -->
+<script src="/static/js/navigation.js"></script>
+
+<!-- stk Components -->
+<script src="/static/js/components/TransitionExpand.js"></script>
+<script src="/static/js/components/VerticalNavLink.js"></script>
+<script src="/static/js/components/VerticalNavGroup.js"></script>
+<script src="/static/js/components/VerticalNavSectionTitle.js"></script>
+<script src="/static/js/components/NotificationDropdown.js"></script>
+<script src="/static/js/components/ThemeSwitcher.js"></script>
+<script src="/static/js/components/index.js"></script>
+
+<!-- Layout Base Script -->
+<script>
+    // User roles passed from server
+    const userRoles = {{ current_user.roles | map(attribute='name') | list | tojson if current_user.is_authenticated else '[]' | safe }};
+
+    // Base app data and methods for layout
+    const layoutMixin = {
+        data() {
+            return {
+                drawer: true,
+                isNavCollapsed: false,
+                isMobile: window.innerWidth < 960,
+                navItems: typeof stkNavigation !== 'undefined' ? stkNavigation : [],
+                notifications: [],
+                wsConnected: false,
+                _ws: null,
+                _wsRetry: 1000,
+            };
+        },
+        computed: {
+            filteredNavItems() {
+                return filterNavByRole(this.navItems, userRoles);
+            }
+        },
+        methods: {
+            resolveNavComponent,
+            toggleNavCollapse() {
+                this.isNavCollapsed = !this.isNavCollapsed;
+                localStorage.setItem('stk-nav-collapsed', this.isNavCollapsed);
+            },
+            handleResize() {
+                this.isMobile = window.innerWidth < 960;
+                if (this.isMobile) {
+                    this.isNavCollapsed = false;
+                }
+            },
+            // Notification methods
+            handleNotificationClick(notification) {
+                if (notification.to) {
+                    window.location.href = notification.to;
+                }
+            },
+            markNotificationRead(id) {
+                const notification = this.notifications.find(n => n.id === id);
+                if (notification) {
+                    notification.isSeen = true;
+                }
+            },
+            markAllNotificationsRead() {
+                this.notifications.forEach(n => n.isSeen = true);
+            },
+            removeNotification(id) {
+                const index = this.notifications.findIndex(n => n.id === id);
+                if (index > -1) {
+                    this.notifications.splice(index, 1);
+                }
+            },
+            _connectWs() {
+                const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const ws = new WebSocket(`${proto}//${location.host}/ws`);
+                this._ws = ws;
+                ws.onopen = () => { this.wsConnected = true; this._wsRetry = 1000; };
+                ws.onclose = () => {
+                    this.wsConnected = false;
+                    setTimeout(() => this._connectWs(), Math.min(this._wsRetry *= 1.5, 30000));
+                };
+                ws.onmessage = (e) => { this._onWsMessage(JSON.parse(e.data)); };
+            },
+            _onWsMessage(msg) {
+                // Handle incoming messages — extend this for notifications, live updates, etc.
+                if (msg.type === 'notification') {
+                    this.notifications.unshift(msg);
+                }
+            }
+        },
+        mounted() {
+            // Restore nav collapsed state
+            const savedCollapsed = localStorage.getItem('stk-nav-collapsed');
+            if (savedCollapsed !== null && !this.isMobile) {
+                this.isNavCollapsed = savedCollapsed === 'true';
+            }
+
+            // Handle resize
+            window.addEventListener('resize', this.handleResize);
+
+            // WebSocket connection (authenticated users only)
+            {% if current_user.is_authenticated %}
+            this._connectWs();
+            {% endif %}
+        },
+        beforeUnmount() {
+            window.removeEventListener('resize', this.handleResize);
+            if (this._ws) this._ws.close();
+        }
+    };
+</script>
+
+{% block js %}{% endblock %}
+</body>
+</html>
