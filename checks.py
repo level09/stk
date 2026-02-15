@@ -277,8 +277,9 @@ async def run_checks():
     app = create_app()
     checks = [v for v in globals().values() if hasattr(v, "_check_name")]
 
-    for check_fn in checks:
-        await check_fn(app)
+    async with app.test_app():
+        for check_fn in checks:
+            await check_fn(app)
 
     print()
     if FAILED == 0:
