@@ -36,8 +36,6 @@ dependencies = [
     "wtforms>=3.2.1",
 ]
 
-[tool.uv.sources]
-quart-security = { path = "../quart-security", editable = true }
 
 [project.optional-dependencies]
 full = [
