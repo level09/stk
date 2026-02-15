@@ -17,7 +17,15 @@ console = Console()
 
 def run_async(coro):
     """Run an async function in sync context (for CLI commands)."""
-    return asyncio.run(coro)
+
+    async def _wrapper():
+        try:
+            return await coro
+        finally:
+            if ext.engine:
+                await ext.engine.dispose()
+
+    return asyncio.run(_wrapper())
 
 
 @click.command()
