@@ -1,0 +1,129 @@
+---
+title: "Authentication"
+description: "User authentication and security features in stk"
+sidebarTitle: "Authentication"
+---
+
+## Overview
+
+stk provides authentication built on quart-security with session-based auth, OAuth integration, and modern security features.
+
+## Features
+
+- User registration and login
+- Role-based access control (RBAC)
+- Two-factor authentication (2FA)
+- WebAuthn / Passkeys
+- OAuth integration (Google, GitHub)
+- Password policies
+- Session protection
+- CSRF protection
+
+## OAuth Integration
+
+Enable social login with Google and GitHub:
+
+```bash
+# Google OAuth
+GOOGLE_AUTH_ENABLED=true
+GOOGLE_OAUTH_CLIENT_ID=your_client_id
+GOOGLE_OAUTH_CLIENT_SECRET=your_client_secret
+
+# GitHub OAuth
+GITHUB_AUTH_ENABLED=true
+GITHUB_OAUTH_CLIENT_ID=your_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
+```
+
+Scopes:
+- Google: profile and email
+- GitHub: user:email
+
+## User Management
+
+### Role-Based Access
+
+```python
+from quart_security import auth_required, roles_required, roles_accepted
+
+@app.route('/admin')
+@auth_required("session")
+@roles_required('admin')
+async def admin_dashboard():
+    return 'Admin only content'
+
+@app.route('/premium')
+@auth_required("session")
+@roles_accepted('premium', 'admin')
+async def premium_content():
+    return 'Premium or admin content'
+```
+
+### Protecting Entire Blueprints
+
+```python
+from quart import Blueprint
+from quart_security import auth_required
+
+portal = Blueprint('portal', __name__)
+
+@portal.before_request
+@auth_required("session")
+async def before_request():
+    pass
+```
+
+## Security Configuration
+
+Key security settings in `.env`:
+
+```bash
+SECURITY_PASSWORD_SALT=your_secure_salt
+SECURITY_TOTP_SECRETS=your_totp_secrets
+SECURITY_REGISTERABLE=true
+SECURITY_CONFIRMABLE=true
+SECURITY_RECOVERABLE=true
+SECURITY_TRACKABLE=true
+SECURITY_PASSWORD_LENGTH_MIN=8
+```
+
+## Session Protection
+
+```python
+# Session Configuration
+PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+```
+
+## Rate Limiting
+
+stk includes built-in rate limiting for auth endpoints (`/login`, `/register`, `/reset`, `/confirm`). Configure in `settings.py`:
+
+```python
+SECURITY_RATE_LIMIT = "5/minute"
+```
+
+## Best Practices
+
+1. **Password Storage** - Passwords are automatically hashed with unique per-user salt
+2. **CSRF Protection** - Automatic token generation for all state-changing requests
+3. **XSS Prevention** - Automatic HTML escaping in Jinja2 templates, secure cookie flags
+4. **Session Security** - Optional Redis-backed sessions, configurable lifetime
+
+## Troubleshooting
+
+1. **OAuth Issues**
+   - Verify callback URLs in provider settings
+   - Check scope permissions
+   - Ensure secrets are correctly configured
+
+2. **2FA Problems**
+   - Verify TOTP secrets configuration
+   - Check time synchronization
+   - Provide backup codes for recovery
+
+3. **Session Issues**
+   - Check `PERMANENT_SESSION_LIFETIME` setting
+   - For Redis sessions, verify `REDIS_URL` in `.env`

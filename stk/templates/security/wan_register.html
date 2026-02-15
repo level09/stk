@@ -1,0 +1,179 @@
+{% extends 'layout.html' %}
+{% from "security/_macros.html" import render_field_with_errors %}
+
+{% block content %}
+<v-container fluid class="pa-4">
+    <v-card max-width="700" class="mx-auto">
+        <v-card-title class="text-h5">
+            <i class="ti ti-fingerprint mr-2"></i>
+            Passkeys
+        </v-card-title>
+        <v-card-subtitle>
+            Sign in without a password using your device, fingerprint, or security key
+        </v-card-subtitle>
+
+        <v-card-text>
+            {% include "security/_messages.html" %}
+
+            {% if credential_options %}
+            <!-- Browser prompt active -->
+            <v-card variant="outlined" class="mb-4">
+                <v-card-text class="text-center pa-8">
+                    <v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
+                    <div class="text-body-1 font-weight-medium">Complete registration on your device</div>
+                    <div class="text-caption text-medium-emphasis mt-1">Follow the prompts from your browser</div>
+                    <div id="wan-errors" class="mt-4"></div>
+                </v-card-text>
+            </v-card>
+            <form action="{{ url_for_security('wan_register_response') }}" method="post" id="wan-register-response-form">
+                {{ wan_register_response_form.hidden_tag() }}
+                <input type="hidden" id="credential" name="credential" value="">
+            </form>
+
+            {% else %}
+            <!-- Registered passkeys -->
+            {% if registered_credentials %}
+            <v-list lines="two" class="mb-4">
+                {% for cred in registered_credentials %}
+                <v-list-item>
+                    <template v-slot:prepend>
+                        <v-avatar color="primary" variant="tonal">
+                            <i class="ti ti-{{ 'key' if cred.usage == 'primary' else 'shield-lock' }}" style="font-size: 20px;"></i>
+                        </v-avatar>
+                    </template>
+                    <v-list-item-title class="font-weight-medium">{{ cred.name }}</v-list-item-title>
+                    <v-list-item-subtitle>
+                        {{ 'Passwordless' if cred.usage == 'primary' else 'Multi-factor' }} · Last used {{ cred.last_use }}
+                    </v-list-item-subtitle>
+                    <template v-slot:append>
+                        <form method="post" action="{{ url_for_security('wan_delete') }}">
+                            {{ wan_delete_form.hidden_tag() }}
+                            <input type="hidden" name="credential_id" value="{{ cred.id }}">
+                            <v-btn icon variant="text" color="error" size="small" type="submit"
+                                   onclick="return confirm('Remove this passkey?')">
+                                <i class="ti ti-trash" style="font-size: 18px;"></i>
+                            </v-btn>
+                        </form>
+                    </template>
+                </v-list-item>
+                {% if not loop.last %}<v-divider></v-divider>{% endif %}
+                {% endfor %}
+            </v-list>
+            {% else %}
+            <v-card variant="tonal" color="grey-lighten-4" class="mb-4">
+                <v-card-text class="text-center pa-8">
+                    <i class="ti ti-fingerprint text-medium-emphasis" style="font-size: 48px;"></i>
+                    <div class="text-body-1 mt-3">No passkeys registered yet</div>
+                    <div class="text-caption text-medium-emphasis">Add a passkey to sign in without a password</div>
+                </v-card-text>
+            </v-card>
+            {% endif %}
+
+            <!-- Add passkey form -->
+            <form action="{{ url_for_security('wan_register') }}" method="post" id="wan-register-form">
+                {{ wan_register_form.hidden_tag() }}
+                <input type="hidden" name="usage" value="primary">
+
+                <div class="d-flex align-center ga-3">
+                    <v-text-field
+                        name="name"
+                        label="Passkey name"
+                        placeholder="e.g., MacBook Touch ID, YubiKey"
+                        density="compact"
+                        hide-details
+                        v-model="deviceName"
+                    ></v-text-field>
+                    <v-btn color="primary" type="submit" :disabled="!deviceName">
+                        <i class="ti ti-plus mr-1"></i>
+                        Add
+                    </v-btn>
+                </div>
+            </form>
+
+            {% if wan_register_form.errors %}
+            <div class="mt-3">
+                {% for field, errors in wan_register_form.errors.items() %}
+                {% for error in errors %}
+                <v-alert type="error" variant="tonal" density="compact" class="mb-2">{{ error }}</v-alert>
+                {% endfor %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endif %}
+        </v-card-text>
+
+        <v-card-actions class="px-4 pb-4">
+            <v-btn variant="text" href="{{ url_for_security('two_factor_setup') }}">
+                <i class="ti ti-chevron-left mr-1"></i>
+                Back to 2FA Settings
+            </v-btn>
+        </v-card-actions>
+    </v-card>
+</v-container>
+{% endblock %}
+
+{% block js %}
+<script>
+    const { createApp } = Vue;
+    const { createVuetify } = Vuetify;
+    const vuetify = createVuetify(config.vuetifyConfig);
+
+    const app = createApp({
+        mixins: [layoutMixin],
+        data() { return { deviceName: '' } },
+        delimiters: ['${', '}']
+    });
+
+    registerStkComponents(app);
+    app.use(vuetify).mount('#app');
+
+    {% if credential_options %}
+    (function() {
+        function b64urlToArrayBuffer(base64url) {
+            const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
+            const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        function arrayBufferToB64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        const options = {{ credential_options | tojson }};
+        options.challenge = b64urlToArrayBuffer(options.challenge);
+        options.user.id = b64urlToArrayBuffer(options.user.id);
+        if (Array.isArray(options.excludeCredentials)) {
+            options.excludeCredentials = options.excludeCredentials.map(c => ({...c, id: b64urlToArrayBuffer(c.id)}));
+        }
+
+        navigator.credentials.create({ publicKey: options })
+            .then(credential => {
+                if (!credential) throw new Error('No credential returned');
+                const encoded = {
+                    id: credential.id,
+                    rawId: arrayBufferToB64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        clientDataJSON: arrayBufferToB64url(credential.response.clientDataJSON),
+                        attestationObject: arrayBufferToB64url(credential.response.attestationObject),
+                        transports: credential.response.getTransports ? credential.response.getTransports() : [],
+                    },
+                };
+                document.getElementById('credential').value = JSON.stringify(encoded);
+                document.getElementById('wan-register-response-form').submit();
+            })
+            .catch(error => {
+                document.getElementById('wan-errors').innerHTML =
+                    '<div class="v-alert v-alert--density-default v-alert--variant-tonal bg-error pa-4 rounded">' +
+                    (error.message || 'Passkey registration failed.') + '</div>';
+            });
+    })();
+    {% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'login-layout.html' %}
+{% from "security/_macros.html" import prop_next %}
+
+{% block content %}
+<v-main class="d-flex flex-column align-center justify-center" style="min-height: 100vh; background: rgb(var(--v-theme-background));">
+    <v-card class="mx-auto pa-8 w-100" rounded="lg" style="max-width: 424px;">
+        <div class="text-center mb-6">
+            <img src="/static/img/stk.svg" alt="Logo" height="40" class="mb-4">
+            <div class="text-h5 font-weight-bold">Verify Your Identity</div>
+            <div class="text-body-2 text-medium-emphasis">Re-authenticate using your security key</div>
+        </div>
+
+        {% include "security/_messages.html" %}
+
+        {% if not credential_options %}
+        <form action="{{ url_for_security('wan_verify') }}{{ prop_next() }}" method="post">
+            {{ wan_verify_form.hidden_tag() }}
+            <v-btn color="primary" type="submit" size="large" block>
+                <template v-slot:prepend>
+                    <i class="ti ti-fingerprint" style="font-size: 20px;"></i>
+                </template>
+                Verify with Security Key
+            </v-btn>
+        </form>
+        {% else %}
+        <div class="text-center pa-6">
+            <v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
+            <div class="text-body-1">Waiting for your security key...</div>
+            <div class="text-caption text-medium-emphasis">Follow the prompts on your device</div>
+        </div>
+
+        <form action="{{ url_for_security('wan_verify_response') }}{{ prop_next() }}" method="post" id="wan-verify-response-form">
+            {{ wan_verify_response_form.hidden_tag() }}
+            <input type="hidden" id="credential" name="credential" value="">
+        </form>
+
+        <div id="wan-errors"></div>
+        {% endif %}
+    </v-card>
+
+    <div class="mt-6 w-100" style="max-width: 424px;">
+        <v-btn onclick="history.back()" variant="text" color="primary">
+            <i class="ti ti-chevron-left mr-1"></i>
+            Back
+        </v-btn>
+    </div>
+</v-main>
+{% endblock %}
+
+{% block js %}
+<script>
+    const { createApp } = Vue;
+    const { createVuetify } = Vuetify;
+    const vuetify = createVuetify(vuetifyConfig);
+
+    const app = createApp({ delimiters: delimiters });
+    app.use(vuetify).mount('#app');
+
+    {% if credential_options %}
+    (function() {
+        function b64urlToArrayBuffer(base64url) {
+            const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
+            const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        function arrayBufferToB64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        const options = {{ credential_options | tojson }};
+        options.challenge = b64urlToArrayBuffer(options.challenge);
+        if (Array.isArray(options.allowCredentials)) {
+            options.allowCredentials = options.allowCredentials.map(c => ({...c, id: b64urlToArrayBuffer(c.id)}));
+        }
+
+        navigator.credentials.get({ publicKey: options })
+            .then(credential => {
+                if (!credential) throw new Error('No credential returned');
+                const encoded = {
+                    id: credential.id,
+                    rawId: arrayBufferToB64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        clientDataJSON: arrayBufferToB64url(credential.response.clientDataJSON),
+                        authenticatorData: arrayBufferToB64url(credential.response.authenticatorData),
+                        signature: arrayBufferToB64url(credential.response.signature),
+                        userHandle: credential.response.userHandle
+                            ? arrayBufferToB64url(credential.response.userHandle) : null,
+                    },
+                };
+                document.getElementById('credential').value = JSON.stringify(encoded);
+                document.getElementById('wan-verify-response-form').submit();
+            })
+            .catch(error => {
+                document.getElementById('wan-errors').innerHTML =
+                    '<div class="v-alert v-alert--density-default v-alert--variant-tonal bg-error pa-4 rounded mb-4">' +
+                    (error.message || 'Passkey verification failed.') + '</div>';
+            });
+    })();
+    {% endif %}
+</script>
+{% endblock %}

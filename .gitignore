@@ -1,0 +1,22 @@
+*.pyc
+.webassets-cache
+.idea
+celerybeat-schedule
+env
+.env
+.env.backup*
+local_settings.py
+node_modules/
+.DS_Store
+.sass-cache
+.vscode/
+.cache/
+.parcel-cache
+stk.sqlite3
+instance/
+
+
+# Claude Code
+.claude/settings.local.json
+*.skill
+.quartenv

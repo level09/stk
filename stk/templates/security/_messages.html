@@ -1,0 +1,12 @@
+{%- with messages = get_flashed_messages(with_categories=true) -%}
+  {% if messages %}
+    {% for category, message in messages %}
+      <v-alert
+        type="{{ category if category in ['success', 'warning', 'error', 'info'] else 'info' }}"
+        variant="tonal"
+        density="compact"
+        class="mb-2"
+      >{{ message }}</v-alert>
+    {% endfor %}
+  {% endif %}
+{%- endwith %}

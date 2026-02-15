@@ -1,0 +1,136 @@
+{% extends 'login-layout.html' %}
+{% from "security/_macros.html" import render_field_with_errors, render_field, render_field_errors, prop_next %}
+
+{% block content %}
+<v-main class="d-flex flex-column align-center justify-center" style="min-height: 100vh; background: rgb(var(--v-theme-background));">
+    <v-card class="mx-auto pa-8 w-100" rounded="lg" style="max-width: 424px;">
+        <div class="text-center mb-6">
+            <img src="/static/img/stk.svg" alt="Logo" height="40" class="mb-4">
+            <div class="text-h5 font-weight-bold">Sign in with Passkey</div>
+            <div class="text-body-2 text-medium-emphasis">Use your security key or passkey</div>
+        </div>
+
+        {% if not credential_options %}
+        <form action="{{ url_for_security('wan_signin') }}{{ prop_next() }}" method="post" id="wan-signin-form">
+            {{ wan_signin_form.hidden_tag() }}
+
+            <v-text-field
+                name="identity"
+                label="Username or Email"
+                class="mb-4"
+                v-model="identity"
+            ></v-text-field>
+
+            <v-checkbox
+                name="remember"
+                label="Remember me"
+                density="compact"
+                class="mb-4"
+            ></v-checkbox>
+
+            {{ render_field_errors(wan_signin_form.credential) }}
+
+            <v-btn color="primary" type="submit" size="large" block :disabled="!identity">
+                <template v-slot:prepend>
+                    <i class="ti ti-fingerprint" style="font-size: 20px;"></i>
+                </template>
+                Authenticate
+            </v-btn>
+        </form>
+        {% else %}
+        <div class="text-center pa-6">
+            <v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
+            <div class="text-body-1">Waiting for your security key...</div>
+            <div class="text-caption text-medium-emphasis mb-4">Follow the prompts on your device</div>
+        </div>
+
+        <form action="{{ url_for_security('wan_signin_response') }}{{ prop_next() }}" method="post" id="wan-signin-response-form">
+            {{ wan_signin_response_form.hidden_tag() }}
+            <input type="hidden" id="credential" name="credential" value="">
+        </form>
+
+        <div id="wan-errors"></div>
+
+        <v-btn variant="outlined" block href="{{ url_for_security('mf_recovery') }}">
+            <template v-slot:prepend>
+                <i class="ti ti-lifebuoy"></i>
+            </template>
+            Use Recovery Code
+        </v-btn>
+        {% endif %}
+
+        {% include "security/_messages.html" %}
+    </v-card>
+
+    <div class="mt-6 w-100 d-flex justify-space-between" style="max-width: 424px;">
+        <v-btn href="{{ url_for_security('login') }}" variant="text" color="primary">
+            <i class="ti ti-chevron-left mr-1"></i>
+            Back to Login
+        </v-btn>
+    </div>
+</v-main>
+{% endblock %}
+
+{% block js %}
+<script>
+    const { createApp } = Vue;
+    const { createVuetify } = Vuetify;
+    const vuetify = createVuetify(vuetifyConfig);
+
+    const app = createApp({
+        data() { return { identity: '' } },
+        delimiters: delimiters
+    });
+    app.use(vuetify).mount('#app');
+
+    {% if credential_options %}
+    (function() {
+        function b64urlToArrayBuffer(base64url) {
+            const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
+            const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        function arrayBufferToB64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        const options = {{ credential_options | tojson }};
+        options.challenge = b64urlToArrayBuffer(options.challenge);
+        if (Array.isArray(options.allowCredentials)) {
+            options.allowCredentials = options.allowCredentials.map(c => ({...c, id: b64urlToArrayBuffer(c.id)}));
+        }
+
+        navigator.credentials.get({ publicKey: options })
+            .then(credential => {
+                if (!credential) throw new Error('No credential returned');
+                const encoded = {
+                    id: credential.id,
+                    rawId: arrayBufferToB64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        clientDataJSON: arrayBufferToB64url(credential.response.clientDataJSON),
+                        authenticatorData: arrayBufferToB64url(credential.response.authenticatorData),
+                        signature: arrayBufferToB64url(credential.response.signature),
+                        userHandle: credential.response.userHandle
+                            ? arrayBufferToB64url(credential.response.userHandle) : null,
+                    },
+                };
+                document.getElementById('credential').value = JSON.stringify(encoded);
+                document.getElementById('wan-signin-response-form').submit();
+            })
+            .catch(error => {
+                document.getElementById('wan-errors').innerHTML =
+                    '<div class="v-alert v-alert--density-default v-alert--variant-tonal bg-error pa-4 rounded mb-4">' +
+                    (error.message || 'Passkey sign-in failed.') + '</div>';
+            });
+    })();
+    {% endif %}
+</script>
+{% endblock %}
