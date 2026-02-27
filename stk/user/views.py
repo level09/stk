@@ -100,6 +100,33 @@ async def api_user_update(id):
         return {"message": "Error updating user"}, 412
 
 
+@bp_user.post("/api/user/<int:id>/reset-password")
+async def api_user_reset_password(id):
+    user = await g.db_session.get(User, id)
+    if user is None:
+        return {"message": "User not found"}, 404
+    json_data = await request.json
+    password = json_data.get("password", "").strip()
+    if not password or len(password) < 8:
+        return {"message": "Password must be at least 8 characters"}, 400
+    from quart_security import hash_password
+
+    try:
+        user.password = hash_password(password)
+        user.password_set = True
+        await Activity.register(
+            current_user.id,
+            "Admin Password Reset",
+            {"target_user": user.email},
+        )
+        await g.db_session.commit()
+        return {"message": "Password reset successfully"}
+    except Exception:
+        await g.db_session.rollback()
+        log.exception("Error resetting password")
+        return {"message": "Error resetting password"}, 412
+
+
 @bp_user.route("/api/user/<int:id>", methods=["DELETE"])
 async def api_user_delete(id):
     user = await g.db_session.get(User, id)
