@@ -3,11 +3,12 @@
 import asyncio
 import secrets
 import string
+from pathlib import Path
 
 import click
 from quart_security import hash_password
 from rich.console import Console
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 import stk.extensions as ext
 from stk.user.models import User
@@ -202,3 +203,90 @@ def reset(email, password):
         run_async(_run())
     except Exception as e:
         print(f"Error resetting user password: {e}")
+
+
+# --- Migrations ---
+
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+
+
+async def _ensure_migrations_table(conn):
+    await conn.execute(
+        text(
+            "CREATE TABLE IF NOT EXISTS applied_migrations ("
+            "name TEXT PRIMARY KEY, "
+            "applied_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
+        )
+    )
+
+
+@click.command()
+def migrate():
+    """Apply pending SQL migrations from the migrations/ directory."""
+
+    async def _run():
+        if not MIGRATIONS_DIR.exists():
+            console.print("[yellow]No migrations/ directory found.[/]")
+            return
+
+        sql_files = sorted(f for f in MIGRATIONS_DIR.iterdir() if f.suffix == ".sql")
+        if not sql_files:
+            console.print("[yellow]No .sql files in migrations/.[/]")
+            return
+
+        async with ext.engine.begin() as conn:
+            await _ensure_migrations_table(conn)
+
+            result = await conn.execute(text("SELECT name FROM applied_migrations"))
+            applied = {row[0] for row in result.fetchall()}
+
+            pending = [f for f in sql_files if f.name not in applied]
+            if not pending:
+                console.print("[green]All migrations already applied.[/]")
+                return
+
+            for f in pending:
+                sql = f.read_text().strip()
+                if not sql:
+                    continue
+                console.print(f"  Applying [blue]{f.name}[/] ... ", end="")
+                for statement in sql.split(";"):
+                    statement = statement.strip()
+                    if statement:
+                        await conn.execute(text(statement))
+                await conn.execute(
+                    text("INSERT INTO applied_migrations (name) VALUES (:name)"),
+                    {"name": f.name},
+                )
+                console.print("[green]done[/]")
+
+    run_async(_run())
+
+
+@click.command("migration-status")
+def migration_status():
+    """Show which migrations have been applied."""
+
+    async def _run():
+        if not MIGRATIONS_DIR.exists():
+            console.print("[yellow]No migrations/ directory found.[/]")
+            return
+
+        sql_files = sorted(
+            f.name for f in MIGRATIONS_DIR.iterdir() if f.suffix == ".sql"
+        )
+
+        async with ext.engine.connect() as conn:
+            await _ensure_migrations_table(conn)
+            result = await conn.execute(
+                text("SELECT name, applied_at FROM applied_migrations ORDER BY name")
+            )
+            applied = {row[0]: row[1] for row in result.fetchall()}
+
+        for name in sql_files:
+            if name in applied:
+                console.print(f"  [green]✓[/] {name}  [dim]({applied[name]})[/]")
+            else:
+                console.print(f"  [yellow]○[/] {name}  [dim](pending)[/]")
+
+    run_async(_run())

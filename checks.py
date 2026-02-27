@@ -102,6 +102,7 @@ def check_routes(app):
         "/login",
         "/dashboard/",
         "/ws",
+        "/health",
     ]
     for route in critical_routes:
         assert route in rules, f"Missing route: {route}"
@@ -231,6 +232,32 @@ def check_static_assets(app):
         assert os.path.exists(path), f"Missing static asset: {asset}"
 
 
+@check("GET /health returns 200")
+async def check_health_endpoint(app):
+    client = app.test_client()
+    response = await client.get("/health")
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    data = await response.get_json()
+    assert data["status"] == "ok", f"Health status: {data['status']}"
+    assert data["checks"]["database"] == "ok"
+
+
+@check("User model has lockout fields")
+def check_lockout_fields(app):
+    from stk.user.models import User
+
+    assert hasattr(User, "failed_login_count"), "Missing failed_login_count"
+    assert hasattr(User, "locked_until"), "Missing locked_until"
+
+
+@check("Admin password reset route exists")
+def check_admin_reset_route(app):
+    rules = [r.rule for r in app.url_map.iter_rules()]
+    assert "/api/user/<int:id>/reset-password" in rules, (
+        "Missing admin reset-password route"
+    )
+
+
 @check("GET / returns 200")
 async def check_http_index(app):
     client = app.test_client()
@@ -259,7 +286,15 @@ async def check_api_requires_auth(app):
 @check("CLI commands registered")
 def check_cli_commands(app):
     commands = list(app.cli.commands.keys())
-    required = ["create-db", "install", "create", "add-role", "reset"]
+    required = [
+        "create-db",
+        "install",
+        "create",
+        "add-role",
+        "reset",
+        "migrate",
+        "migration-status",
+    ]
     for cmd in required:
         assert cmd in commands, f"Missing CLI command: {cmd}"
 

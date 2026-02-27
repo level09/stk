@@ -68,6 +68,10 @@ class User(Base, UserMixin):
         "Role", secondary=roles_users, backref="users", lazy="selectin"
     )
 
+    # account lockout
+    failed_login_count = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
+
     confirmed_at = Column(DateTime, nullable=True)
     last_login_at = Column(DateTime, nullable=True)
     current_login_at = Column(DateTime, nullable=True)

@@ -56,6 +56,38 @@ def create_oauth_user(provider_data, ip_address):
     return user
 
 
+@public.route("/health")
+async def health():
+    import stk.extensions as ext
+
+    status = {"status": "ok", "checks": {}}
+
+    # DB check
+    try:
+        from sqlalchemy import text
+
+        async with ext.engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        status["checks"]["database"] = "ok"
+    except Exception as e:
+        status["checks"]["database"] = f"error: {e}"
+        status["status"] = "degraded"
+
+    # Redis check (if configured)
+    session_interface = getattr(current_app, "session_interface", None)
+    backend = getattr(session_interface, "backend", None)
+    if backend is not None:
+        try:
+            await backend.ping()
+            status["checks"]["redis"] = "ok"
+        except Exception as e:
+            status["checks"]["redis"] = f"error: {e}"
+            status["status"] = "degraded"
+
+    code = 200 if status["status"] == "ok" else 503
+    return status, code
+
+
 @public.route("/")
 async def index():
     return await render_template("index.html")
