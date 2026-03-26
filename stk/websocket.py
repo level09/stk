@@ -8,7 +8,7 @@ broadcast() here to add live features (notifications, status updates, etc).
 import asyncio
 import json
 
-from quart import Blueprint, websocket
+from quart import Blueprint, g, websocket
 from quart_security import current_user
 
 ws_bp = Blueprint("ws", __name__)
@@ -40,6 +40,13 @@ async def ws_endpoint():
         return
 
     user_id = str(current_user.id)
+
+    # Release the DB session early. WebSocket connections are long-lived
+    # and don't need a persistent DB connection. Holding one starves the
+    # pool and causes GC warnings on shutdown.
+    db_session = g.pop("db_session", None)
+    if db_session is not None:
+        await db_session.close()
     queue: asyncio.Queue = asyncio.Queue()
     _clients.setdefault(user_id, set()).add(queue)
 
