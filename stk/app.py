@@ -146,7 +146,9 @@ def register_errorhandlers(app):
             try:
                 await db_session.rollback()
             except Exception:
-                pass
+                logger.warning(
+                    "Failed to rollback session during error handling", exc_info=True
+                )
             finally:
                 await db_session.close()
 
