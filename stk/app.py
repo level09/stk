@@ -89,7 +89,7 @@ def register_extensions(app):
 
         try:
             await asyncio.wait_for(ext.engine.dispose(), timeout=5)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
     user_datastore = SQLAlchemyUserDatastore(

@@ -16,6 +16,8 @@ stk.sqlite3
 instance/
 
 
+__pycache__/
+
 # Claude Code
 .claude/settings.local.json
 *.skill

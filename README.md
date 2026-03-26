@@ -9,7 +9,7 @@ A full-stack async Python framework. Auth, 2FA, WebSockets, admin dashboard, Vue
 ```bash
 git clone git@github.com:level09/stk.git && cd stk
 ./setup.sh                    # deps + secure .env
-uv run quart create-db        # database
+uv run quart create-db        # database via Alembic
 uv run quart install          # admin user
 uv run quart run              # localhost:5000
 ```
@@ -71,7 +71,7 @@ stk ships what actually matters:
 ### Infrastructure
 - Async email (aiosmtplib) with HTML + text templates
 - Fire-and-forget background tasks (no Celery)
-- CLI commands: create-db, install, create user, reset password, add role, cleanup sessions
+- CLI commands: create-db, db upgrade/downgrade/revision, install, create user, reset password, add role, cleanup sessions
 - Docker Compose: PostgreSQL, Redis, Nginx (one command)
 - VPS deploy script with auto-SSL via Caddy
 - Pre-commit hooks, ruff linting
@@ -119,6 +119,16 @@ QUART_DEBUG=1                    # 0 in production
 # GITHUB_AUTH_ENABLED=true
 # GITHUB_OAUTH_CLIENT_ID=...
 # GITHUB_OAUTH_CLIENT_SECRET=...
+```
+
+Database migrations:
+
+```bash
+uv run quart create-db                        # upgrade to head
+uv run quart db revision -m "add billing"    # generate a new revision
+uv run quart db upgrade                       # apply migrations
+uv run quart db downgrade -1                  # rollback one revision
+uv run quart db stamp head                    # adopt Alembic for an existing DB
 ```
 
 ## Docker
