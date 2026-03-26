@@ -182,7 +182,7 @@ mkdir -p instance
 
 # Create .quartenv for Quart CLI auto-loading
 cat > .quartenv << 'EOF'
-QUART_APP=run:app
+QUART_APP=run.py
 QUART_DEBUG=1
 EOF
 echo -e "${GREEN}Created .quartenv for Quart CLI${NC}"
