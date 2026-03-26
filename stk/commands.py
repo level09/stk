@@ -34,7 +34,7 @@ def run_async(coro):
 def create_db():
     """Apply all database migrations."""
     command.upgrade(build_alembic_config(), "head")
-    print("Database migrations applied successfully")
+    console.print("[green]Database migrations applied successfully[/]")
 
 
 @click.group()
@@ -102,7 +102,7 @@ def install(email, password):
 
         async with ext.async_session_factory() as session:
             admin_role = (
-                await session.execute(select(Role).filter(Role.name == "admin"))
+                await session.execute(select(Role).where(Role.name == "admin"))
             ).scalar_one_or_none()
             if not admin_role:
                 admin_role = Role(name="admin")
@@ -111,7 +111,7 @@ def install(email, password):
 
             admin_user = (
                 await session.execute(
-                    select(User).filter(User.roles.any(Role.name == "admin"))
+                    select(User).where(User.roles.any(Role.name == "admin"))
                 )
             ).scalar_one_or_none()
             if admin_user:
@@ -162,10 +162,10 @@ def create(email, password):
     async def _run():
         async with ext.async_session_factory() as session:
             existing = (
-                await session.execute(select(User).filter(User.email == email))
+                await session.execute(select(User).where(User.email == email))
             ).scalar_one_or_none()
             if existing is not None:
-                print("User already exists!")
+                console.print("[yellow]User already exists![/]")
             else:
                 user = User(email=email, password=hash_password(password), active=True)
                 session.add(user)
@@ -185,17 +185,17 @@ def add_role(email, role):
 
         async with ext.async_session_factory() as session:
             u = (
-                await session.execute(select(User).filter(User.email == email))
+                await session.execute(select(User).where(User.email == email))
             ).scalar_one_or_none()
 
             if u is None:
-                print("Sorry, this user does not exist!")
+                console.print("[red]Sorry, this user does not exist![/]")
             else:
                 r = (
-                    await session.execute(select(Role).filter_by(name=role))
+                    await session.execute(select(Role).where(Role.name == role))
                 ).scalar_one_or_none()
                 if r is None:
-                    print("Sorry, this role does not exist!")
+                    console.print("[yellow]Sorry, this role does not exist![/]")
                     answer = click.prompt(
                         "Would you like to create one? Y/N", default="N"
                     )
@@ -204,8 +204,8 @@ def add_role(email, role):
                         try:
                             session.add(r)
                             await session.commit()
-                            print(
-                                "Role created successfully, you may add it now to the user"
+                            console.print(
+                                "[green]Role created successfully, you may add it now to the user[/]"
                             )
                         except Exception:
                             await session.rollback()
@@ -222,7 +222,7 @@ def cleanup_sessions():
     from stk.tasks import cleanup_expired_sessions
 
     run_async(cleanup_expired_sessions())
-    print("Session cleanup complete")
+    console.print("[green]Session cleanup complete[/]")
 
 
 @click.command()
@@ -236,23 +236,25 @@ def reset(email, password):
         async def _run():
             async with ext.async_session_factory() as session:
                 u = (
-                    await session.execute(select(User).filter(User.email == email))
+                    await session.execute(select(User).where(User.email == email))
                 ).scalar_one_or_none()
                 if not u:
-                    print(f'User with email "{email}" not found.')
+                    console.print(f'[red]User with email "{email}" not found.[/]')
                     return
 
                 u.password = pwd
                 try:
                     await session.commit()
-                    print("User password has been reset successfully.")
+                    console.print(
+                        "[green]User password has been reset successfully.[/]"
+                    )
                 except Exception:
                     await session.rollback()
-                    print("Error committing to database.")
+                    console.print("[red]Error committing to database.[/]")
 
         run_async(_run())
     except Exception as e:
-        print(f"Error resetting user password: {e}")
+        console.print(f"[red]Error resetting user password: {e}[/]")
 
 
 @click.command()

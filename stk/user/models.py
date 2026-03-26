@@ -1,4 +1,5 @@
 import dataclasses
+import logging
 import secrets
 import string
 from datetime import datetime
@@ -225,7 +226,9 @@ class Activity(Base):
 
             await broadcast({"type": "activity", "action": action, "user_id": user_id})
         except Exception:
-            pass  # don't fail DB ops if WS broadcast fails
+            logging.getLogger(__name__).warning(
+                "WebSocket broadcast failed", exc_info=True
+            )
         return activity
 
 

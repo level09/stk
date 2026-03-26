@@ -107,8 +107,9 @@ async def api_user_reset_password(id):
         return {"message": "User not found"}, 404
     json_data = await request.json
     password = json_data.get("password", "").strip()
-    if not password or len(password) < 8:
-        return {"message": "Password must be at least 8 characters"}, 400
+    min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
+    if not password or len(password) < min_len:
+        return {"message": f"Password must be at least {min_len} characters"}, 400
     from quart_security import hash_password
 
     try:
