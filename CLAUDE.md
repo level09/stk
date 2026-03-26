@@ -110,26 +110,11 @@ No Celery. `stk/tasks.py` provides:
 
 Vue 3 + Vuetify loaded from static files. **Custom delimiters `${` and `}` to avoid Jinja conflicts.** Every Vue app must set `delimiters: config.delimiters`. Server data passed via `<script type="application/json">` tags.
 
-### quart-security
-
-Published on PyPI as `quart-security`. The maintainer also manages the source at `../quart-security/`. For local iteration during development:
-
-```bash
-# Switch to local editable (for developing quart-security itself)
-uv pip install -e ../quart-security
-
-# Switch back to PyPI version
-uv sync
-```
-
-Do NOT commit `[tool.uv.sources]` overrides pointing to the local path.
-
 ## Key Gotchas
 
 - `User.from_dict()`, `Activity.register()`, `Session.create_session()` are all async.
 - Signal handlers (`@user_authenticated.connect` etc.) are async.
 - Pagination is manual: `offset().limit()` + `select(func.count())`.
 - WebSocket connections release their DB session early to avoid pool starvation.
-- AGENTS.md exists with detailed patterns but some examples use outdated `db.Model`/`db.select()` syntax. The actual codebase uses `Base` and `sqlalchemy.select()` directly.
 - Session backend: Redis if `REDIS_URL` is set, otherwise cookie-based.
 - `DISABLE_MULTIPLE_SESSIONS` config controls single-session enforcement.
