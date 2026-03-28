@@ -1,8 +1,10 @@
 import asyncio
 import inspect
+from datetime import timedelta
 
 import click
 from quart import Quart, g, render_template, request
+from quart_rate_limiter import RateLimiter, limit_blueprint
 from quart_security import Security, SQLAlchemyUserDatastore
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -107,15 +109,11 @@ def register_extensions(app):
         session.init_app(app)
     # For non-redis, fall back to Quart's built-in cookie sessions
 
-    # Rate limit auth endpoints
-    from stk.utils.ratelimit import check_security_rate_limit
-
-    _auth_paths = frozenset({"/login", "/register", "/reset", "/confirm"})
-
-    @app.before_request
-    async def _rate_limit_auth():
-        if request.path in _auth_paths and request.method == "POST":
-            return await check_security_rate_limit()
+    # Rate limiting (replaces custom in-memory limiter)
+    RateLimiter(app)
+    security_bp = app.blueprints.get("security")
+    if security_bp:
+        limit_blueprint(security_bp, 10, timedelta(minutes=1))
 
     return None
 

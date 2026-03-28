@@ -212,10 +212,10 @@ class Activity(Base):
     __tablename__ = "activity"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     action = Column(String(255), nullable=False)
     data = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
 
     @classmethod
     async def register(cls, user_id, action, data=None):
@@ -236,7 +236,7 @@ class Session(Base):
     __tablename__ = "user_sessions"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     user = relationship("User", backref="sessions", lazy="selectin")
 
     session_token = Column(String(255), unique=True, nullable=False)
@@ -246,7 +246,7 @@ class Session(Base):
 
     meta = Column(JSON, nullable=True)
 
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     def to_dict(self):

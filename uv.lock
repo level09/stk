@@ -1161,6 +1161,18 @@ wheels = [
 ]
 
 [[package]]
+name = "quart-rate-limiter"
+version = "0.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "quart" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/c4/84c073f15612ad6971e95cd541e75534de0fdeab9e59d6ff968f17622a18/quart_rate_limiter-0.12.1.tar.gz", hash = "sha256:9bd44b35372d0255ae716bff9aedeb041188cc3480a51a37e1f9e00b178941f3", size = 9647, upload-time = "2025-08-13T12:41:26.594Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/c2/ed5b657287b9cf5b7ef59e243f5c95265a26f78bf3f96a06b3b44d30ea5d/quart_rate_limiter-0.12.1-py3-none-any.whl", hash = "sha256:c910aa603b1eaaedb02d9475c9df1626e32b2bd936647228609d00269521f656", size = 8960, upload-time = "2025-08-13T12:41:25.207Z" },
+]
+
+[[package]]
 name = "quart-security"
 version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1307,6 +1319,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "qrcode" },
     { name = "quart" },
+    { name = "quart-rate-limiter" },
     { name = "quart-security" },
     { name = "quart-session" },
     { name = "rich" },
@@ -1352,6 +1365,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "quart", specifier = ">=0.20.0" },
+    { name = "quart-rate-limiter", specifier = ">=0.12.1" },
     { name = "quart-security", specifier = ">=1.1.0" },
     { name = "quart-session", specifier = ">=3.0.0" },
     { name = "redis", marker = "extra == 'full'", specifier = ">=7.1.0" },
