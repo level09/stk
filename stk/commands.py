@@ -3,6 +3,7 @@
 import asyncio
 import secrets
 import string
+from datetime import datetime
 
 import click
 from quart_security import hash_password
@@ -33,6 +34,12 @@ def run_async(coro):
 @click.command()
 def create_db():
     """Apply all database migrations."""
+    import os
+
+    from stk.settings import Config
+
+    instance_dir = os.path.join(Config.PROJECT_ROOT, "instance")
+    os.makedirs(instance_dir, exist_ok=True)
     command.upgrade(build_alembic_config(), "head")
     console.print("[green]Database migrations applied successfully[/]")
 
@@ -137,6 +144,7 @@ def install(email, password):
                 name="Super Admin",
                 password=hash_password(password),
                 active=True,
+                confirmed_at=datetime.now(),
             )
             user.roles.append(admin_role)
             session.add(user)
@@ -167,7 +175,12 @@ def create(email, password):
             if existing is not None:
                 console.print("[yellow]User already exists![/]")
             else:
-                user = User(email=email, password=hash_password(password), active=True)
+                user = User(
+                    email=email,
+                    password=hash_password(password),
+                    active=True,
+                    confirmed_at=datetime.now(),
+                )
                 session.add(user)
                 await session.commit()
 
