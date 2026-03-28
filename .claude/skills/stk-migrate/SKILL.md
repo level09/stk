@@ -13,7 +13,7 @@ Current revision:
 !`cd /Users/level09/projects/stk && uv run quart db current 2>&1 | tail -5`
 
 Recent migrations:
-!`ls -1 alembic/versions/*.py 2>/dev/null | grep -v __pycache__`
+!`ls -1t alembic/versions/*.py 2>/dev/null | head -10`
 
 Models with tables:
 !`grep -rn "__tablename__" stk/*/models.py 2>/dev/null`
@@ -27,10 +27,11 @@ Models with tables:
 
 2. **Review the generated file** in `alembic/versions/`. Check:
    - All expected table/column changes are present
-   - Foreign keys reference correct tables
-   - Indexes are created where needed
+   - Foreign keys reference correct tables and use correct column types
+   - Indexes are created where needed (especially on foreign keys and unique constraints)
    - `downgrade()` correctly reverses `upgrade()`
    - No destructive changes that would lose data (if so, warn the user)
+   - Column types match the model definitions (String lengths, nullable flags, defaults)
 
 3. **For SQLite compatibility**, verify batch mode is used. The `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
 
@@ -50,6 +51,15 @@ Models with tables:
    ```bash
    uv run python checks.py
    ```
+
+## Model conventions to verify against
+
+Models use `@dataclasses.dataclass` and inherit from `Base` (stk.extensions). Key patterns:
+- `id = Column(Integer, primary_key=True)`
+- `created_at = Column(DateTime, default=datetime.now, nullable=False)`
+- Foreign keys: `Column(Integer, ForeignKey("table.id"))` or `Column(String(64), ForeignKey("table.field", ondelete="CASCADE"))`
+- JSON fields: `Column(JSON, nullable=True)`
+- Unique constraints: either `unique=True` on column or `UniqueConstraint(...)` in `__table_args__`
 
 ## Common patterns
 
@@ -77,4 +87,9 @@ def upgrade():
 ```python
 with op.batch_alter_table("users") as batch_op:
     batch_op.alter_column("old_name", new_column_name="new_name")
+```
+
+**Add a composite unique constraint:**
+```python
+op.create_unique_constraint("uq_oauth_provider_user", "oauth", ["provider", "provider_user_id"])
 ```

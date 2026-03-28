@@ -108,7 +108,17 @@ No Celery. `stk/tasks.py` provides:
 
 ### Frontend
 
-Vue 3 + Vuetify loaded from static files. **Custom delimiters `${` and `}` to avoid Jinja conflicts.** Every Vue app must set `delimiters: config.delimiters`. Server data passed via `<script type="application/json">` tags.
+Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data()`, `methods`, `mounted()`), NOT Composition API.
+
+- **Delimiters:** `${}` via `config.delimiters` (avoids Jinja `{{}}` conflicts)
+- **Layout mixin:** Every app uses `mixins: [layoutMixin]` for drawer, nav, WebSocket, notifications
+- **Component registration:** Call `registerStkComponents(app)` before `.mount('#app')`
+- **Vuetify init:** `createVuetify(config.vuetifyConfig)` (config is in `static/js/config.js`)
+- **Icons:** Tabler Icons (`ti ti-pencil`, `ti ti-plus`, etc.), NOT Material Design Icons
+- **Server data:** Pass via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
+- **Navigation:** Sidebar entries in `static/js/navigation.js` with `role: 'admin'` for access control
+- **JSON responses:** List endpoints use `orjson` via `import orjson as json` and `Response(json.dumps(data), content_type="application/json")`
+- **Request body:** Frontend sends mutations as `{item: {...}}`, extract with `json_data.get("item", {})`
 
 ## Key Gotchas
 

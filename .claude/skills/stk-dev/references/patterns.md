@@ -4,11 +4,13 @@
 
 ```python
 # stk/products/models.py
+import dataclasses
 from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Boolean, Text
 from sqlalchemy.orm import relationship
 from stk.extensions import Base
 
+@dataclasses.dataclass
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True)
@@ -18,6 +20,11 @@ class Category(Base):
     def to_dict(self):
         return {"id": self.id, "name": self.name}
 
+    def from_dict(self, data):
+        self.name = data.get("name", self.name)
+        return self
+
+@dataclasses.dataclass
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True)
@@ -41,38 +48,43 @@ class Product(Base):
             "active": self.active,
         }
 
-    @classmethod
-    async def from_dict(cls, data):
-        return cls(
-            name=data.get("name"),
-            description=data.get("description"),
-            price=data.get("price"),
-            category_id=data.get("category_id"),
-            active=data.get("active", True),
-        )
+    async def from_dict(self, data):
+        self.name = data.get("name", self.name)
+        self.description = data.get("description", self.description)
+        self.price = data.get("price", self.price)
+        self.category_id = data.get("category_id", self.category_id)
+        self.active = data.get("active", self.active)
+        return self
 ```
 
 ```python
 # stk/products/views.py
-from quart import Blueprint, g, render_template, request
-from quart_security import auth_required, roles_required, current_user
-from sqlalchemy import select, func
+import logging
+import orjson as json
+from quart import Blueprint, Response, g, render_template, request
+from quart_security import auth_required, current_user, roles_required
+from sqlalchemy import func, select
 from stk.user.models import Activity
 from .models import Product, Category
 
+log = logging.getLogger(__name__)
 bp = Blueprint("products", __name__)
+PER_PAGE = 25
 
-@bp.get("/products/")
-@auth_required("session")
-async def products_page():
-    return await render_template("products/index.html")
-
-@bp.get("/api/products")
+@bp.before_request
 @auth_required("session")
 @roles_required("admin")
+async def before_request():
+    pass
+
+@bp.get("/products/")
+async def products_page():
+    return await render_template("cms/products.html")
+
+@bp.get("/api/products")
 async def list_products():
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 25, type=int)
+    per_page = request.args.get("per_page", PER_PAGE, type=int)
 
     query = select(Product)
 
@@ -81,15 +93,74 @@ async def list_products():
     if category_id := request.args.get("category_id", type=int):
         query = query.where(Product.category_id == category_id)
 
-    total = await g.db_session.scalar(select(func.count()).select_from(query.subquery()))
-    items = (await g.db_session.execute(
-        query.offset((page - 1) * per_page).limit(per_page)
-    )).scalars().all()
+    count_result = await g.db_session.execute(select(func.count()).select_from(Product))
+    total = count_result.scalar()
 
-    return {"items": [p.to_dict() for p in items], "total": total, "perPage": per_page}
+    result = await g.db_session.execute(
+        query.offset((page - 1) * per_page).limit(per_page)
+    )
+    items = [p.to_dict() for p in result.scalars().all()]
+
+    response_data = {"items": items, "total": total, "perPage": per_page}
+    return Response(json.dumps(response_data), content_type="application/json")
+
+@bp.post("/api/product/")
+async def create_product():
+    json_data = await request.json
+    product_data = json_data.get("item", {})
+    if not product_data.get("name"):
+        return {"message": "Name is required"}, 400
+    product = Product()
+    await product.from_dict(product_data)
+    g.db_session.add(product)
+    try:
+        await g.db_session.flush()
+        await Activity.register(current_user.id, "Product Create", product.to_dict())
+        await g.db_session.commit()
+        return {"message": "Product successfully created!"}
+    except Exception:
+        await g.db_session.rollback()
+        log.exception("Error creating product")
+        return {"message": "Error creating product"}, 412
+
+@bp.post("/api/product/<int:id>")
+async def update_product(id):
+    product = await g.db_session.get(Product, id)
+    if product is None:
+        return {"message": "Product not found"}, 404
+    json_data = await request.json
+    product_data = json_data.get("item", {})
+    old_data = product.to_dict()
+    try:
+        await product.from_dict(product_data)
+        await Activity.register(
+            current_user.id, "Product Update",
+            {"old": old_data, "new": product.to_dict()},
+        )
+        await g.db_session.commit()
+        return {"message": "Product successfully updated!"}
+    except Exception:
+        await g.db_session.rollback()
+        log.exception("Error updating product")
+        return {"message": "Error updating product"}, 412
+
+@bp.route("/api/product/<int:id>", methods=["DELETE"])
+async def delete_product(id):
+    product = await g.db_session.get(Product, id)
+    if product is None:
+        return {"message": "Product not found"}, 404
+    product_data = product.to_dict()
+    try:
+        await g.db_session.delete(product)
+        await Activity.register(current_user.id, "Product Delete", product_data)
+        await g.db_session.commit()
+        return {"message": "Product successfully deleted!"}
+    except Exception:
+        await g.db_session.rollback()
+        log.exception("Error deleting product")
+        return {"message": "Error deleting product"}, 412
 
 @bp.get("/api/categories")
-@auth_required("session")
 async def list_categories():
     result = await g.db_session.execute(select(Category))
     return {"items": [c.to_dict() for c in result.scalars().all()]}
@@ -101,11 +172,9 @@ async def list_categories():
 from sqlalchemy import select, func, or_
 
 @bp.get("/api/products")
-@auth_required("session")
-@roles_required("admin")
 async def list_products():
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 25, type=int)
+    per_page = request.args.get("per_page", PER_PAGE, type=int)
 
     query = select(Product)
 
@@ -131,12 +200,16 @@ async def list_products():
     column = getattr(Product, sort_by, Product.id)
     query = query.order_by(column.desc() if sort_order == "desc" else column.asc())
 
-    total = await g.db_session.scalar(select(func.count()).select_from(query.subquery()))
-    items = (await g.db_session.execute(
-        query.offset((page - 1) * per_page).limit(per_page)
-    )).scalars().all()
+    count_result = await g.db_session.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar()
 
-    return {"items": [p.to_dict() for p in items], "total": total, "perPage": per_page}
+    result = await g.db_session.execute(
+        query.offset((page - 1) * per_page).limit(per_page)
+    )
+    items = [p.to_dict() for p in result.scalars().all()]
+
+    response_data = {"items": items, "total": total, "perPage": per_page}
+    return Response(json.dumps(response_data), content_type="application/json")
 ```
 
 ## File Uploads
@@ -146,8 +219,6 @@ from quart import current_app
 from werkzeug.utils import secure_filename
 
 @bp.post("/api/product/<int:id>/image")
-@auth_required("session")
-@roles_required("admin")
 async def upload_image(id):
     product = await g.db_session.get(Product, id)
     if not product:
@@ -163,114 +234,221 @@ async def upload_image(id):
     return {"item": product.to_dict()}
 ```
 
-## Vue Dialog Patterns
+## Join Queries (Activity + User example)
 
-Complete CRUD with dialogs:
+When you need data from related tables without a relationship:
 
-```javascript
-createApp({
-  delimiters: ['${', '}'],
-  setup() {
-    const items = ref([]);
-    const total = ref(0);
-    const loading = ref(false);
-    const dialog = ref(false);
-    const confirmDialog = ref(false);
-    const editMode = ref(false);
-    const saving = ref(false);
-    const deleting = ref(false);
-    const selectedItem = ref(null);
-    const form = ref({ name: '', price: 0, category_id: null });
-    const snackbar = ref({ show: false, text: '', color: '' });
+```python
+result = await g.db_session.execute(
+    select(Activity, User)
+    .outerjoin(User, Activity.user_id == User.id)
+    .order_by(Activity.created_at.desc())
+    .offset((page - 1) * per_page)
+    .limit(per_page)
+)
 
-    async function loadItems({ page, itemsPerPage }) {
-      loading.value = true;
-      const res = await axios.get('/api/products', { params: { page, per_page: itemsPerPage } });
-      items.value = res.data.items;
-      total.value = res.data.total;
-      loading.value = false;
-    }
+items = []
+for activity, user in result.all():
+    items.append({
+        "id": activity.id,
+        "user": user.display_name if user else f"User ID: {activity.user_id}",
+        "action": activity.action,
+        "data": activity.data,
+        "created_at": activity.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+    })
+```
 
-    function openCreate() {
-      editMode.value = false;
-      form.value = { name: '', price: 0, category_id: null };
-      dialog.value = true;
-    }
+## Vue CRUD Template (Options API)
 
-    function editItem(item) {
-      editMode.value = true;
-      selectedItem.value = item;
-      form.value = { ...item };
-      dialog.value = true;
-    }
+Complete template with data table, edit dialog, delete confirmation, and snackbar:
 
-    async function saveItem() {
-      try {
-        saving.value = true;
-        const url = editMode.value
-          ? `/api/product/${selectedItem.value.id}`
-          : '/api/product/';
-        await axios.post(url, form.value);
-        dialog.value = false;
-        loadItems({ page: 1, itemsPerPage: 25 });
-      } catch (error) {
-        snackbar.value = {
-          show: true,
-          text: error.response?.data?.message || 'Save failed',
-          color: 'error',
+```html
+{% extends "layout.html" %}
+{% block content %}
+<v-card class="ma-2 mt-12 w-100 h-100">
+    <v-toolbar>
+        <v-toolbar-title>Products</v-toolbar-title>
+        <v-spacer></v-spacer>
+    </v-toolbar>
+    <v-card-text>
+        <v-data-table-server
+            :items="items" :items-length="itemsLength"
+            :headers="headers"
+            :page="options.page" :items-per-page="options.itemsPerPage"
+            @update:options="refresh" hover
+        >
+            <template v-slot:top>
+                <v-toolbar dense elevation="0" color="transparent">
+                    <v-btn class="ml-auto" @click="createItem" size="small" color="primary" variant="elevated">
+                        <template v-slot:prepend><i class="ti ti-plus"></i></template>
+                        Add Product
+                    </v-btn>
+                </v-toolbar>
+            </template>
+
+            <template v-slot:item.active="{ item }">
+                <v-avatar size="16" :color="item.active ? 'green' : 'grey'"></v-avatar>
+            </template>
+
+            <template v-slot:item.actions="{ item }">
+                <v-icon small class="mr-2" @click="editItem(item)">ti ti-pencil</v-icon>
+                <v-icon small @click="deleteItem(item)">ti ti-trash</v-icon>
+            </template>
+        </v-data-table-server>
+    </v-card-text>
+</v-card>
+
+<!-- Edit Dialog -->
+<v-dialog v-model="edialog" width="660">
+    <v-card v-if="edialog">
+        <v-toolbar>
+            <v-toolbar-title>Product Editor</v-toolbar-title>
+            <template v-slot:append>
+                <v-btn @click="edialog=false" size="small" icon="ti ti-x" variant="text"></v-btn>
+            </template>
+        </v-toolbar>
+        <v-card-text>
+            <v-text-field label="Name" v-model="eitem.name"></v-text-field>
+            <v-textarea label="Description" v-model="eitem.description"></v-textarea>
+            <v-text-field label="Price" type="number" v-model="eitem.price"></v-text-field>
+            <v-switch color="primary" label="Active" v-model="eitem.active"></v-switch>
+        </v-card-text>
+        <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="primary" @click="saveItem" variant="elevated">Save</v-btn>
+        </v-card-actions>
+    </v-card>
+</v-dialog>
+
+<v-snackbar v-model="snackBar" rounded="pill" elevation="25">
+    ${snackMessage}
+    <template v-slot:actions>
+        <v-btn @click="snackBar=false" icon="ti ti-x" size="small" variant="text"></v-btn>
+    </template>
+</v-snackbar>
+{% endblock %}
+
+{% block js %}
+<!-- Server data (optional, for dropdowns etc.) -->
+<script type="application/json" id="categories-data">
+{{ categories|tojson|safe }}
+</script>
+
+<script>
+const {createApp, toRaw} = Vue;
+const {createVuetify} = Vuetify;
+const vuetify = createVuetify(config.vuetifyConfig);
+
+window.app = createApp({
+    mixins: [layoutMixin],
+    delimiters: config.delimiters,
+    data() {
+        return {
+            snackBar: false,
+            snackMessage: "",
+            items: [],
+            itemsLength: 0,
+            options: { page: 1, itemsPerPage: 25 },
+            headers: [
+                {title: 'ID', value: 'id'},
+                {title: 'Name', value: 'name'},
+                {title: 'Price', value: 'price'},
+                {title: 'Active', value: 'active', sortable: false},
+                {title: 'Actions', value: 'actions', sortable: false}
+            ],
+            edialog: false,
+            eitem: { id: "", name: "", description: "", price: 0, active: true },
+            categories: JSON.parse(document.querySelector('#categories-data').textContent),
         };
-      } finally {
-        saving.value = false;
-      }
+    },
+    methods: {
+        showSnack(message) {
+            this.snackMessage = message;
+            this.snackBar = true;
+        },
+        refresh(options) {
+            if (options) {
+                this.options = { ...this.options, page: options.page, itemsPerPage: options.itemsPerPage };
+            }
+            axios.get(`/api/products?page=${this.options.page}&per_page=${this.options.itemsPerPage}`)
+                .then(res => {
+                    this.items = res.data.items;
+                    this.itemsLength = res.data.total;
+                })
+                .catch(error => this.showSnack('Failed to load products'));
+        },
+        createItem() {
+            this.eitem = { name: "", description: "", price: 0, active: true };
+            this.edialog = true;
+        },
+        editItem(item) {
+            this.eitem = toRaw(item);
+            this.$nextTick(() => { this.edialog = true; });
+        },
+        saveItem() {
+            const url = this.eitem.id
+                ? `/api/product/${this.eitem.id}`
+                : '/api/product/';
+            axios.post(url, {item: this.eitem})
+                .then(res => { this.showSnack(res.data?.message); this.refresh(); })
+                .catch(err => this.showSnack(err.response?.data?.message || 'Error'));
+            this.edialog = false;
+        },
+        deleteItem(item) {
+            if (confirm('Are you sure?')) {
+                axios.delete(`/api/product/${item.id}`)
+                    .then(res => { this.showSnack(res.data?.message); this.refresh(); })
+                    .catch(err => this.showSnack(err.response?.data));
+            }
+        }
     }
+});
 
-    function deleteItem(item) {
-      selectedItem.value = item;
-      confirmDialog.value = true;
-    }
-
-    async function confirmDelete() {
-      try {
-        deleting.value = true;
-        await axios.delete(`/api/product/${selectedItem.value.id}`);
-        confirmDialog.value = false;
-        loadItems({ page: 1, itemsPerPage: 25 });
-      } catch (error) {
-        snackbar.value = {
-          show: true,
-          text: error.response?.data?.message || 'Delete failed',
-          color: 'error',
-        };
-      } finally {
-        deleting.value = false;
-      }
-    }
-
-    return {
-      items, total, loading, dialog, confirmDialog, editMode,
-      saving, deleting, form, snackbar,
-      openCreate, editItem, saveItem, deleteItem, confirmDelete, loadItems,
-    };
-  }
-}).use(createVuetify(vuetifyConfig)).mount('#app');
+registerStkComponents(app);
+app.use(vuetify).mount("#app");
+</script>
+{% endblock %}
 ```
 
 ## Error Handling
 
-API endpoints return `{"message": "..."}` on errors:
+API endpoints return `{"message": "..."}` on errors with try/except rollback:
 
 ```python
 @bp.post("/api/product/")
-@auth_required("session")
-@roles_required("admin")
 async def create_product():
-    data = await request.json
-    if not data.get("name"):
+    json_data = await request.json
+    product_data = json_data.get("item", {})
+    if not product_data.get("name"):
         return {"message": "Name is required"}, 400
-    product = await Product.from_dict(data)
+    product = Product()
+    await product.from_dict(product_data)
     g.db_session.add(product)
-    await g.db_session.commit()
-    return {"item": product.to_dict()}
+    try:
+        await g.db_session.flush()
+        await Activity.register(current_user.id, "Product Create", product.to_dict())
+        await g.db_session.commit()
+        return {"message": "Product successfully created!"}
+    except Exception:
+        await g.db_session.rollback()
+        log.exception("Error creating product")
+        return {"message": "Error creating product"}, 412
 ```
 
 Global error handler in `app.py` catches unhandled exceptions, rolls back the session, and returns JSON for API requests or renders an error template otherwise.
+
+## WebSocket Broadcasting
+
+Activity.register() auto-broadcasts via WebSocket. For custom broadcasts:
+
+```python
+from stk.websocket import broadcast
+
+# Broadcast to all connected users
+await broadcast({"type": "notification", "text": "Something happened"})
+
+# Broadcast to specific user
+await broadcast({"type": "update", "data": {...}}, user_id=123)
+```
+
+The layout's `_onWsMessage` handler receives these. Extend it for custom message types.
