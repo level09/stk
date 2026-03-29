@@ -1,6 +1,6 @@
 /**
  * stk Framework - Central Configuration
- * Ember/Fire-inspired color palette
+ * Monochrome brutalist palette
  */
 
 const config = {
@@ -23,18 +23,26 @@ const config = {
                 variant: 'outlined'
             },
             VChip: {
-                size: 'small'
+                size: 'small',
+                rounded: 'sm'
             },
             VCard: {
                 elevation: 0,
-                rounded: 'lg'
+                rounded: 0
             },
             VMenu: {
                 offset: 10
             },
             VBtn: {
                 variant: 'elevated',
-                size: 'small'
+                size: 'small',
+                rounded: 0
+            },
+            VDialog: {
+                rounded: 0
+            },
+            VToolbar: {
+                elevation: 0
             },
             VDataTableServer: {
                 itemsPerPage: 25,
@@ -47,35 +55,33 @@ const config = {
                 light: {
                     dark: false,
                     colors: {
-                        // Ember light theme
-                        primary: '#EA580C',      // Ember Orange
-                        secondary: '#1E293B',    // Slate (for contrast)
-                        accent: '#F97316',       // Bright Orange
-                        error: '#DC2626',        // Red
-                        info: '#0EA5E9',         // Sky Blue
-                        success: '#16A34A',      // Green
-                        warning: '#EAB308',      // Yellow
-                        background: '#FFFFFF',   // White
-                        surface: '#F8FAFC',      // Slate 50
-                        'surface-light': '#F1F5F9', // Slate 100
-                        'on-surface': '#1E293B', // Slate 800
+                        primary: '#1a1a1a',
+                        secondary: '#555555',
+                        accent: '#333333',
+                        error: '#b91c1c',
+                        info: '#1a1a1a',
+                        success: '#166534',
+                        warning: '#a16207',
+                        background: '#fafafa',
+                        surface: '#fafafa',
+                        'surface-light': '#f0f0f0',
+                        'on-surface': '#1a1a1a',
                     }
                 },
                 dark: {
                     dark: true,
                     colors: {
-                        // Ember dark theme
-                        primary: '#F97316',      // Bright Orange (more visible on dark)
-                        secondary: '#CBD5E1',    // Slate 300
-                        accent: '#FB923C',       // Orange 400
-                        error: '#EF4444',        // Red 500
-                        info: '#38BDF8',         // Sky 400
-                        success: '#22C55E',      // Green 500
-                        warning: '#FACC15',      // Yellow 400
-                        background: '#0F172A',   // Slate 900
-                        surface: '#1E293B',      // Slate 800
-                        'surface-light': '#334155', // Slate 700
-                        'on-surface': '#F1F5F9', // Slate 100
+                        primary: '#e5e5e5',
+                        secondary: '#a3a3a3',
+                        accent: '#d4d4d4',
+                        error: '#fca5a5',
+                        info: '#e5e5e5',
+                        success: '#86efac',
+                        warning: '#fde047',
+                        background: '#0a0a0a',
+                        surface: '#141414',
+                        'surface-light': '#262626',
+                        'on-surface': '#e5e5e5',
                     }
                 }
             }

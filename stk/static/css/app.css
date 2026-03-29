@@ -2,16 +2,188 @@ html, body {
     height: 100%;
 }
 
-/* ===== Card Hover Effect ===== */
+/* ===== Typography ===== */
+body,
+.v-application {
+    font-family: 'Be Vietnam Pro', sans-serif !important;
+}
+
+.v-toolbar-title,
+.v-card-title,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
+.text-subtitle-1, .text-subtitle-2,
+.font-weight-bold,
+.v-list-item-title {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    letter-spacing: -0.02em !important;
+}
+
+.v-toolbar-title {
+    text-transform: uppercase;
+    font-weight: 800 !important;
+}
+
+.v-btn {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+}
+
+.v-data-table th,
+.v-chip,
+.v-label,
+.text-caption, .text-overline,
+.v-field__input,
+.v-pagination {
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* ===== Brutalist Cards ===== */
 .v-card {
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    border: 2px solid #1a1a1a !important;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
-.v-card:hover {
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+.v-theme--dark .v-card {
+    border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* ===== Global Scrollbars ===== */
+.v-card > .v-toolbar {
+    border-bottom: 2px solid #1a1a1a;
+}
+
+.v-theme--dark .v-card > .v-toolbar {
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== Brutalist Buttons ===== */
+.v-btn--variant-elevated.v-btn--color-primary,
+.v-btn--variant-elevated.bg-primary {
+    border: 2px solid #1a1a1a;
+    box-shadow: 3px 3px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-btn--variant-elevated.v-btn--color-primary:hover,
+.v-btn--variant-elevated.bg-primary:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-btn--variant-elevated.v-btn--color-primary:active,
+.v-btn--variant-elevated.bg-primary:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-theme--dark .v-btn--variant-elevated.v-btn--color-primary,
+.v-theme--dark .v-btn--variant-elevated.bg-primary {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 3px 3px 0 0 rgba(255,255,255,0.15) !important;
+}
+
+.v-btn--variant-tonal,
+.v-btn--variant-outlined {
+    border: 2px solid #1a1a1a !important;
+    box-shadow: 2px 2px 0 0 rgba(0,0,0,1);
+}
+
+.v-theme--dark .v-btn--variant-tonal,
+.v-theme--dark .v-btn--variant-outlined {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 2px 2px 0 0 rgba(255,255,255,0.1);
+}
+
+/* ===== Inputs ===== */
+.v-field--variant-outlined .v-field__outline {
+    --v-field-border-width: 2px;
+}
+
+.v-field--focused {
+    box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+.v-field--focused .v-field__outline {
+    --v-field-border-opacity: 1;
+}
+
+/* ===== Data Table ===== */
+.v-data-table th {
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid #1a1a1a !important;
+}
+
+.v-theme--dark .v-data-table th {
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.v-data-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ===== Chips ===== */
+.v-chip {
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.04em;
+}
+
+/* ===== Dialogs ===== */
+.v-overlay__content > .v-card {
+    border: 3px solid #1a1a1a !important;
+    box-shadow: 8px 8px 0 0 rgba(0,0,0,1) !important;
+}
+
+.v-theme--dark .v-overlay__content > .v-card {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 8px 8px 0 0 rgba(255,255,255,0.08) !important;
+}
+
+/* ===== Snackbar ===== */
+.v-snackbar__wrapper {
+    border: 2px solid #1a1a1a !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 0 rgba(0,0,0,1) !important;
+}
+
+/* ===== App Bar ===== */
+.v-app-bar {
+    border-bottom: 3px solid #1a1a1a !important;
+}
+
+.v-theme--dark .v-app-bar {
+    border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ===== Navigation Drawer ===== */
+.v-navigation-drawer {
+    border-right: 2px solid #1a1a1a !important;
+}
+
+.v-theme--dark .v-navigation-drawer {
+    border-right-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.nav-header .app-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+}
+
+.v-navigation-drawer .nav-items .nav-section-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* ===== Scrollbars ===== */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -23,50 +195,17 @@ html, body {
 
 ::-webkit-scrollbar-thumb {
     background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 3px;
+    border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0, 0, 0, 0.25);
 }
 
-.v-theme--dark ::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-.v-theme--dark ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.25);
-}
-
-/* ===== Input Focus States ===== */
-.v-field--focused .v-field__outline {
-    --v-field-border-opacity: 1;
-}
-
-/* ===== Data Table Enhancements ===== */
-.v-data-table tbody tr:hover {
-    background-color: rgba(var(--v-theme-primary), 0.04) !important;
-}
-
-.v-data-table tbody tr:nth-child(even) {
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-.v-theme--dark .v-data-table tbody tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.02);
-}
-
-.v-data-table th {
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.5px;
-}
-
 /* ===== Links ===== */
 a {
     color: rgb(var(--v-theme-primary));
-    transition: opacity 0.2s;
+    transition: opacity 0.15s;
 }
 
 a:hover {
