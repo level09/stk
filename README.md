@@ -1,10 +1,27 @@
-# stk
+<p align="center">
+  <img src="docs/logo.gif" alt="stk" width="480">
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<h1 align="center">stk</h1>
 
-**[Live Demo](https://demo.stk.dev)** · **[Docs](https://docs.stk.dev)** · **[Tutorials](https://github.com/level09/stk/wiki)**
+<p align="center">
+  <strong>Async Python framework with batteries you actually need.</strong><br>
+  Auth, 2FA, WebAuthn, OAuth, WebSockets, admin dashboard, Vue 3 frontend. No build step, no third-party auth services. One codebase, you own everything.
+</p>
 
-A full-stack async Python framework. Auth, 2FA, WebSockets, admin dashboard, Vue 3 frontend. No build step, no third-party auth services, no JS toolchain. One codebase, you own everything.
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+"></a>
+  <a href="https://docs.astral.sh/uv/"><img src="https://img.shields.io/badge/uv-package%20manager-blueviolet.svg" alt="uv"></a>
+</p>
+
+<p align="center">
+  <a href="https://demo.stk.dev">Live Demo</a> &middot;
+  <a href="https://docs.stk.dev">Docs</a> &middot;
+  <a href="https://github.com/level09/stk/wiki">Tutorials</a>
+</p>
+
+---
 
 ```bash
 git clone git@github.com:level09/stk.git && cd stk
@@ -43,9 +60,10 @@ stk ships what actually matters:
 - Multi-factor recovery codes
 - Google and GitHub OAuth with account linking
 - Server-side session tracking (IP, browser, device, expiration)
+- Account lockout after failed attempts
 - Single-session mode (optional)
 - Rate limiting on auth endpoints (sliding window, no Redis)
-- PBKDF2-SHA512 password hashing
+- PBKDF2-SHA512 password hashing, 12 char minimum
 
 ### Real-time
 - Authenticated WebSocket endpoint with per-user message queues
@@ -65,7 +83,7 @@ stk ships what actually matters:
 - Dark/light theme with system preference detection
 - Collapsible sidebar navigation
 - Notification dropdown
-- Tabler Icons (5000+) and Material Design Icons
+- Tabler Icons (5000+)
 - Custom `${ }` delimiters (no Jinja conflicts)
 
 ### Infrastructure
@@ -75,22 +93,23 @@ stk ships what actually matters:
 - Docker Compose: PostgreSQL, Redis, Nginx (one command)
 - VPS deploy script with auto-SSL via Caddy
 - Pre-commit hooks, ruff linting
-- Sanity checks (`uv run python checks.py`) instead of test theater
+- Health endpoint (`/health`) for uptime monitoring
 
 ### AI-native
-- Ships with Claude Code instructions (CLAUDE.md) and Cursor rules
-- Detailed agent patterns (AGENTS.md) for AI-assisted development
+- Ships with Claude Code instructions (`CLAUDE.md`) and Windsurf rules
+- AI-assisted scaffolding skills for blueprints, APIs, and migrations
 - Your AI already knows the codebase conventions
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
-| Runtime | Python 3.11-3.13, [uv](https://docs.astral.sh/uv/) |
-| Web | Quart (async Flask) |
+| Runtime | Python 3.11+, [uv](https://docs.astral.sh/uv/) |
+| Web | [Quart](https://quart.palletsprojects.com/) (async Flask) |
 | ORM | SQLAlchemy 2.0+ async |
 | Database | SQLite (default), PostgreSQL (optional) |
-| Auth | quart-security (2FA, WebAuthn, OAuth) |
+| Migrations | Alembic |
+| Auth | [quart-security](https://quart-security.readthedocs.io/) (2FA, WebAuthn, OAuth) |
 | Frontend | Vue 3, Vuetify 3, Axios |
 | WebSockets | Native Quart WebSocket support |
 | Email | aiosmtplib |
@@ -106,10 +125,10 @@ SECRET_KEY=your_secret_key
 QUART_APP=run.py
 QUART_DEBUG=1                    # 0 in production
 
-# PostgreSQL (optional)
+# PostgreSQL (optional, SQLite is default)
 # SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
 
-# Redis sessions (optional)
+# Redis sessions (optional, cookies are default)
 # REDIS_URL=redis://localhost:6379/1
 
 # OAuth (optional)
@@ -119,6 +138,12 @@ QUART_DEBUG=1                    # 0 in production
 # GITHUB_AUTH_ENABLED=true
 # GITHUB_OAUTH_CLIENT_ID=...
 # GITHUB_OAUTH_CLIENT_SECRET=...
+
+# Email (optional)
+# MAIL_SERVER=smtp.example.com
+# MAIL_USERNAME=...
+# MAIL_PASSWORD=...
+# SECURITY_EMAIL_SENDER=noreply@example.com
 ```
 
 Database migrations:
@@ -146,6 +171,26 @@ curl -sSL https://raw.githubusercontent.com/level09/ignite/main/ignite.sh | sudo
 ```
 
 Handles Caddy (auto SSL), Python 3.13, Redis, systemd services. See [Ignite](https://github.com/level09/ignite).
+
+## CLI Reference
+
+```bash
+uv run quart create-db              # Apply all migrations
+uv run quart install                # Create admin user
+uv run quart create                 # Create user by email/password
+uv run quart add-role               # Assign role to user
+uv run quart reset                  # Reset user password
+uv run quart cleanup-sessions       # Deactivate expired sessions
+uv run quart db upgrade [rev]       # Run migrations forward
+uv run quart db downgrade <rev>     # Roll back migrations
+uv run quart db revision -m "msg"   # Generate new migration
+uv run quart db current             # Show current revision
+uv run quart db history             # Show migration history
+uv run quart migrate                # Alias for upgrade head
+uv run quart migration-status       # Show current revision
+uv run ruff check --fix . && uv run ruff format .  # Lint + format
+uv run python checks.py             # Sanity checks
+```
 
 ## License
 
