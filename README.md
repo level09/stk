@@ -31,8 +31,6 @@ uv run quart install          # admin user
 uv run quart run              # localhost:5000
 ```
 
-https://github.com/user-attachments/assets/a87bfad2-45dc-4d94-bdf1-0448dfea8084
-
 ## Why stk
 
 Most frameworks give you routing and leave the rest as homework. Auth alone eats weeks. Then you bolt on Clerk or Auth0, hand your users' credentials to a third party, and pay per-MAU for the privilege.
