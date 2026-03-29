@@ -124,12 +124,12 @@
             </v-toolbar>
             <v-card-text>
                 <p class="mb-4 text-body-2">Set a new password for <strong>${resetUser.email}</strong></p>
-                <v-text-field label="New Password" type="password" v-model="resetPassword" :rules="[v => !!v && v.length >= 8 || 'Min 8 characters']"></v-text-field>
+                <v-text-field label="New Password" type="password" v-model="resetPassword" :rules="[v => !!v && v.length >= 12 || 'Min 12 characters']"></v-text-field>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn @click="resetDialog=false" variant="text">Cancel</v-btn>
-                <v-btn color="primary" @click="submitResetPassword" variant="elevated" :disabled="!resetPassword || resetPassword.length < 8">Reset</v-btn>
+                <v-btn color="primary" @click="submitResetPassword" variant="elevated" :disabled="!resetPassword || resetPassword.length < 12">Reset</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
