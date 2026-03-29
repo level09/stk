@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.gif" alt="stk" width="480">
+  <img src="docs/logo.svg" alt="stk" width="480">
 </p>
 
 <h1 align="center">stk</h1>
