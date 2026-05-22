@@ -10,7 +10,6 @@
     <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
 
     <link rel="stylesheet" href="/static/css/vuetify.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <link rel="stylesheet" href="/static/css/layout.css">
     <link rel="stylesheet" href="/static/css/app.css">
@@ -296,5 +295,20 @@
 </script>
 
 {% block js %}{% endblock %}
+
+<!-- Prefetch same-origin links on hover (Chrome). Skip mutating/auth routes. -->
+<script type="speculationrules">
+{
+  "prefetch": [{
+    "where": {
+      "and": [
+        { "href_matches": "/*" },
+        { "not": { "href_matches": ["/logout", "/login/*", "/oauth/*", "/ws"] } }
+      ]
+    },
+    "eagerness": "moderate"
+  }]
+}
+</script>
 </body>
 </html>
