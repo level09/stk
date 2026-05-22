@@ -1,3 +1,14 @@
+/* Native cross-document view transitions for MPA navigation.
+   Chrome 126+/Safari 18.2+ animate; Firefox ignores and snaps (graceful). */
+@view-transition {
+    navigation: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+}
+
 html, body {
     height: 100%;
 }
