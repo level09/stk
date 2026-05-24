@@ -23,7 +23,7 @@
             </v-btn>
         </form>
         {% else %}
-        <div class="text-center pa-6">
+        <div class="text-center pa-6" id="wan-waiting">
             <v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
             <div class="text-body-1">Waiting for your security key...</div>
             <div class="text-caption text-medium-emphasis mb-4">Follow the prompts on your device</div>
@@ -111,6 +111,8 @@
                 document.getElementById('wan-signin-response-form').submit();
             })
             .catch(error => {
+                const waiting = document.getElementById('wan-waiting');
+                if (waiting) waiting.style.display = 'none';
                 document.getElementById('wan-errors').innerHTML =
                     '<div class="v-alert v-alert--density-default v-alert--variant-tonal bg-error pa-4 rounded mb-4">' +
                     (error.message || 'Passkey sign-in failed.') + '</div>';
