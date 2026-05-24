@@ -9,6 +9,66 @@ const config = {
 
     // Vuetify configuration
     vuetifyConfig: {
+        // Tabler icon set for Vuetify's internal component icons (data-table
+        // sort/pagination, select dropdown, checkboxes, alerts). Without this
+        // Vuetify defaults to mdi aliases, which render blank since we ship no
+        // MDI font. Pass-through any explicit "ti ti-*" string; prefix bare names.
+        icons: {
+            defaultSet: 'tabler',
+            sets: {
+                tabler: {
+                    component: (props) => {
+                        const icon = props.icon || '';
+                        const cls = (icon.startsWith('ti ') || icon.startsWith('ti-'))
+                            ? icon
+                            : `ti ti-${icon}`;
+                        return Vue.h(props.tag, { class: cls });
+                    }
+                }
+            },
+            aliases: {
+                complete: 'check',
+                cancel: 'circle-x',
+                close: 'x',
+                delete: 'x',
+                clear: 'circle-x',
+                success: 'circle-check',
+                info: 'info-circle',
+                warning: 'alert-triangle',
+                error: 'alert-circle',
+                prev: 'chevron-left',
+                next: 'chevron-right',
+                checkboxOn: 'square-check',
+                checkboxOff: 'square',
+                checkboxIndeterminate: 'square-minus',
+                delimiter: 'circle',
+                sortAsc: 'arrow-up',
+                sortDesc: 'arrow-down',
+                expand: 'chevron-down',
+                menu: 'menu-2',
+                subgroup: 'chevron-down',
+                dropdown: 'chevron-down',
+                radioOn: 'circle-check',
+                radioOff: 'circle',
+                edit: 'pencil',
+                ratingEmpty: 'star',
+                ratingFull: 'star-filled',
+                ratingHalf: 'star-half-filled',
+                loading: 'loader-2',
+                first: 'chevrons-left',
+                last: 'chevrons-right',
+                unfold: 'arrows-sort',
+                file: 'paperclip',
+                plus: 'plus',
+                minus: 'minus',
+                calendar: 'calendar',
+                treeviewCollapse: 'chevron-down',
+                treeviewExpand: 'chevron-right',
+                eyeDropper: 'color-picker',
+                upload: 'upload',
+                color: 'palette'
+            }
+        },
         defaults: {
             VTextField: {
                 variant: 'outlined'
