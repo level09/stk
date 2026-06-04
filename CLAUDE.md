@@ -6,6 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Async Quart web framework with Vue 3 + Vuetify frontend (no build step). Full auth stack via quart-security (session auth, 2FA/TOTP, WebAuthn, OAuth). SQLite default, PostgreSQL optional. Alembic for migrations.
 
+## Vision
+
+stk is a lean agent-operable SaaS framework.
+
+The goal is not to add AI features. The goal is to make the path from idea to secure working app cheaper, clearer, and more verifiable.
+
+AI changed the cost curve: exploration, scaffolding, refactoring, and documentation are cheaper. Verification, security, judgment, and product taste are now the bottleneck. stk should optimize for that new center of gravity.
+
+Core loop:
+
+```text
+idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> ship
+```
+
 ## Commands
 
 ```bash

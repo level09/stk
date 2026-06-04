@@ -7,6 +7,7 @@
 <p align="center">
   <strong>Async Python framework with batteries you actually need.</strong><br>
   Auth, 2FA, WebAuthn, OAuth, WebSockets, admin dashboard, Vue 3 frontend. No build step, no third-party auth services. One codebase, you own everything.
+  STK makes SaaS apps legible, changeable, testable, and operable by agents.
 </p>
 
 <p align="center">
@@ -96,6 +97,8 @@ stk ships what actually matters:
 ### AI-native
 - Ships with Claude Code instructions (`CLAUDE.md`) and Windsurf rules
 - AI-assisted scaffolding skills for blueprints, APIs, and migrations
+- Structured agent context in `.stk/context/`
+- Route inspection, verification, and review artifacts via `quart inspect`, `quart verify`, and `quart report`
 - Your AI already knows the codebase conventions
 
 ## Stack
@@ -186,6 +189,9 @@ uv run quart db current             # Show current revision
 uv run quart db history             # Show migration history
 uv run quart migrate                # Alias for upgrade head
 uv run quart migration-status       # Show current revision
+uv run quart inspect routes --json  # Machine-readable route map
+uv run quart verify                 # Lint, sanity, and migration checks
+uv run quart report                 # Static project review artifact
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
 uv run python checks.py             # Sanity checks
 ```
