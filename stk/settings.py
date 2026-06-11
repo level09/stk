@@ -84,6 +84,15 @@ class Config:
     DISABLE_MULTIPLE_SESSIONS = (
         os.environ.get("DISABLE_MULTIPLE_SESSIONS", "False").lower() == "true"
     )
+    # Test-only browser session handoff for agent-driven development.
+    STK_ENV = os.environ.get("STK_ENV", "production")
+    STK_ENABLE_AGENT_LOGIN = (
+        os.environ.get("STK_ENABLE_AGENT_LOGIN", "False").lower() == "true"
+        or os.environ.get("STK_ENABLE_AGENT_LOGIN") == "1"
+    )
+    STK_AGENT_LOGIN_MAX_TTL_SECONDS = int(
+        os.environ.get("STK_AGENT_LOGIN_MAX_TTL_SECONDS", "60")
+    )
 
     # Email settings (used by aiosmtplib via AsyncMailUtil)
     MAIL_SERVER = os.environ.get("MAIL_SERVER")

@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 import stk.extensions as ext
 from alembic import command
+from stk.agent_login import create_agent_login_token
 from stk.migrations import build_alembic_config
 from stk.user.models import User
 
@@ -76,6 +77,8 @@ def _route_source(view_func):
 
 
 def _route_auth(rule):
+    if rule.rule.startswith("/_test/"):
+        return {"required": False, "source": "test-only", "scheme": "agent-token"}
     blueprint = rule.endpoint.rsplit(".", 1)[0] if "." in rule.endpoint else None
     if blueprint in {"portal", "users"}:
         return {"required": True, "source": "blueprint", "scheme": "session"}
@@ -204,6 +207,33 @@ def create_db():
     os.makedirs(instance_dir, exist_ok=True)
     command.upgrade(build_alembic_config(), "head")
     console.print("[green]Database migrations applied successfully[/]")
+
+
+@click.group("browser-token")
+def browser_token():
+    """Create test-only browser login URLs."""
+
+
+@browser_token.command("create")
+@click.option("--user", "email", required=True, help="Test user email.")
+@click.option("--ttl", default=60, type=int, help="Token TTL in seconds.")
+@click.option("--next", "next_path", default="/dashboard/", help="Local redirect path.")
+def browser_token_create(email, ttl, next_path):
+    """Create a signed test-only browser login URL."""
+    from stk.app import create_app
+
+    app = create_app()
+    if ttl > app.config["STK_AGENT_LOGIN_MAX_TTL_SECONDS"]:
+        raise click.ClickException("ttl exceeds STK_AGENT_LOGIN_MAX_TTL_SECONDS")
+    if not app.config["STK_ENABLE_AGENT_LOGIN"]:
+        raise click.ClickException("agent login is disabled")
+
+    async def _create_token():
+        async with app.app_context():
+            return create_agent_login_token(email, next_path)
+
+    token = run_async(_create_token())
+    click.echo(f"/_test/login?token={token}")
 
 
 @click.group(name="inspect")

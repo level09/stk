@@ -1,6 +1,11 @@
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
+from quart_security import hash_password
+
+import stk.extensions as ext
+from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
 from stk.commands import (
     _command_runner,
@@ -8,6 +13,7 @@ from stk.commands import (
     build_routes_report,
     build_verify_report,
 )
+from stk.user.models import Role, User
 
 
 class AgentOperabilityTests(unittest.TestCase):
@@ -77,6 +83,134 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn("verify", app.cli.commands)
         self.assertIn("report", app.cli.commands)
         self.assertNotIn("explain", app.cli.commands)
+
+
+class AgentLoginConfigTests(unittest.TestCase):
+    def test_agent_login_is_disabled_by_default(self):
+        app = create_app()
+
+        self.assertFalse(app.config["STK_ENABLE_AGENT_LOGIN"])
+        self.assertEqual(app.config["STK_ENV"], "production")
+        self.assertNotIn("agent_login.agent_login", app.view_functions)
+
+
+class AgentLoginEnabledConfig:
+    SECRET_KEY = "test-secret"
+    SECURITY_PASSWORD_SALT = "test-salt"
+    SQLALCHEMY_DATABASE_URI = "sqlite+aiosqlite:///:memory:"
+    SESSION_TYPE = None
+    STK_ENV = "development"
+    STK_ENABLE_AGENT_LOGIN = True
+    STK_AGENT_LOGIN_MAX_TTL_SECONDS = 60
+
+
+class AgentLoginUnsafeConfig(AgentLoginEnabledConfig):
+    STK_ENV = "production"
+    TESTING = False
+
+
+class AgentLoginTestingConfig(AgentLoginEnabledConfig):
+    TESTING = True
+    STK_ENV = "production"
+
+
+class AgentLoginBlueprintTests(unittest.TestCase):
+    def test_agent_login_registers_in_development_only_when_enabled(self):
+        app = create_app(AgentLoginEnabledConfig)
+
+        self.assertIn("agent_login.agent_login", app.view_functions)
+
+    def test_agent_login_registers_when_testing_even_if_env_is_production(self):
+        app = create_app(AgentLoginTestingConfig)
+
+        self.assertIn("agent_login.agent_login", app.view_functions)
+
+    def test_agent_login_crashes_when_enabled_in_production(self):
+        with self.assertRaisesRegex(RuntimeError, "agent login cannot be enabled"):
+            create_app(AgentLoginUnsafeConfig)
+
+
+class AgentLoginTokenTests(unittest.IsolatedAsyncioTestCase):
+    async def test_agent_login_token_round_trips_user_and_next_path(self):
+        app = create_app(AgentLoginTestingConfig)
+
+        async with app.app_context():
+            token = create_agent_login_token("admin@example.com", "/dashboard/")
+            payload = read_agent_login_token(token, max_age=60)
+
+        self.assertEqual(payload["email"], "admin@example.com")
+        self.assertEqual(payload["next"], "/dashboard/")
+
+    async def test_agent_login_token_rejects_external_redirect(self):
+        app = create_app(AgentLoginTestingConfig)
+
+        async with app.app_context():
+            with self.assertRaisesRegex(ValueError, "next path must be local"):
+                create_agent_login_token("admin@example.com", "https://evil.test")
+
+
+class AgentLoginRouteTests(unittest.IsolatedAsyncioTestCase):
+    async def test_agent_login_rejects_missing_token(self):
+        app = create_app(AgentLoginTestingConfig)
+
+        async with app.test_client() as client:
+            response = await client.get("/_test/login")
+
+        self.assertEqual(response.status_code, 400)
+
+    async def test_agent_login_rejects_non_example_user(self):
+        app = create_app(AgentLoginTestingConfig)
+
+        async with app.app_context():
+            token = create_agent_login_token("real@company.com", "/dashboard/")
+
+        async with app.test_client() as client:
+            response = await client.get(f"/_test/login?token={token}")
+
+        self.assertEqual(response.status_code, 403)
+
+
+class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.app = create_app(AgentLoginTestingConfig)
+        async with ext.engine.begin() as conn:
+            await conn.run_sync(Role.metadata.create_all)
+
+    async def asyncTearDown(self):
+        await ext.engine.dispose()
+
+    async def test_agent_login_creates_authenticated_session(self):
+        async with ext.async_session_factory() as session:
+            role = Role(name="admin")
+            user = User(
+                email="admin@example.com",
+                name="Admin",
+                password=hash_password("TestPassword123!"),
+                active=True,
+                confirmed_at=datetime.now(),
+            )
+            user.roles.append(role)
+            session.add(user)
+            await session.commit()
+
+        async with self.app.app_context():
+            token = create_agent_login_token("admin@example.com", "/dashboard/")
+
+        async with self.app.test_client() as client:
+            response = await client.get(f"/_test/login?token={token}")
+            self.assertEqual(response.status_code, 302)
+
+            dashboard = await client.get("/dashboard/")
+
+        self.assertNotEqual(dashboard.status_code, 401)
+
+
+class AgentLoginVerificationTests(unittest.TestCase):
+    def test_verify_report_marks_agent_login_disabled_as_safe(self):
+        app = create_app()
+        routes = build_routes_report(app)
+
+        self.assertNotIn("/_test/login", {route["rule"] for route in routes})
 
 
 if __name__ == "__main__":
