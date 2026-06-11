@@ -11,3 +11,16 @@ Security invariants:
 - Do not expose secrets in generated artifacts.
 
 When changing auth, inspect the route map, update tests or checks, and generate a project report.
+
+## Agent Browser Login
+
+Agent browser login is a development/testing-only session handoff. It is disabled by default and must never be enabled in production.
+
+Required guards:
+
+1. `STK_ENABLE_AGENT_LOGIN=1`
+2. `STK_ENV=development` or `app.testing == true`
+3. Signed short-lived token
+4. Test user email ending in `@example.com`
+
+If the feature is enabled outside development/testing, app startup fails.
