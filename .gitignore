@@ -24,6 +24,7 @@ __pycache__/
 .quartenv
 
 # Private planning docs (never publish)
+docs/plans/
 docs/superpowers/
 
 # Browser smoke artifacts
