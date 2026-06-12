@@ -836,3 +836,37 @@ def migrate():
 def migration_status():
     """Show the current Alembic migration revision."""
     command.current(build_alembic_config())
+
+
+@click.command("new")
+@click.argument("name")
+def new_module(name):
+    """Scaffold a new blueprint module.
+
+    NAME must be a lowercase snake_case identifier (e.g. blog_post).
+    Generates blueprint package, template, and wires into app.py + navigation.js.
+    """
+    from stk.scaffold.generator import generate_module
+
+    try:
+        actions = generate_module(name)
+    except (ValueError, FileExistsError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    console.print(f"\n[green]Scaffolded blueprint:[/] [bold]{name}[/]")
+    for action in actions:
+        console.print(f"  [blue]+[/] {action}")
+
+    console.print(
+        f"""
+[yellow]Post-generation checklist:[/]
+  1. Customize [bold]stk/{name}/models.py[/] -- add/rename fields to fit your domain.
+  2. Run migration autogenerate:
+       [bold]uv run quart db revision -m "add {name}"[/]
+     Review [bold]alembic/versions/<rev>_add_{name}.py[/] for correctness.
+  3. Apply migration:
+       [bold]uv run quart db upgrade[/]
+  4. Verify:
+       [bold]uv run quart verify && uv run quart smoke[/]
+"""
+    )
