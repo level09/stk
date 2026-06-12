@@ -11,7 +11,9 @@ from stk.commands import (
     _command_runner,
     build_project_report_html,
     build_routes_report,
+    build_smoke_report,
     build_verify_report,
+    smoke_exit_code,
 )
 from stk.user.models import Role, User
 
@@ -81,8 +83,43 @@ class AgentOperabilityTests(unittest.TestCase):
 
         self.assertIn("inspect", app.cli.commands)
         self.assertIn("verify", app.cli.commands)
+        self.assertIn("smoke", app.cli.commands)
         self.assertIn("report", app.cli.commands)
         self.assertNotIn("explain", app.cli.commands)
+
+    def test_smoke_report_marks_only_behavioral_failures_as_failed(self):
+        report = build_smoke_report(
+            [
+                {
+                    "name": "login",
+                    "path": "/login",
+                    "status": 200,
+                    "console": [{"type": "warning", "text": "slow asset"}],
+                    "failed_requests": [],
+                },
+                {
+                    "name": "dashboard",
+                    "path": "/dashboard/",
+                    "status": 500,
+                    "console": [{"type": "error", "text": "ReferenceError"}],
+                    "failed_requests": [
+                        {"url": "http://127.0.0.1/static/missing.js", "failure": "404"}
+                    ],
+                },
+            ],
+            dashboard_screenshot=".stk/smoke/dashboard.png",
+        )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(smoke_exit_code(report), 1)
+        self.assertEqual(report["pages"][0]["status"], "passed")
+        self.assertEqual(report["pages"][1]["status"], "failed")
+        self.assertIn("HTTP 500", report["pages"][1]["problems"])
+        self.assertIn("console error: ReferenceError", report["pages"][1]["problems"])
+        self.assertIn(
+            "request failed: http://127.0.0.1/static/missing.js 404",
+            report["pages"][1]["problems"],
+        )
 
 
 class AgentLoginConfigTests(unittest.TestCase):

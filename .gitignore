@@ -25,3 +25,6 @@ __pycache__/
 
 # Private planning docs (never publish)
 docs/superpowers/
+
+# Browser smoke artifacts
+.stk/smoke/

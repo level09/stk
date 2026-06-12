@@ -47,6 +47,7 @@ full = [
 dev = [
     "ruff",
     "pre-commit",
+    "playwright",
 ]
 asgi = [
     "hypercorn>=0.17.0",
