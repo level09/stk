@@ -413,3 +413,9 @@ await run_with_session(heavy_work)
 ```
 
 For detailed examples see [references/patterns.md](references/patterns.md).
+
+## Frontend Component Reference
+
+Canonical Vuetify/Vue component surface (pinned versions, real prop names, usage patterns):
+`.stk/context/frontend.md` — consult this before writing any template or JS. It documents every
+component tag, prop, slot, and event actually used in this codebase, sourced from the templates.
