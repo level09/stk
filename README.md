@@ -17,7 +17,6 @@
 </p>
 
 <p align="center">
-  <a href="https://demo.stk.dev">Live Demo</a> &middot;
   <a href="https://docs.stk.dev">Docs</a> &middot;
   <a href="https://github.com/level09/stk/wiki">Tutorials</a>
 </p>
@@ -95,7 +94,7 @@ stk ships what actually matters:
 - Health endpoint (`/health`) for uptime monitoring
 
 ### AI-native
-- Ships with Claude Code instructions (`CLAUDE.md`) and Windsurf rules
+- Ships with Claude Code instructions (`CLAUDE.md`) and agent primitives
 - AI-assisted scaffolding skills for blueprints, APIs, and migrations
 - Structured agent context in `.stk/context/`
 - Route inspection, verification, and review artifacts via `quart inspect`, `quart verify`, and `quart report`
