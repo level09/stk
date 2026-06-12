@@ -9,81 +9,66 @@ argument-hint: "[blueprint-name]"
 
 Create a complete blueprint for `$ARGUMENTS` in the stk framework.
 
-## Current project state
+## Workflow
 
-Existing blueprints:
-!`ls -d stk/*/views.py 2>/dev/null | sed 's|stk/||;s|/views.py||'`
+The scaffolder generates the full module structure. Run it first, then customize domain fields and logic.
 
-Registered in app.py:
-!`grep -E 'register_blueprint|from stk\.' stk/app.py`
+```bash
+uv run quart new <name>
+```
 
-Navigation items:
-!`grep -E 'title:|heading:' stk/static/js/navigation.js 2>/dev/null | head -20`
+`<name>` must be lowercase snake_case (e.g. `blog_post`, `invoice_line`). Reserved names (`user`, `role`, `portal`, `public`, `session`, `admin`, etc.) are rejected with a clear error.
 
-## Steps
+The command generates:
+- `stk/<name>/__init__.py`, `models.py`, `views.py`
+- `stk/templates/cms/<name>.html`
+- Patches `stk/app.py` (import + `register_blueprint`)
+- Patches `stk/static/js/navigation.js` (nav entry)
 
-1. **Create the blueprint directory** at `stk/$ARGUMENTS/`:
-   - `__init__.py` (empty)
-   - `models.py` with model(s) inheriting from `Base`
-   - `views.py` with Blueprint, page route, and CRUD API endpoints
+Then:
+1. Customize `stk/<name>/models.py` -- add/rename fields to fit your domain
+2. Run: `uv run quart db revision -m "add <name>"` and review the generated migration
+3. Apply: `uv run quart db upgrade`
+4. Verify: `uv run quart verify && uv run quart smoke`
 
-2. **Models must follow stk conventions:**
-   - `import dataclasses` and use `@dataclasses.dataclass` decorator
-   - Import `Base` from `stk.extensions`, NOT `db`
-   - Use `Column(Type)` from sqlalchemy directly
-   - All relationships use `lazy="selectin"`
-   - Include `to_dict()` instance method
-   - Include `async from_dict(self, data)` as **instance method** that mutates self (NOT a classmethod)
-   - Include `created_at = Column(DateTime, default=datetime.now, nullable=False)`
+## Customization reference
 
-3. **Views must follow the real codebase patterns:**
-   - ALL handlers are `async def`
-   - Use `import orjson as json` and return `Response(json.dumps(data), content_type="application/json")` for list endpoints
-   - Blueprint-level auth via `@bp.before_request` with `@auth_required("session")` (add `@roles_required("admin")` if admin-only)
-   - DB access via `await g.db_session.execute(...)` or `await g.db_session.get(...)`
-   - Frontend sends `{item: {...}}`, extract with `json_data.get("item", {})`
-   - Wrap mutations in try/except with `await g.db_session.rollback()` on error
-   - Log mutations: `await Activity.register(current_user.id, "Action", data)`
-   - Return `{"message": "..."}` for create/update/delete responses
-   - Use `PER_PAGE = 25` constant
-   - Use `log = logging.getLogger(__name__)` for error logging
+After scaffolding, the generated files follow these conventions. Only touch these when you need to go beyond the defaults.
 
-4. **Create template** at `stk/templates/$ARGUMENTS/index.html` or `stk/templates/cms/$ARGUMENTS.html`:
-   - Extend `layout.html`
-   - Vue 3 Options API: `data()`, `methods`, `mounted()`, NOT `setup()`
-   - Must include `mixins: [layoutMixin]` and `delimiters: config.delimiters`
-   - Use `const vuetify = createVuetify(config.vuetifyConfig)`
-   - Call `registerStkComponents(app)` before `app.use(vuetify).mount("#app")`
-   - Use `v-data-table-server` for lists
-   - Icons: Tabler Icons (`ti ti-*`), e.g. `ti ti-plus`, `ti ti-pencil`, `ti ti-trash`, `ti ti-x`
-   - Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
-   - Use `toRaw()` from Vue when editing items: `const {createApp, toRaw} = Vue`
+### Models (`stk/<name>/models.py`)
 
-5. **Register the blueprint** in `stk/app.py`:
-   - Add import at top with other blueprint imports
-   - Add `app.register_blueprint(bp)` in `register_blueprints()`
+- `import dataclasses` and use `@dataclasses.dataclass` decorator
+- Import `Base` from `stk.extensions`, NOT `db`
+- Use `Column(Type)` from sqlalchemy directly
+- All relationships use `lazy="selectin"`
+- Include `to_dict()` instance method
+- Include `async from_dict(self, data)` as **instance method** that mutates self (NOT a classmethod)
+- Include `created_at = Column(DateTime, default=datetime.now, nullable=False)`
 
-6. **Add navigation entry** in `stk/static/js/navigation.js`:
-   ```javascript
-   // Simple link (role is singular string, not array)
-   { title: '$ARGUMENTS', icon: 'ti ti-<icon>', to: '/$ARGUMENTS', role: 'admin' },
+### Views (`stk/<name>/views.py`)
 
-   // Or grouped with children
-   {
-     title: '$ARGUMENTS', icon: 'ti ti-<icon>', role: 'admin',
-     children: [
-       { title: 'List', icon: 'ti ti-list', to: '/$ARGUMENTS' },
-     ]
-   },
-   ```
+- ALL handlers are `async def`
+- Use `import orjson as json` and return `Response(json.dumps(data), content_type="application/json")` for list endpoints
+- Blueprint-level auth via `@bp.before_request` with `@auth_required("session")` + `@roles_required("admin")`
+- DB access via `await g.db_session.execute(...)` or `await g.db_session.get(...)`
+- Frontend sends `{item: {...}}`, extract with `json_data.get("item", {})`
+- Wrap mutations in try/except with `await g.db_session.rollback()` on error
+- Log mutations: `await Activity.register(current_user.id, "Action", data)`
+- Return `{"message": "..."}` for create/update/delete responses
+- Use `PER_PAGE = 25` constant
+- Use `log = logging.getLogger(__name__)` for error logging
 
-7. **Generate Alembic migration:**
-   - Run: `uv run quart db revision -m "add $ARGUMENTS tables"`
-   - Review the generated migration for correctness
+### Template (`stk/templates/cms/<name>.html`)
 
-8. **Verify:**
-   - Run `uv run ruff check --fix . && uv run ruff format .`
-   - Run `uv run python checks.py`
+- Extend `layout.html`
+- Vue 3 Options API: `data()`, `methods`, `mounted()`, NOT `setup()`
+- Must include `mixins: [layoutMixin]` and `delimiters: config.delimiters`
+- Use `const vuetify = createVuetify(config.vuetifyConfig)`
+- Call `registerStkComponents(app)` before `app.use(vuetify).mount("#app")`
+- Use `v-data-table-server` for lists
+- Icons: Tabler Icons (`ti ti-*`), e.g. `ti ti-plus`, `ti ti-pencil`, `ti ti-trash`, `ti ti-x`
+- Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
+- Use `toRaw()` from Vue when editing items: `const {createApp, toRaw} = Vue`
 
 ## Do NOT:
 - Use `db.Model`, `db.Column`, `db.select()`, or any Flask-SQLAlchemy patterns
@@ -92,7 +77,7 @@ Navigation items:
 - Use `jsonify()` (return dicts or Response objects)
 - Use `lazy="dynamic"` on relationships (breaks async)
 - Forget `await` on DB operations
-- Use Vue Composition API (`setup()`, `ref()`, `reactive()`) — use Options API
-- Use Material Design Icons — use Tabler Icons (`ti ti-*`)
-- Send raw data in POST — wrap in `{item: {...}}`
+- Use Vue Composition API (`setup()`, `ref()`, `reactive()`) -- use Options API
+- Use Material Design Icons -- use Tabler Icons (`ti ti-*`)
+- Send raw data in POST -- wrap in `{item: {...}}`
 - Forget `mixins: [layoutMixin]` or `registerStkComponents(app)` in templates
