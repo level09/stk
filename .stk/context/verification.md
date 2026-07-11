@@ -17,6 +17,7 @@ For database changes, also run:
 
 For auth or route changes, also run:
 - `uv run quart inspect routes --json`
+- `uv run quart inspect context --json`
 - `uv run quart report`
 
 ## Browser Feature Testing

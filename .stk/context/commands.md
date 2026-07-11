@@ -15,6 +15,7 @@ Common commands:
 
 Agent-operability commands:
 - `uv run quart inspect routes --json`
+- `uv run quart inspect context --json`
 - `uv run quart verify`
 - `uv run quart verify --json`
 - `uv run quart smoke`

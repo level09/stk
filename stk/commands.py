@@ -24,7 +24,7 @@ from sqlalchemy import select
 import stk.extensions as ext
 from alembic import command
 from stk.agent_login import create_agent_login_token
-from stk.migrations import build_alembic_config
+from stk.migrations import build_alembic_config, import_model_modules
 from stk.user.models import User
 
 console = Console()
@@ -116,6 +116,36 @@ def build_routes_report(app):
             }
         )
     return routes
+
+
+def build_models_report():
+    """Return model metadata in a compact, agent-readable shape."""
+    from stk.extensions import Base
+
+    import_model_modules()
+    models = {}
+    for table_name, table in sorted(Base.metadata.tables.items()):
+        models[table_name] = {
+            "columns": [
+                {
+                    "name": column.name,
+                    "type": str(column.type),
+                    "nullable": column.nullable,
+                    "primary_key": column.primary_key,
+                }
+                for column in table.columns
+            ],
+            "indexes": sorted(index.name for index in table.indexes if index.name),
+        }
+    return models
+
+
+def build_context_report(app):
+    """Return the project context contract used by agents and tooling."""
+    return {
+        "routes": build_routes_report(app),
+        "models": build_models_report(),
+    }
 
 
 def build_verify_report(commands=None, runner=_command_runner):
@@ -527,6 +557,22 @@ def inspect_routes(as_json):
     for route in report:
         methods = ",".join(route["methods"])
         click.echo(f"{methods:12} {route['rule']} -> {route['endpoint']}")
+
+
+@inspect_cmd.command("context")
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
+def inspect_context(as_json):
+    """Inspect routes and models as one agent-readable contract."""
+    from stk.app import create_app
+
+    report = build_context_report(create_app())
+    if as_json:
+        click.echo(json.dumps(report, indent=2))
+        return
+
+    click.echo(
+        f"Context: {len(report['routes'])} routes, {len(report['models'])} models"
+    )
 
 
 @click.command()
