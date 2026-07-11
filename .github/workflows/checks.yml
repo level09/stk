@@ -2,9 +2,15 @@ name: Checks
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, dev]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, dev]
+
+env:
+  QUART_APP: run.py
+  SECRET_KEY: test-secret-key-for-ci
+  SECURITY_PASSWORD_SALT: test-salt-for-ci
+  SECURITY_TOTP_SECRETS: test-totp-secret
 
 jobs:
   checks:
@@ -20,22 +26,29 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra dev
+
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
 
       - name: Create database tables
-        env:
-          QUART_APP: run.py
-          SECRET_KEY: test-secret-key-for-ci
-          SECURITY_PASSWORD_SALT: test-salt-for-ci
-          SECURITY_TOTP_SECRETS: test-totp-secret
         run: |
           mkdir -p instance
           uv run quart create-db
 
-      - name: Run checks
-        env:
-          QUART_APP: run.py
-          SECRET_KEY: test-secret-key-for-ci
-          SECURITY_PASSWORD_SALT: test-salt-for-ci
-          SECURITY_TOTP_SECRETS: test-totp-secret
-        run: uv run python checks.py -v
+      - name: Unit tests
+        run: uv run python -m unittest discover tests -v
+
+      - name: Verify (lint, sanity, migrations)
+        run: uv run quart verify --json
+
+      - name: Browser smoke (behavioral)
+        run: uv run quart smoke --json
+
+      - name: Upload smoke artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: .stk/smoke/
+          if-no-files-found: ignore
