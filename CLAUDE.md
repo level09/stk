@@ -34,6 +34,20 @@ uv run python checks.py           # Sanity checks (not pytest)
 docker compose up --build          # Full stack (Redis, PostgreSQL, Nginx)
 ```
 
+### Agent Operability
+
+Prefer these over guessing from files. Structured agent context lives in `.stk/context/` (architecture, commands, verification, frontend).
+
+```bash
+uv run quart inspect routes --json   # Route map with auth and source info
+uv run quart inspect context --json  # Routes + models in one contract
+uv run quart verify --json           # Lint, sanity, migration checks (exit 0/1)
+uv run quart smoke --json            # Real-browser behavioral check (Playwright)
+uv run quart report                  # Static project review artifact
+uv run quart new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
+uv run python -m unittest tests/test_agent_operability.py tests/test_scaffolder.py
+```
+
 ### Database Migrations (Alembic)
 
 ```bash

@@ -187,6 +187,23 @@ uv run ruff check --fix .     # Lint and auto-fix
 uv run ruff format .          # Format code
 ```
 
+## Agent Operability
+
+stk exposes machine-readable project state so agents and tooling can verify instead of guess:
+
+```bash
+uv run quart inspect routes --json    # Route map with auth and source info
+uv run quart inspect context --json   # Routes and models in one contract
+uv run quart verify --json            # Lint, sanity, and migration checks
+uv run quart smoke --json             # Real-browser smoke check (Playwright)
+uv run quart report                   # Static project review artifact
+uv run quart new <module>             # Deterministic module scaffold
+```
+
+The smoke command boots a temporary app with its own SQLite database, logs in through a test-only agent route, visits the dashboard and admin pages, captures console errors and failed requests, and writes a screenshot to `.stk/smoke/`. The test login route is not registered by default and refuses to start outside development or testing.
+
+Structured agent context (architecture, commands, verification, frontend conventions) lives in `.stk/context/`.
+
 ## Security Best Practices
 
 1. **Input Validation**

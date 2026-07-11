@@ -15,7 +15,7 @@ stk combines Quart (async Python) with Vue 3 and Vuetify 3, without webpack, vit
 - **Zero build step** - Vue 3 + Vuetify 3 run directly in browser. No node_modules
 - **Auth that works** - 2FA, WebAuthn, OAuth (Google/GitHub) — production code, not a tutorial
 - **SQLite by default** - Deploy anywhere. Add PostgreSQL when you need it
-- **AI-native** - Ships with Claude Code & Cursor rules
+- **Agent-operable** - Ships with `AGENTS.md`, structured context, and CLI verification commands
 - **Complexity is opt-in** - Redis, PostgreSQL are optional add-ons
 
 ## Documentation Sections
@@ -44,22 +44,17 @@ GITHUB_OAUTH_CLIENT_ID=your_client_id
 GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
 ```
 
-## Cursor Rules
+## Built for AI Agents
 
-stk now leverages Cursor Rules for intelligent code assistance and generation. This approach provides:
+stk ships with `AGENTS.md` and structured context in `.stk/context/`, so AI assistants (Claude Code, Cursor, Copilot) understand the codebase instantly. Machine-readable introspection and verification close the loop:
 
-- Context-aware code generation through modern AI-powered IDEs
-- Codebase-specific guidance tailored to stk's patterns
-- Improved documentation integrated with development tools
-- Framework-specific best practices and conventions
-- More flexible workflow than template-based generation
+- `quart inspect context --json` reports routes and models in one contract
+- `quart verify --json` runs lint, sanity, and migration checks
+- `quart smoke --json` drives a real browser through login and the dashboard
+- `quart new <module>` scaffolds a complete module deterministically
 
-Rules are organized by domain areas like Vue-Jinja integration and UI components to provide targeted assistance exactly when needed.
+See [AI-Assisted Development](/cursor-rules) for details.
 
 ## Source Code
 
-The source code is available on [GitHub](https://github.com/level09/stk).
-
-## Contributing
-
-We welcome contributions! Please read our [Contributing Guide](https://github.com/level09/stk/blob/master/CONTRIBUTING.md) for details. 
+The source code is available on [GitHub](https://github.com/level09/stk). Issues and pull requests welcome. 
