@@ -9,6 +9,7 @@ from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
 from stk.commands import (
     _command_runner,
+    build_context_report,
     build_project_report_html,
     build_routes_report,
     build_smoke_report,
@@ -32,6 +33,15 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn("source", by_rule["/dashboard/"])
         self.assertTrue(by_rule["/users/"]["auth"]["required"])
         self.assertEqual(by_rule["/users/"]["auth"]["source"], "blueprint")
+
+    def test_context_report_exposes_routes_and_models(self):
+        report = build_context_report(create_app())
+
+        self.assertEqual(set(report), {"routes", "models"})
+        self.assertIn("user", report["models"])
+        user_columns = {c["name"]: c for c in report["models"]["user"]["columns"]}
+        self.assertTrue(user_columns["id"]["primary_key"])
+        self.assertIn("email", user_columns)
 
     def test_verify_report_records_command_results(self):
         calls = []

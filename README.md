@@ -189,6 +189,7 @@ uv run quart db history             # Show migration history
 uv run quart migrate                # Alias for upgrade head
 uv run quart migration-status       # Show current revision
 uv run quart inspect routes --json  # Machine-readable route map
+uv run quart inspect context --json # Routes and models in one contract
 uv run quart verify                 # Lint, sanity, and migration checks
 uv run quart report                 # Static project review artifact
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
