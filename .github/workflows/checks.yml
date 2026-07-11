@@ -2,9 +2,9 @@ name: Checks
 
 on:
   push:
-    branches: [master, main, dev]
+    branches: [master]
   pull_request:
-    branches: [master, main, dev]
+    branches: [master]
 
 env:
   QUART_APP: run.py
