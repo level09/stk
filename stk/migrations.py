@@ -42,9 +42,10 @@ def get_database_url(*, sync: bool = False) -> str:
 
     url = make_url(database_url)
     drivername = SYNC_DRIVER_MAP.get(url.drivername)
-    if drivername is None:
-        return str(url)
-    return str(url.set(drivername=drivername))
+    if drivername is not None:
+        url = url.set(drivername=drivername)
+    # str(URL) masks the password as *** on SQLAlchemy >= 2.0.50
+    return url.render_as_string(hide_password=False)
 
 
 def get_target_metadata():
