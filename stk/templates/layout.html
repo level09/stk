@@ -102,7 +102,7 @@
                     <v-divider></v-divider>
 
                     <v-list density="compact">
-                        <v-list-item href="/logout" base-color="error">
+                        <v-list-item @click="logout" base-color="error">
                             <template v-slot:prepend><i class="ti ti-logout mr-3" style="font-size: 18px;"></i></template>
                             <v-list-item-title>Logout</v-list-item-title>
                         </v-list-item>
@@ -166,6 +166,13 @@
     </v-layout>
 </v-app>
 
+{% if current_user.is_authenticated %}
+<!-- Logout is POST-only with CSRF (quart-security >= 1.4.1) -->
+<form id="logout-form" method="POST" action="/logout" hidden>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+
 <!-- Flash message auto-hide (outside Vue template) -->
 {% if messages %}
 <script>
@@ -223,6 +230,9 @@
         },
         methods: {
             resolveNavComponent,
+            logout() {
+                document.getElementById('logout-form').submit();
+            },
             toggleNavCollapse() {
                 this.isNavCollapsed = !this.isNavCollapsed;
                 localStorage.setItem('stk-nav-collapsed', this.isNavCollapsed);
@@ -303,7 +313,7 @@
     "where": {
       "and": [
         { "href_matches": "/*" },
-        { "not": { "href_matches": ["/logout", "/login/*", "/oauth/*", "/ws"] } }
+        { "not": { "href_matches": ["/login/*", "/oauth/*", "/ws"] } }
       ]
     },
     "eagerness": "moderate"

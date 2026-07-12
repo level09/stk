@@ -194,7 +194,6 @@ generate_env() {
 QUART_APP=run.py
 SECRET_KEY=$(openssl rand -hex 32)
 SECURITY_PASSWORD_SALT=$(openssl rand -hex 32)
-SECURITY_TOTP_SECRETS=$(openssl rand -hex 32),$(openssl rand -hex 32)
 SESSION_COOKIE_SECURE=${cookie_secure}
 EOF
 

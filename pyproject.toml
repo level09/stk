@@ -1,6 +1,6 @@
 [project]
 name = "stk"
-version = "13.4.0"
+version = "13.4.1"
 description = "An async Quart framework optimized for AI-assisted development workflows"
 authors = [
     {name = "Level09", email = "hello@level09.com"}
@@ -28,7 +28,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "qrcode>=8.2",
     "quart>=0.20.0",
-    "quart-security>=1.4.0",
+    "quart-security>=1.4.1",
     "quart-session>=3.0.0",
     "rich>=14.0.0",
     "sqlalchemy[asyncio]>=2.0.41",

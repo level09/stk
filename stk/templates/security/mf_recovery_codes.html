@@ -43,14 +43,8 @@
             <v-card variant="outlined" class="mb-4">
                 <v-card-text class="text-center pa-6">
                     <i class="ti ti-eye-off mb-3" style="font-size: 48px; opacity: 0.5;"></i>
-                    <div class="text-body-1 mb-4">Recovery codes are hidden for security</div>
-                    <form action="{{ url_for_security('mf_recovery_codes') }}" method="GET">
-                        <input type="hidden" name="show_codes" value="1">
-                        <v-btn color="primary" type="submit">
-                            <i class="ti ti-eye mr-1"></i>
-                            Show Codes
-                        </v-btn>
-                    </form>
+                    <div class="text-body-1">Recovery codes are active</div>
+                    <div class="text-caption text-medium-emphasis">Codes are shown only once when generated. Lost them? Regenerate below.</div>
                 </v-card-text>
             </v-card>
             {% else %}

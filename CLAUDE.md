@@ -107,8 +107,9 @@ Sync click commands wrapping `asyncio.run()` in `stk/commands.py`. Quart CLI doe
 - OAuth (Google, GitHub) via AuthLib `AsyncOAuth2Client`
 - Password hashing: pbkdf2_sha512, min 12 chars
 - Account lockout: `failed_login_count` + `locked_until` on User model
-- Recovery codes (3 codes)
-- Session freshness: 60-minute window
+- Recovery codes (3 codes, hashed at rest, displayed only once at generation)
+- Session freshness: 60-minute window, enforced on 2FA/recovery/passkey management routes (stale session gets 401)
+- Logout is POST-only (`layoutMixin.logout()` submits the form; plain links 405)
 
 **Signal handlers** (all async, in `stk/user/views.py`):
 - `@user_authenticated.connect` - creates session record, tracks IP changes
