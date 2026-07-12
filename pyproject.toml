@@ -1,6 +1,6 @@
 [project]
 name = "stk"
-version = "13.3.0"
+version = "13.4.0"
 description = "An async Quart framework optimized for AI-assisted development workflows"
 authors = [
     {name = "Level09", email = "hello@level09.com"}
