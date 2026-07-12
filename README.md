@@ -162,15 +162,28 @@ uv run quart db stamp head                    # adopt Alembic for an existing DB
 docker compose up --build   # Redis, PostgreSQL, Nginx
 ```
 
-## VPS Deploy
+## Production Deploy
 
-One command on any Ubuntu VPS:
+One command on a fresh Ubuntu 22.04/24.04 VPS:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/level09/ignite/main/ignite.sh | sudo DOMAIN=your-domain.com bash
+wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com bash /tmp/deploy.sh
 ```
 
-Handles Caddy (auto SSL), Python 3.13, Redis, systemd services. See [Ignite](https://github.com/level09/ignite).
+Installs Caddy (auto SSL), uv-managed Python 3.13, the app as a systemd service behind uvicorn, a scoped app user, UFW, fail2ban, and SSH hardening. SQLite by default; `DB=postgres` adds PostgreSQL, Redis, and the `full` extra. Admin credentials land in `/home/<user>/.credentials`.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOMAIN` | (required) | Domain name, or server IP with `SKIP_SSL=true` |
+| `REPO` | `level09/stk` | GitHub repository to deploy |
+| `BRANCH` | `master` | Branch to deploy |
+| `DB` | `sqlite` | `sqlite` or `postgres` (postgres adds Redis + `full` extra) |
+| `ADMIN_EMAIL` | `admin@$DOMAIN` | Admin login email |
+| `ADMIN_PASSWORD` | (generated) | Admin password |
+| `SKIP_SSL` | `false` | `true` serves plain HTTP (IP-only testing) |
+| `PYTHON_PORT` | `5000` | Internal uvicorn port |
+
+Update a deployed app: `git pull && uv sync --frozen --no-dev && uv run quart db upgrade && sudo systemctl restart <domain>.service`
 
 ## CLI Reference
 
