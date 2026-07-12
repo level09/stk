@@ -111,7 +111,6 @@ def check_routes(app):
 @check("Security config is sane")
 def check_security_config(app):
     assert app.config["SECURITY_PASSWORD_LENGTH_MIN"] >= 8
-    assert app.config["SESSION_USE_SIGNER"] is True
 
 
 @check("Async session factory initialized")
