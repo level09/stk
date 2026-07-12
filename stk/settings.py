@@ -70,7 +70,9 @@ class Config:
     SESSION_TYPE = _SESSION_TYPE
     SESSION_URI = _redis_url  # quart-session auto-creates async redis from URI
     SESSION_KEY_PREFIX = "session:"
-    SESSION_USE_SIGNER = True
+    # quart-session's signer emits a bytes cookie value that modern werkzeug
+    # rejects (500 on login); random session ids don't need signing
+    SESSION_USE_SIGNER = False
     PERMANENT_SESSION_LIFETIME = 3600
     SESSION_COOKIE_SECURE = (
         os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
