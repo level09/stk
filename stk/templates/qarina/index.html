@@ -1562,7 +1562,7 @@ function switchTab(id) {
   if (tab && tab.sessionId) {
     history.replaceState({ tabId: id, sessionId: tab.sessionId }, '', `/research/${tab.sessionId}`);
   } else {
-    history.replaceState({ tabId: id }, '', '/');
+    history.replaceState({ tabId: id }, '', '/research/');
   }
 }
 
@@ -1580,7 +1580,7 @@ function closeTab(id) {
     activeTabId = null;
     const empty = $('#panel-empty');
     if (empty) empty.classList.add('active');
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', '/research/');
   } else if (activeTabId === id) {
     switchTab(tabs[Math.min(idx, tabs.length - 1)].id);
   }
@@ -1607,9 +1607,9 @@ function showHome({ push = false } = {}) {
   if (empty) empty.classList.add('active');
   modelTag.textContent = 'ready';
   if (push) {
-    history.pushState(null, '', '/');
+    history.pushState(null, '', '/research/');
   } else {
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', '/research/');
   }
   queryEl.focus();
 }
@@ -2243,7 +2243,7 @@ async function restoreTabs() {
     return;
   }
 
-  // At '/': switch to previously active tab, or show home if nothing restored
+  // At '/research/': switch to previously active tab, or show home if nothing restored
   const t = tabs.find(t => t.sessionId === activeId);
   if (t) {
     switchTab(t.id);
@@ -2254,7 +2254,7 @@ async function restoreTabs() {
 
 // Browser back/forward
 window.addEventListener('popstate', (e) => {
-  if (location.pathname === '/') {
+  if (location.pathname === '/' || location.pathname === '/research/') {
     showHome();
     return;
   }

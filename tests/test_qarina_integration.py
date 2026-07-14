@@ -1,4 +1,6 @@
+import re
 import unittest
+from pathlib import Path
 
 from stk.app import create_app
 from stk.qarina.knowledge import _namespace_key
@@ -38,3 +40,16 @@ class QarinaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("/research/ws", rules)
         self.assertIn("/research/api/history", rules)
         self.assertIn("/research/api/history/<int:run_id>", rules)
+
+    def test_research_home_keeps_canonical_url_on_show_home(self):
+        template = Path("stk/templates/qarina/index.html").read_text()
+        match = re.search(
+            r"function showHome\(\{ push = false \} = \{\}\) \{.*?\n\}",
+            template,
+            re.DOTALL,
+        )
+
+        self.assertIsNotNone(match)
+        home_script = match.group()
+        self.assertIn("history.pushState(null, '', '/research/')", home_script)
+        self.assertIn("history.replaceState(null, '', '/research/')", home_script)
