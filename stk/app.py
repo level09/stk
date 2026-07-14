@@ -15,6 +15,7 @@ from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
 from stk.portal.views import portal
 from stk.public.views import public
+from stk.qarina.views import bp as qarina
 from stk.settings import Config
 from stk.user.forms import ExtendedRegisterForm, OAuthAwareChangePasswordForm
 from stk.user.models import Role, User, WebAuthn
@@ -128,6 +129,7 @@ def register_blueprints(app):
     app.register_blueprint(bp_user)
     app.register_blueprint(public)
     app.register_blueprint(portal)
+    app.register_blueprint(qarina)
     app.register_blueprint(ws_bp)
     if agent_login_enabled(app):
         app.register_blueprint(bp_agent_login)

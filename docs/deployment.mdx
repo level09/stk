@@ -145,6 +145,9 @@ sudo systemctl start stk
 - [ ] Set secure cookie flags (`SESSION_COOKIE_SECURE=True`)
 - [ ] Enable HTTPS via Nginx + Certbot
 - [ ] Nginx serves `/static` directly
+- [ ] Set `OPENROUTER_API_KEY` and `SERPER_API_KEY` in `.env` for Qarina
+- [ ] Run `uv run quart db upgrade` after deployment
+- [ ] Keep `QUARINA_MAX_CONCURRENT_RUNS` at a small value for team sharing
 
 ## Troubleshooting
 

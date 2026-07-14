@@ -88,7 +88,7 @@ async def check_role_model(app):
 @check("All blueprints register")
 def check_blueprints(app):
     blueprints = list(app.blueprints.keys())
-    required = ["users", "public", "portal", "security", "ws"]
+    required = ["users", "public", "portal", "security", "ws", "qarina"]
     for bp in required:
         assert bp in blueprints, f"Missing blueprint: {bp}"
 
@@ -102,6 +102,8 @@ def check_routes(app):
         "/login",
         "/dashboard/",
         "/ws",
+        "/research/",
+        "/research/ws",
         "/health",
     ]
     for route in critical_routes:
@@ -126,10 +128,11 @@ async def check_all_models(app):
     from sqlalchemy import select
 
     import stk.extensions as ext
+    from stk.qarina.models import ResearchRun
     from stk.user.models import Activity, OAuth, Session, WebAuthn
 
     async with ext.async_session_factory() as session:
-        for model in [Activity, Session, OAuth, WebAuthn]:
+        for model in [Activity, Session, OAuth, WebAuthn, ResearchRun]:
             await session.execute(select(model).limit(1))
 
 
@@ -205,6 +208,7 @@ def check_templates(app):
         "cms/users.html",
         "cms/roles.html",
         "cms/activities.html",
+        "qarina/index.html",
     ]
     for tpl in required:
         path = os.path.join(template_dir, tpl)

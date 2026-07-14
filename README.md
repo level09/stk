@@ -116,6 +116,18 @@ stk ships what actually matters:
 | Server | Uvicorn (ASGI) |
 | Proxy | Nginx or Caddy |
 
+## Qarina Research
+
+Qarina is integrated as an authenticated STK blueprint at `/research/`. It
+keeps Qarina's evidence-oriented research engine and vanilla streaming UI,
+while STK owns login, sessions, per-user history, activity records, and the
+research WebSocket boundary.
+
+Research runs are stored in STK's database and are only visible to the user who
+created them. Set `OPENROUTER_API_KEY` and `SERPER_API_KEY` in `.env` before
+starting a run. `QUARINA_MAX_CONCURRENT_RUNS` defaults to `2` to limit provider
+spend during team use.
+
 ## Configuration
 
 Environment variables (`.env`):
@@ -124,6 +136,7 @@ Environment variables (`.env`):
 SECRET_KEY=your_secret_key
 QUART_APP=run.py
 QUART_DEBUG=1                    # 0 in production
+SECURITY_REGISTERABLE=False      # keep False for private team deployments
 
 # PostgreSQL (optional, SQLite is default)
 # SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname

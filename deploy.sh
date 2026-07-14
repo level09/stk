@@ -195,6 +195,16 @@ QUART_APP=run.py
 SECRET_KEY=$(openssl rand -hex 32)
 SECURITY_PASSWORD_SALT=$(openssl rand -hex 32)
 SESSION_COOKIE_SECURE=${cookie_secure}
+SECURITY_REGISTERABLE=${SECURITY_REGISTERABLE:-False}
+
+# Qarina research providers
+OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+SERPER_API_KEY=${SERPER_API_KEY:-}
+MODEL=${MODEL:-google/gemini-3.1-flash-lite}
+KNOWLEDGE_MODEL=${KNOWLEDGE_MODEL:-deepseek/deepseek-chat}
+EMBEDDING_MODEL=${EMBEDDING_MODEL:-openai/text-embedding-3-small}
+EMBEDDING_DIM=${EMBEDDING_DIM:-1536}
+QUARINA_MAX_CONCURRENT_RUNS=${QUARINA_MAX_CONCURRENT_RUNS:-2}
 EOF
 
     if [ "$DB" = "postgres" ]; then

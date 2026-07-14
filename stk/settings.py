@@ -33,7 +33,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", _default_db)
 
     # security
-    SECURITY_REGISTERABLE = True
+    SECURITY_REGISTERABLE = (
+        os.environ.get("SECURITY_REGISTERABLE", "True").lower() == "true"
+    )
     SECURITY_RECOVERABLE = False
     SECURITY_CONFIRMABLE = False
     SECURITY_CHANGEABLE = True

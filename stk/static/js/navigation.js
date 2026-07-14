@@ -13,6 +13,11 @@ const stkNavigation = [
     to: '/dashboard'
   },
   {
+    title: 'Qarina Research',
+    icon: 'ti ti-world-search',
+    to: '/research/'
+  },
+  {
     heading: 'Account'
   },
   {
