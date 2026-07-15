@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from . import evidence, knowledge
+from .costs import CostLedger, tracked_chat_completion
 
 load_dotenv()
 
@@ -280,14 +281,17 @@ TOOLS = [
 http = httpx.Client(timeout=30.0)
 
 
-def _sonar_research(query: str) -> str:
+def _sonar_research(query: str, ledger: CostLedger | None = None) -> str:
     """Use Perplexity Sonar via OpenRouter for AI-powered web research."""
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.environ["OPENROUTER_API_KEY"],
         timeout=LLM_TIMEOUT,
     )
-    response = client.chat.completions.create(
+    response = tracked_chat_completion(
+        client,
+        ledger,
+        purpose="sonar_research",
         model="perplexity/sonar-pro",
         messages=[
             {
@@ -310,13 +314,17 @@ SERPER_ENDPOINTS = {
 }
 
 
-def _serper_search(query: str, category: str, limit: int = 5) -> str:
+def _serper_search(
+    query: str, category: str, limit: int = 5, ledger: CostLedger | None = None
+) -> str:
     """Query Serper (Google Search API) for a specific category."""
     endpoint = SERPER_ENDPOINTS.get(category, SERPER_ENDPOINTS["search"])
     payload = {"q": query, "num": limit}
     headers = {"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"}
     r = http.post(endpoint, json=payload, headers=headers)
     r.raise_for_status()
+    if ledger is not None:
+        ledger.record_serper(category)
     data = r.json()
 
     if category == "images":
@@ -402,11 +410,15 @@ def _filter_youtube_results(items: list[dict]) -> list[dict]:
     ]
 
 
-def _search_videos(query: str, limit: int = 5) -> str:
+def _search_videos(
+    query: str, limit: int = 5, ledger: CostLedger | None = None
+) -> str:
     """Search videos and enrich likely YouTube results with evidence dossiers."""
     raw_results = []
     for search_query in _video_search_queries(query):
-        raw_results.extend(json.loads(_serper_search(search_query, "videos", limit)))
+        raw_results.extend(
+            json.loads(_serper_search(search_query, "videos", limit, ledger))
+        )
     results = _filter_youtube_results(_dedupe_results(raw_results))[:limit]
     enriched = []
     dossier_count = 0
@@ -444,7 +456,10 @@ def _emit_video_results(
 
 
 def _prefetch_video_evidence(
-    query: str, collected: dict, disabled_tools: set
+    query: str,
+    collected: dict,
+    disabled_tools: set,
+    ledger: CostLedger | None = None,
 ) -> Generator[dict, None, None]:
     if "search_videos" in disabled_tools:
         return
@@ -454,7 +469,9 @@ def _prefetch_video_evidence(
         args={"query": query, "limit": 8},
         label=f"(video evidence) {query[:80]}",
     )
-    result = execute_tool("search_videos", {"query": query, "limit": 8})
+    result = execute_tool(
+        "search_videos", {"query": query, "limit": 8}, ledger=ledger
+    )
     try:
         parsed = json.loads(result)
     except json.JSONDecodeError:
@@ -728,10 +745,12 @@ def _telegram_channel_posts(query: str, channels: list[str]) -> list[dict]:
 _TG_NON_CHANNELS = {"share", "joinchat", "addstickers", "proxy", "socks"}
 
 
-def _search_social(query: str, platform: str) -> str:
+def _search_social(
+    query: str, platform: str, ledger: CostLedger | None = None
+) -> str:
     """Search social media. Twitter uses Grok, others use Serper with site: filter."""
     if platform == "twitter":
-        return _grok_x_search(query)
+        return _grok_x_search(query, ledger)
 
     site_filter = SITE_FILTERS.get(platform, "")
     search_query = f"{query} {site_filter}".strip()
@@ -742,6 +761,8 @@ def _search_social(query: str, platform: str) -> str:
         headers=headers,
     )
     r.raise_for_status()
+    if ledger is not None:
+        ledger.record_serper("social")
     data = r.json().get("organic", [])[:8]
     results = [
         {
@@ -768,14 +789,17 @@ def _search_social(query: str, platform: str) -> str:
     return json.dumps(results, indent=2)
 
 
-def _grok_x_search(query: str) -> str:
+def _grok_x_search(query: str, ledger: CostLedger | None = None) -> str:
     """Search X/Twitter using Grok with OpenRouter's xAI web/X search tool."""
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.environ["OPENROUTER_API_KEY"],
         timeout=LLM_TIMEOUT,
     )
-    response = client.chat.completions.create(
+    response = tracked_chat_completion(
+        client,
+        ledger,
+        purpose="grok_x_search",
         model="x-ai/grok-4.20",
         messages=[
             {
@@ -799,19 +823,28 @@ def _grok_x_search(query: str) -> str:
     return json.dumps({"platform": "twitter", "results": content}, indent=2)
 
 
-def execute_tool(name: str, args: dict) -> str:
+def execute_tool(
+    name: str, args: dict, ledger: CostLedger | None = None
+) -> str:
     try:
         if name == "web_research":
-            return _sonar_research(args["query"])
+            return _sonar_research(args["query"], ledger)
         elif name == "search_images":
-            return _serper_search(args["query"], "images", args.get("limit", 5))
+            return _serper_search(
+                args["query"], "images", args.get("limit", 5), ledger
+            )
         elif name == "search_videos":
-            return _search_videos(args["query"], args.get("limit", 5))
+            return _search_videos(args["query"], args.get("limit", 5), ledger)
         elif name == "search_news":
-            return _serper_search(args["query"], "news", args.get("limit", 5))
+            return _serper_search(
+                args["query"], "news", args.get("limit", 5), ledger
+            )
         elif name == "search_documents":
             return _serper_search(
-                args.get("query", "") + " filetype:pdf", "search", args.get("limit", 5)
+                args.get("query", "") + " filetype:pdf",
+                "search",
+                args.get("limit", 5),
+                ledger,
             )
         elif name == "read_page":
             return _jina_read(args["url"])
@@ -830,7 +863,7 @@ def execute_tool(name: str, args: dict) -> str:
                 indent=2,
             )
         elif name == "search_social":
-            return _search_social(args["query"], args["platform"])
+            return _search_social(args["query"], args["platform"], ledger)
         elif name == "think":
             return json.dumps(
                 {"reflection_recorded": args.get("reflection", "")[:2000]}
@@ -1058,9 +1091,14 @@ def _required_source_tools(active_tool_names: set[str]) -> list[str]:
     return [name for name in lane_order if name in active_tool_names]
 
 
-def _generate_plan(client, model: str, query: str) -> str:
+def _generate_plan(
+    client, model: str, query: str, ledger: CostLedger | None = None
+) -> str:
     """Generate a research plan before executing."""
-    response = client.chat.completions.create(
+    response = tracked_chat_completion(
+        client,
+        ledger,
+        purpose="plan",
         model=model,
         max_tokens=512,
         messages=[
@@ -1078,9 +1116,14 @@ def _generate_plan(client, model: str, query: str) -> str:
     return response.choices[0].message.content or ""
 
 
-def _generate_followups(client, model: str, query: str) -> list[str]:
+def _generate_followups(
+    client, model: str, query: str, ledger: CostLedger | None = None
+) -> list[str]:
     """Generate clarifying questions before research."""
-    response = client.chat.completions.create(
+    response = tracked_chat_completion(
+        client,
+        ledger,
+        purpose="followups",
         model=model,
         max_tokens=256,
         messages=[
@@ -1135,7 +1178,7 @@ def _ensure_markdown(content: str) -> str:
 
 
 def _run_agent_loop(
-    client, model, messages, active_tools, collected
+    client, model, messages, active_tools, collected, ledger: CostLedger | None = None
 ) -> Generator[dict, None, str]:
     """Run the core tool-calling loop. Yields events live, returns report content."""
     iteration = 0
@@ -1145,7 +1188,10 @@ def _run_agent_loop(
         iteration += 1
         yield event("thinking", iteration=iteration)
 
-        response = client.chat.completions.create(
+        response = tracked_chat_completion(
+            client,
+            ledger,
+            purpose="orchestrator",
             model=model,
             max_tokens=4096,
             tools=active_tools,
@@ -1192,7 +1238,7 @@ def _run_agent_loop(
                     return tc, json.dumps(
                         {"error": "invalid tool arguments (malformed JSON)"}
                     )
-                return tc, execute_tool(tc.function.name, args)
+                return tc, execute_tool(tc.function.name, args, ledger)
 
             with ThreadPoolExecutor(max_workers=6) as pool:
                 results = list(pool.map(_exec, msg.tool_calls))
@@ -1263,7 +1309,10 @@ def _run_agent_loop(
             "content": "Stop researching. Write the final report NOW in the required markdown format, using everything gathered so far.",
         }
     )
-    response = client.chat.completions.create(
+    response = tracked_chat_completion(
+        client,
+        ledger,
+        purpose="orchestrator_salvage",
         model=model,
         max_tokens=4096,
         messages=messages,
@@ -1279,6 +1328,7 @@ def run(query: str, config: dict = None) -> Generator[dict, None, None]:
     model = _select_model(config)
 
     active_tools, disabled_tools = _select_active_tools(sources)
+    ledger = CostLedger()
 
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
@@ -1318,7 +1368,7 @@ def run(query: str, config: dict = None) -> Generator[dict, None, None]:
     def _get_followups():
         nonlocal followups
         try:
-            followups = _generate_followups(client, model, query)
+            followups = _generate_followups(client, model, query, ledger)
         except Exception:
             pass
 
@@ -1334,7 +1384,7 @@ def run(query: str, config: dict = None) -> Generator[dict, None, None]:
     def _get_plan():
         nonlocal plan
         try:
-            plan = _generate_plan(client, model, query)
+            plan = _generate_plan(client, model, query, ledger)
         except Exception:
             pass
 
@@ -1358,7 +1408,9 @@ def run(query: str, config: dict = None) -> Generator[dict, None, None]:
     # Videos are the core evidence lane for this tool. Run them deterministically
     # before the LLM has a chance to finish with text-only research.
     yield event("phase", name="Finding YouTube video evidence...")
-    yield from _audit(_prefetch_video_evidence(query, collected, disabled_tools))
+    yield from _audit(
+        _prefetch_video_evidence(query, collected, disabled_tools, ledger)
+    )
 
     # Phase 3: Execute research
     yield event("phase", name="Researching...")
@@ -1441,7 +1493,7 @@ Do NOT include images, videos, or documents sections. Those are appended automat
     ]
 
     report_content = yield from _audit(
-        _run_agent_loop(client, model, messages, active_tools, collected)
+        _run_agent_loop(client, model, messages, active_tools, collected, ledger)
     )
 
     # Phase 4: Gap analysis and second pass
@@ -1459,7 +1511,7 @@ Do NOT include images, videos, or documents sections. Those are appended automat
             }
         )
         report_content = yield from _audit(
-            _run_agent_loop(client, model, messages, active_tools, collected)
+            _run_agent_loop(client, model, messages, active_tools, collected, ledger)
         )
 
     # Backfill: force-call any enabled media tools that returned nothing
@@ -1492,7 +1544,9 @@ Do NOT include images, videos, or documents sections. Those are appended automat
             )
 
         def _backfill(tool_name):
-            return tool_name, execute_tool(tool_name, {"query": query, "limit": 5})
+            return tool_name, execute_tool(
+                tool_name, {"query": query, "limit": 5}, ledger
+            )
 
         with ThreadPoolExecutor(max_workers=4) as pool:
             bf_results = list(pool.map(_backfill, backfill_needed.keys()))
@@ -1555,6 +1609,8 @@ Do NOT include images, videos, or documents sections. Those are appended automat
             log.warning(f"Evidence appendix failed: {e}")
 
     yield event("report", content=report_content or "No results found.")
+
+    yield event("cost_summary", summary=ledger.summary())
 
     yield event("done")
 

@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from stk.app import create_app
+from stk.qarina.costs import CostLedger
 from stk.qarina.knowledge import _namespace_key
 
 
@@ -15,6 +16,31 @@ class QarinaTestConfig:
 
 
 class QarinaIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    def test_cost_ledger_estimates_openrouter_and_serper_usage(self):
+        class Usage:
+            prompt_tokens = 1000
+            completion_tokens = 500
+            total_tokens = 1500
+
+        class Response:
+            model = "test-model"
+            usage = Usage()
+
+        ledger = CostLedger(
+            model_pricing={
+                "test-model": {"prompt": 1.0, "completion": 2.0},
+            },
+            serper_cost_per_query=0.01,
+        )
+        ledger.record_openrouter(Response(), purpose="research")
+        ledger.record_serper("news")
+
+        summary = ledger.summary()
+
+        self.assertEqual(summary["openrouter"]["total_tokens"], 1500)
+        self.assertEqual(summary["serper"]["queries"], 1)
+        self.assertEqual(summary["estimated_usd"], 0.012)
+
     def test_knowledge_namespace_is_user_scoped(self):
         self.assertEqual(_namespace_key(7), "user-7")
         self.assertNotEqual(_namespace_key(7), _namespace_key(8))

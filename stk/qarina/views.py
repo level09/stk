@@ -99,6 +99,7 @@ async def _update_run(
     *,
     status: str,
     report: str | None = None,
+    costs: dict | None = None,
     error: str | None = None,
 ):
     async with ext.async_session_factory() as session:
@@ -112,6 +113,7 @@ async def _update_run(
             return
         run_record.status = status
         run_record.report = report
+        run_record.costs = costs
         run_record.error = error
         run_record.completed_at = datetime.now()
         session.add(
@@ -175,6 +177,7 @@ async def research_ws():
     loop = asyncio.get_running_loop()
     stop = threading.Event()
     report = None
+    costs = None
     run_status = "completed"
 
     def put(event):
@@ -220,17 +223,26 @@ async def research_ws():
                 await _set_run_model(run_id, event.get("model"))
             elif event.get("type") == "report":
                 report = event.get("content", "")
+            elif event.get("type") == "cost_summary":
+                costs = event.get("summary") or {}
             elif event.get("type") == "error":
                 run_status = "failed"
             elif event.get("type") == "stopped":
                 run_status = "cancelled"
             await websocket.send_json(event)
-        await _update_run(run_id, user_id, status=run_status, report=report, error=None)
+        await _update_run(
+            run_id,
+            user_id,
+            status=run_status,
+            report=report,
+            costs=costs,
+            error=None,
+        )
         await websocket.send_json({"type": "saved", "session_id": run_id})
     except Exception:
         stop.set()
         run_status = "cancelled"
-        await _update_run(run_id, user_id, status=run_status, report=report)
+        await _update_run(run_id, user_id, status=run_status, report=report, costs=costs)
     finally:
         stop.set()
         reader_task.cancel()

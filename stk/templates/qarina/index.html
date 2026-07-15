@@ -1082,6 +1082,24 @@
   }
   .download-btn i { font-size: 14px; }
 
+  .cost-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-left: 3px solid var(--green);
+    border-radius: 12px;
+    color: var(--text2);
+    font-size: 12px;
+  }
+  .cost-summary strong { color: var(--text); font-size: 15px; }
+  .cost-summary .cost-breakdown { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cost-summary .cost-note { color: var(--text3); font-size: 10px; }
+
   /* Empty state */
   .empty {
     text-align: center;
@@ -1933,6 +1951,12 @@ function go() {
       if (activeTabId === id) div.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    if (ev.type === 'cost_summary') {
+      tab.costSummary = ev.summary || {};
+      const panel = $(`#panel-${id}`);
+      if (panel) panel.appendChild(renderCostSummary(tab.costSummary));
+    }
+
     if (ev.type === 'saved' && ev.session_id) {
       tab.sessionId = ev.session_id;
       // Push to browser history so this session is bookmarkable/shareable
@@ -2111,6 +2135,29 @@ function escHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function renderCostSummary(summary) {
+  const card = document.createElement('section');
+  card.className = 'cost-summary';
+  const total = Number(summary.estimated_usd || 0).toFixed(4);
+  const openrouter = summary.openrouter || {};
+  const serper = summary.serper || {};
+  const note = summary.pricing_complete
+    ? 'Estimated from provider usage and current model pricing.'
+    : 'Partial estimate. Some model pricing was unavailable.';
+  card.innerHTML = `
+    <div>
+      <strong>Estimated run cost $${total}</strong>
+      <div class="cost-breakdown">
+        <span>OpenRouter ${openrouter.total_tokens || 0} tokens</span>
+        <span>Serper ${serper.queries || 0} searches</span>
+      </div>
+      <div class="cost-note">${note}</div>
+    </div>
+    <i class="ti ti-receipt-2" aria-hidden="true"></i>
+  `;
+  return card;
 }
 
 function safeUrl(u) {
@@ -2368,6 +2415,7 @@ async function openHistorySession(id, opts = {}) {
 
     const tab = createTab(session.query, { status: 'done', sessionId: id, skipStatus: true });
     tab.reportMd = session.report;
+    tab.costSummary = session.costs || {};
 
     const panel = $(`#panel-${tab.id}`);
     if (!panel) return;
@@ -2393,6 +2441,9 @@ async function openHistorySession(id, opts = {}) {
     });
     bar.appendChild(dlBtn);
     panel.appendChild(bar);
+    if (session.costs && Object.keys(session.costs).length) {
+      panel.appendChild(renderCostSummary(session.costs));
+    }
 
     updateTabStatus(tab.id, 'done');
   } catch (err) {

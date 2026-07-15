@@ -20,6 +20,7 @@ class ResearchRun(Base):
     report: Mapped[str | None] = mapped_column(Text, nullable=True)
     model: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sources: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    costs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="running")
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -33,6 +34,7 @@ class ResearchRun(Base):
             "query": self.query,
             "model": self.model,
             "status": self.status,
+            "costs": self.costs or {},
             "created_at": self.created_at.isoformat(),
         }
 
@@ -41,6 +43,7 @@ class ResearchRun(Base):
             **self.summary(),
             "report": self.report,
             "sources": self.sources or {},
+            "costs": self.costs or {},
             "error": self.error,
             "completed_at": (
                 self.completed_at.isoformat() if self.completed_at else None
