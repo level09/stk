@@ -26,6 +26,7 @@ from openai import OpenAI
 
 from . import evidence, knowledge
 from .costs import CostLedger, tracked_chat_completion
+from .language import output_language_instruction, resolve_output_language
 
 load_dotenv()
 
@@ -1325,6 +1326,7 @@ def run(query: str, config: dict = None) -> Generator[dict, None, None]:
     config = config or {}
     knowledge_namespace = config.get("knowledge_namespace")
     sources = config.get("sources", {})
+    output_language = resolve_output_language(query, config.get("output_language"))
     model = _select_model(config)
 
     active_tools, disabled_tools = _select_active_tools(sources)
@@ -1469,7 +1471,8 @@ transcript excerpt, why it matters, and what still needs verification.
 What's still missing or unverified.
 
 IMPORTANT: Write in plain markdown with headers, bullets, and links. Never output JSON.
-Do NOT include images, videos, or documents sections. Those are appended automatically."""
+Do NOT include images, videos, or documents sections. Those are appended automatically.
+{output_language_instruction(output_language)}"""
 
     if prior_knowledge:
         dynamic_prompt += (

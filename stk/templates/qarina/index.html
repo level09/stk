@@ -1445,6 +1445,13 @@
     <button class="chip active" type="button" aria-pressed="true" data-tool="news"><i class="ti ti-news"></i> News</button>
     <button class="chip active" type="button" aria-pressed="true" data-tool="docs"><i class="ti ti-file-type-pdf"></i> Documents</button>
     <button class="chip" type="button" aria-pressed="false" data-tool="social"><i class="ti ti-brand-x"></i> X + Social</button>
+    <span class="sep" aria-hidden="true"></span>
+    <label for="output-language">Report:</label>
+    <select id="output-language" aria-label="Report language">
+      <option value="auto">Auto</option>
+      <option value="english">English</option>
+      <option value="arabic">Arabic</option>
+    </select>
   </div>
 
   <div class="tab-bar" id="tab-bar"></div>
@@ -1467,6 +1474,7 @@ const btn = $('#go');
 const tabBar = $('#tab-bar');
 const panels = $('#panels');
 const modelTag = $('#model-tag');
+const outputLanguageEl = $('#output-language');
 
 const TOOL_META = {
   web_research:         { ti: 'ti-world-search',      cls: 'research', label: 'Web research', lane: 'Web' },
@@ -2170,7 +2178,7 @@ function getConfig() {
   document.querySelectorAll('.chip').forEach(c => {
     sources[c.dataset.tool] = c.classList.contains('active');
   });
-  return { sources };
+  return { sources, output_language: outputLanguageEl.value };
 }
 
 // Toggle chips

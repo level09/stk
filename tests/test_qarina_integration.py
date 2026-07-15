@@ -5,6 +5,7 @@ from pathlib import Path
 from stk.app import create_app
 from stk.qarina.costs import CostLedger
 from stk.qarina.knowledge import _namespace_key
+from stk.qarina.language import output_language_instruction, resolve_output_language
 
 
 class QarinaTestConfig:
@@ -16,6 +17,22 @@ class QarinaTestConfig:
 
 
 class QarinaIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    def test_output_language_auto_detects_arabic_queries(self):
+        self.assertEqual(
+            resolve_output_language("ما هي آخر التطورات؟", "auto"), "arabic"
+        )
+        self.assertEqual(resolve_output_language("What happened?", "auto"), "english")
+
+    def test_output_language_override_wins_over_auto_detection(self):
+        self.assertEqual(
+            resolve_output_language("ما هي آخر التطورات؟", "english"), "english"
+        )
+        self.assertEqual(resolve_output_language("What happened?", "arabic"), "arabic")
+
+    def test_output_language_instruction_requires_the_selected_language(self):
+        self.assertIn("Arabic", output_language_instruction("arabic"))
+        self.assertIn("English", output_language_instruction("english"))
+
     def test_cost_ledger_estimates_openrouter_and_serper_usage(self):
         class Usage:
             prompt_tokens = 1000
@@ -79,3 +96,16 @@ class QarinaIntegrationTests(unittest.IsolatedAsyncioTestCase):
         home_script = match.group()
         self.assertIn("history.pushState(null, '', '/research/')", home_script)
         self.assertIn("history.replaceState(null, '', '/research/')", home_script)
+
+    def test_research_home_sends_the_selected_output_language(self):
+        template = Path("stk/templates/qarina/index.html").read_text()
+        agent = Path("stk/qarina/agent.py").read_text()
+
+        self.assertIn('id="output-language"', template)
+        self.assertIn('value="auto"', template)
+        self.assertIn('value="english"', template)
+        self.assertIn('value="arabic"', template)
+        self.assertIn("output_language: outputLanguageEl.value", template)
+        self.assertIn(
+            'resolve_output_language(query, config.get("output_language"))', agent
+        )
