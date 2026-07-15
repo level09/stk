@@ -3,11 +3,11 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Project stk</title>
-    <meta name="description" content="A framework for the next decade">
-    <meta name="author" content="stk">
+    <title>Qarina</title>
+    <meta name="description" content="Evidence-grounded research workspace">
+    <meta name="author" content="Qarina">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/static/img/qarina.svg" type="image/svg+xml">
 
     <link rel="stylesheet" href="/static/css/vuetify.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -33,8 +33,8 @@
             {% endif %}
 
             <v-app-bar-title>
-                <a href="/" class="d-flex align-center text-decoration-none">
-                    <img class="logo-adaptive" style="height: 40px;" src="/static/img/stk.svg">
+                <a href="/research/" class="d-flex align-center text-decoration-none" aria-label="Qarina Research">
+                    <img class="logo-adaptive" style="height: 40px;" src="/static/img/qarina.svg" alt="Qarina">
                 </a>
             </v-app-bar-title>
 
@@ -117,7 +117,7 @@
         <v-navigation-drawer v-model="drawer" :rail="isNavCollapsed" :rail-width="68" width="260">
             <!-- Nav Header -->
             <div class="nav-header">
-                <span v-show="!isNavCollapsed" class="app-title">Navigation</span>
+                <span v-show="!isNavCollapsed" class="app-title">Qarina Workspace</span>
                 <v-spacer></v-spacer>
                 <v-btn
                     v-show="!isMobile"

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Qarina</title>
+  <desc id="desc">Qarina research mark</desc>
+  <rect width="64" height="64" rx="16" fill="#151515"/>
+  <circle cx="30" cy="30" r="15" fill="none" stroke="#f0b35b" stroke-width="5"/>
+  <path d="M41 41 52 52" fill="none" stroke="#f0b35b" stroke-width="5" stroke-linecap="round"/>
+</svg>

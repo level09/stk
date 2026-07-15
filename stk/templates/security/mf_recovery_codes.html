@@ -102,7 +102,7 @@
                 navigator.clipboard.writeText(codes.join('\n'));
             },
             download() {
-                const text = 'stk Recovery Codes\n======================\n\n' + codes.join('\n');
+                const text = 'Qarina Recovery Codes\n========================\n\n' + codes.join('\n');
                 const blob = new Blob([text], { type: 'text/plain' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
