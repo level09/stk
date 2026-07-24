@@ -44,7 +44,7 @@ uv run quart inspect context --json  # Routes + models in one contract
 uv run quart verify --json           # Lint, sanity, migration checks (exit 0/1)
 uv run quart smoke --json            # Real-browser behavioral check (Playwright)
 uv run quart report                  # Static project review artifact
-uv run quart shell                   # Async REPL: app, live db session, models, top-level await
+uv run quart shell                   # Async REPL: app, live db session, models, top-level await (ptpython)
 uv run quart shell -c "await count(User)"  # One-shot query, prints last expression
 uv run quart new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
 uv run python -m unittest discover -s tests

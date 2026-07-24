@@ -52,6 +52,7 @@ dev = [
     "ruff",
     "pre-commit",
     "playwright",
+    "ptpython>=3.0.30",
 ]
 asgi = [
     "hypercorn>=0.17.0",

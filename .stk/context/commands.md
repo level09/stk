@@ -21,7 +21,7 @@ Agent-operability commands:
 - `uv run quart smoke`
 - `uv run quart smoke --json`
 - `uv run quart report`
-- `uv run quart shell` (async REPL: app, live `db` session, all models, top-level await)
+- `uv run quart shell` (async REPL: app, live `db` session, all models, top-level await; ptpython gives highlighting and completion when the dev extra is installed)
 - `uv run quart shell -c "await count(User)"` (one-shot query, prints the last expression)
 
 Run `uv run quart smoke` for frontend-touching changes. It is the behavioral browser check for this no-build Vue/Vuetify frontend.

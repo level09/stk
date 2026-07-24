@@ -106,7 +106,9 @@ def print_banner(models) -> None:
     console.print(f"[dim]models:[/] {', '.join(models)}")
     for name, description in BANNER_HELPERS:
         console.print(f"  [green]{name:22}[/] [dim]{description}[/]")
-    console.print("[dim]top-level await works. ctrl-d to exit.[/]\n")
+    console.print(
+        "[dim]top-level await works. tab completes, F2 opens the menu, ctrl-d exits.[/]\n"
+    )
 
 
 def _masked_database_url() -> str:
@@ -139,6 +141,46 @@ def _setup_readline(namespace) -> None:
     except OSError:  # unreadable history is not worth failing the shell over
         return
     atexit.register(readline.write_history_file, str(HISTORY_FILE))
+
+
+def _configure_repl(repl) -> None:
+    """Syntax highlighting, fish-style suggestions, completion as you type."""
+    repl.use_code_colorscheme("monokai")
+    repl.complete_while_typing = True
+    repl.enable_fuzzy_completion = True
+    repl.enable_auto_suggest = True
+    repl.enable_history_search = True
+    repl.show_signature = True
+    repl.show_docstring = True
+    repl.highlight_matching_parenthesis = True
+    repl.confirm_exit = False
+
+
+async def _run_ptpython(app, db, namespace) -> None:
+    """Full-screen REPL. User code is awaited in this task, so `g` stays bound."""
+    from ptpython.repl import embed
+
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    async with app.app_context():
+        g.db_session = db
+        await embed(
+            globals=namespace,
+            title="stk shell",
+            history_filename=str(HISTORY_FILE),
+            configure=_configure_repl,
+            patch_stdout=True,
+            return_asyncio_coroutine=True,
+        )
+
+
+def _ptpython_usable() -> bool:
+    if not sys.stdin.isatty():
+        return False
+    try:
+        import ptpython  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def build_awaiter(app, db, loop):
@@ -179,16 +221,21 @@ def run_shell(app, source: str | None = None) -> None:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     db = ext.async_session_factory()
-    await_ = build_awaiter(app, db, loop)
     namespace = build_namespace(app, db)
 
     try:
         if source is not None:
-            _run_source(await_, namespace, source)
+            _run_source(build_awaiter(app, db, loop), namespace, source)
+            return
+
+        print_banner(sorted(discover_models()))
+        if _ptpython_usable():
+            loop.run_until_complete(_run_ptpython(app, db, namespace))
             return
         _setup_readline(namespace)
-        print_banner(sorted(discover_models()))
-        AsyncConsole(namespace, await_).interact(banner="", exitmsg="")
+        AsyncConsole(namespace, build_awaiter(app, db, loop)).interact(
+            banner="", exitmsg=""
+        )
     finally:
         loop.run_until_complete(db.close())
         if ext.engine:
