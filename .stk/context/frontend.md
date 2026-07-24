@@ -5,10 +5,24 @@ Every prop and pattern below is sourced from stk/templates/ or stk/static/js/ â€
 
 ## Pinned Versions
 
-- **Vue**: 3.3.4 (`stk/static/js/vue.min.js`)
-- **Vuetify**: 3.7.8 (`stk/static/js/vuetify.min.js`)
-- **Axios**: shipped as `stk/static/js/axios.min.js`
-- **Tabler Icons**: loaded via CDN `@tabler/icons-webfont@latest`
+Authoritative list: `stk/static/VERSIONS.txt`. Bump a version in `vendor.sh`, run
+`./vendor.sh`, then `uv run quart smoke`.
+
+- **Vue**: 3.5.40 production build (`stk/static/js/vue.min.js`)
+- **Vuetify**: 3.12.11 (`stk/static/js/vuetify.min.js` + `stk/static/css/vuetify.min.css`)
+- **Axios**: 1.18.1 (`stk/static/js/axios.min.js`)
+- **Tabler Icons**: 3.45.0, self-hosted (`stk/static/icons/`), woff2 only
+
+Vuetify 4 runs on this codebase (verified: no console errors, data tables and
+dialogs intact) but drops the Material Design 2 typography classes. stk uses 54 of
+them (`text-h5`, `text-body-2`, `text-caption`, ...), which silently lose their
+styling: no console error, so `quart smoke` still passes while headings render at
+body size. Treat Vuetify 4 as a design migration to `text-headline-*`,
+`text-title-*`, `text-body-*`, not a version bump.
+
+Never reintroduce the Vue development build. Vue 3.5's production reactivity loops
+forever on state mutated inside a computed, where the dev build only warns; that is
+what `filterNavByRole` in `stk/static/js/components/index.js` must stay pure for.
 
 ## Boilerplate: App Init
 

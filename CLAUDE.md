@@ -140,7 +140,7 @@ No Celery. `stk/tasks.py` provides:
 
 ### Frontend
 
-Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data()`, `methods`, `mounted()`), NOT Composition API.
+Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data()`, `methods`, `mounted()`), NOT Composition API. Versions are pinned in `stk/static/VERSIONS.txt` and refreshed with `./vendor.sh`; see `.stk/context/frontend.md` before bumping Vuetify.
 
 - **Delimiters:** `${}` via `config.delimiters` (avoids Jinja `{{}}` conflicts)
 - **Layout mixin:** Every app uses `mixins: [layoutMixin]` for drawer, nav, WebSocket, notifications

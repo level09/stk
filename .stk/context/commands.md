@@ -12,6 +12,7 @@ Common commands:
 - `uv run python checks.py`
 - `uv sync --extra dev`
 - `uv run playwright install chromium`
+- `./vendor.sh` (re-download pinned frontend assets listed in `stk/static/VERSIONS.txt`)
 
 Agent-operability commands:
 - `uv run quart inspect routes --json`
