@@ -6,26 +6,26 @@ Default checks:
 - `uv run python -m unittest discover -s tests`
 - `uv run ruff check .`
 - `uv run python checks.py`
-- `uv run quart verify`
+- `uv run stk verify`
 
 For frontend-touching changes, also run:
-- `uv run quart smoke`
+- `uv run stk smoke`
 
 For model or migration changes, also run:
-- `uv run quart db check` (fails if models drifted away from migrations; part of `quart verify`)
-- `uv run quart db current`
+- `uv run stk db check` (fails if models drifted away from migrations; part of `quart verify`)
+- `uv run stk db current`
 
 For auth or route changes, also run:
-- `uv run quart inspect routes --json`
-- `uv run quart inspect context --json`
-- `uv run quart report`
+- `uv run stk inspect routes --json`
+- `uv run stk inspect context --json`
+- `uv run stk report`
 
 ## Browser Feature Testing
 
 For authenticated browser testing in development:
 
 ```bash
-STK_ENV=development STK_ENABLE_AGENT_LOGIN=1 uv run quart browser-token create --user admin@example.com --ttl 60 --next /dashboard/
+STK_ENV=development STK_ENABLE_AGENT_LOGIN=1 uv run stk browser-token create --user admin@example.com --ttl 60 --next /dashboard/
 ```
 
 Open the returned `/_test/login?token=...` path in the browser. The route creates a normal authenticated session and redirects to the requested local path.
@@ -37,7 +37,7 @@ Use browser tests only for workflows where rendering, navigation, or interaction
 The default real-browser check is:
 
 ```bash
-uv run quart smoke
+uv run stk smoke
 ```
 
 Install the dev dependency and Chromium once per machine:

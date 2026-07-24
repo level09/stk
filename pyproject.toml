@@ -39,6 +39,9 @@ dependencies = [
 ]
 
 
+[project.scripts]
+stk = "stk.cli.main:main"
+
 # Overrides Quart's built-in `shell` (plugin commands win over built-ins).
 [project.entry-points."quart.commands"]
 shell = "stk.cli:shell"

@@ -54,8 +54,8 @@ git clone https://github.com/level09/stk.git
 cd stk
 ./setup.sh                # Install deps + generate secure .env
 uv sync --extra full      # Add asyncpg + Redis
-uv run quart create-db    # Setup database
-uv run quart install      # Create admin user
+uv run stk create-db    # Setup database
+uv run stk install      # Create admin user
 ```
 
 ### Database Configuration
@@ -73,8 +73,8 @@ sudo -u postgres createdb mydb
 SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://myuser:password@localhost/mydb
 
 # Initialize
-uv run quart create-db
-uv run quart install
+uv run stk create-db
+uv run stk install
 ```
 
 ### Nginx Configuration

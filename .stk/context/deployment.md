@@ -26,10 +26,10 @@ curl -s -o /dev/null -w "%{http_code}" http://<domain-or-ip>/   # expect 200
 systemctl is-active <domain>.service
 ```
 
-Then log in at `/login` with the credentials file and, for behavioral confidence, run `uv run quart smoke` locally against the same revision.
+Then log in at `/login` with the credentials file and, for behavioral confidence, run `uv run stk smoke` locally against the same revision.
 
 Update a deployed app (as the app user, in the app dir):
 
 ```bash
-git pull && uv sync --frozen --no-dev && uv run quart db upgrade && sudo systemctl restart <domain>.service
+git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service
 ```

@@ -26,9 +26,9 @@
 ```bash
 git clone git@github.com:level09/stk.git && cd stk
 ./setup.sh                    # deps + secure .env
-uv run quart create-db        # database via Alembic
-uv run quart install          # admin user
-uv run quart run              # localhost:5000
+uv run stk create-db        # database via Alembic
+uv run stk install          # admin user
+uv run stk run              # localhost:5000
 ```
 
 ## Why stk
@@ -149,11 +149,11 @@ QUART_DEBUG=1                    # 0 in production
 Database migrations:
 
 ```bash
-uv run quart create-db                        # upgrade to head
-uv run quart db revision -m "add billing"    # generate a new revision
-uv run quart db upgrade                       # apply migrations
-uv run quart db downgrade -1                  # rollback one revision
-uv run quart db stamp head                    # adopt Alembic for an existing DB
+uv run stk create-db                        # upgrade to head
+uv run stk db revision -m "add billing"    # generate a new revision
+uv run stk db upgrade                       # apply migrations
+uv run stk db downgrade -1                  # rollback one revision
+uv run stk db stamp head                    # adopt Alembic for an existing DB
 ```
 
 ## Docker
@@ -183,28 +183,28 @@ Installs Caddy (auto SSL), uv-managed Python 3.13, the app as a systemd service 
 | `SKIP_SSL` | `false` | `true` serves plain HTTP (IP-only testing) |
 | `PYTHON_PORT` | `5000` | Internal uvicorn port |
 
-Update a deployed app: `git pull && uv sync --frozen --no-dev && uv run quart db upgrade && sudo systemctl restart <domain>.service`
+Update a deployed app: `git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service`
 
 ## CLI Reference
 
 ```bash
-uv run quart create-db              # Apply all migrations
-uv run quart install                # Create admin user
-uv run quart create                 # Create user by email/password
-uv run quart add-role               # Assign role to user
-uv run quart reset                  # Reset user password
-uv run quart cleanup-sessions       # Deactivate expired sessions
-uv run quart db upgrade [rev]       # Run migrations forward
-uv run quart db downgrade <rev>     # Roll back migrations
-uv run quart db revision -m "msg"   # Generate new migration
-uv run quart db current             # Show current revision
-uv run quart db history             # Show migration history
-uv run quart migrate                # Alias for upgrade head
-uv run quart migration-status       # Show current revision
-uv run quart inspect routes --json  # Machine-readable route map
-uv run quart inspect context --json # Routes and models in one contract
-uv run quart verify                 # Lint, sanity, and migration checks
-uv run quart report                 # Static project review artifact
+uv run stk create-db              # Apply all migrations
+uv run stk install                # Create admin user
+uv run stk create                 # Create user by email/password
+uv run stk add-role               # Assign role to user
+uv run stk reset                  # Reset user password
+uv run stk cleanup-sessions       # Deactivate expired sessions
+uv run stk db upgrade [rev]       # Run migrations forward
+uv run stk db downgrade <rev>     # Roll back migrations
+uv run stk db revision -m "msg"   # Generate new migration
+uv run stk db current             # Show current revision
+uv run stk db history             # Show migration history
+uv run stk migrate                # Alias for upgrade head
+uv run stk migration-status       # Show current revision
+uv run stk inspect routes --json  # Machine-readable route map
+uv run stk inspect context --json # Routes and models in one contract
+uv run stk verify                 # Lint, sanity, and migration checks
+uv run stk report                 # Static project review artifact
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
 uv run python checks.py             # Sanity checks
 ```

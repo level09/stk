@@ -6,7 +6,7 @@ Every prop and pattern below is sourced from stk/templates/ or stk/static/js/ â€
 ## Pinned Versions
 
 Authoritative list: `stk/static/VERSIONS.txt`. Bump a version in `vendor.sh`, run
-`./vendor.sh`, then `uv run quart smoke`.
+`./vendor.sh`, then `uv run stk smoke`.
 
 - **Vue**: 3.5.40 production build (`stk/static/js/vue.min.js`)
 - **Vuetify**: 4.1.6 (`stk/static/js/vuetify.min.js` + `stk/static/css/vuetify.min.css`)

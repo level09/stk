@@ -11,7 +11,7 @@ from stk.migrations import import_model_modules
 VERIFY_COMMANDS = [
     ("ruff", ["ruff", "check", "."]),
     ("checks", [sys.executable, "checks.py"]),
-    ("migration-drift", [sys.executable, "-m", "quart", "db", "check"]),
+    ("migration-drift", [sys.executable, "-m", "stk", "db", "check"]),
 ]
 
 

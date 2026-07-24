@@ -183,7 +183,7 @@ async def get_posts():
 ## Development Server
 
 ```bash
-uv run quart run              # Start server
+uv run stk run              # Start server
 uv run ruff check --fix .     # Lint and auto-fix
 uv run ruff format .          # Format code
 ```
@@ -193,12 +193,12 @@ uv run ruff format .          # Format code
 stk exposes machine-readable project state so agents and tooling can verify instead of guess:
 
 ```bash
-uv run quart inspect routes --json    # Route map with auth and source info
-uv run quart inspect context --json   # Routes and models in one contract
-uv run quart verify --json            # Lint, sanity, and migration checks
-uv run quart smoke --json             # Real-browser smoke check (Playwright)
-uv run quart report                   # Static project review artifact
-uv run quart new <module>             # Deterministic module scaffold
+uv run stk inspect routes --json    # Route map with auth and source info
+uv run stk inspect context --json   # Routes and models in one contract
+uv run stk verify --json            # Lint, sanity, and migration checks
+uv run stk smoke --json             # Real-browser smoke check (Playwright)
+uv run stk report                   # Static project review artifact
+uv run stk new <module>             # Deterministic module scaffold
 ```
 
 The smoke command boots a temporary app with its own SQLite database, logs in through a test-only agent route, visits the dashboard and admin pages, captures console errors and failed requests, and writes a screenshot to `.stk/smoke/`. The test login route is not registered by default and refuses to start outside development or testing.

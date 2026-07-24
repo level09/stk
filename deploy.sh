@@ -212,14 +212,14 @@ EOF
 # Initialize database (Alembic migrations to head)
 init_database() {
     step "Initializing database"
-    sudo -u "$APP_USER" bash -c "cd $APP_DIR && export QUART_APP=run.py && /usr/local/bin/uv run --no-sync quart create-db" >/dev/null 2>&1
+    sudo -u "$APP_USER" bash -c "cd $APP_DIR && /usr/local/bin/uv run --no-sync stk create-db" >/dev/null 2>&1
     step_done
 }
 
 # Create admin user
 create_admin() {
     step "Creating admin user"
-    sudo -u "$APP_USER" bash -c "cd $APP_DIR && export QUART_APP=run.py && /usr/local/bin/uv run --no-sync quart install -e '${ADMIN_EMAIL}' -p '${ADMIN_PASSWORD}'" >/dev/null 2>&1
+    sudo -u "$APP_USER" bash -c "cd $APP_DIR && /usr/local/bin/uv run --no-sync stk install -e '${ADMIN_EMAIL}' -p '${ADMIN_PASSWORD}'" >/dev/null 2>&1
 
     # Save credentials
     cat > "/home/${APP_USER}/.credentials" << EOF

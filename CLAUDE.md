@@ -22,45 +22,53 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 
 ## Commands
 
+Everything runs through one command, `stk`, grouped by purpose in `stk --help`.
+It bakes in the app factory, so `QUART_APP` is never needed. `quart <command>`
+still works for anything registered on `app.cli`.
+
 ```bash
 ./setup.sh                        # First-time setup (venv, deps, .env)
 uv sync --extra dev               # Install with dev tools
-uv run quart run                  # Dev server at localhost:5000
-uv run quart run --port 5001      # Alt port (macOS 5000 conflict)
-uv run quart create-db            # Apply all migrations (upgrade to head)
-uv run quart install              # Create admin user
+uv run stk --help                 # Command map, grouped by purpose
+uv run stk run                    # Dev server at localhost:5000
+uv run stk run --port 5001        # Alt port (macOS 5000 conflict)
+uv run stk create-db              # Apply all migrations (upgrade to head)
+uv run stk install                # Create admin user
 uv run ruff check --fix . && uv run ruff format .  # Lint + format
 uv run python checks.py           # Sanity checks (not pytest)
-docker compose up --build          # Full stack (Redis, PostgreSQL, Nginx)
+docker compose up --build         # Full stack (Redis, PostgreSQL, Nginx)
 ```
+
+Drop the `uv run` prefix by activating the venv once per shell:
+`source .venv/bin/activate`, then `stk run`, `stk shell`, `stk verify`.
 
 ### Agent Operability
 
 Prefer these over guessing from files. Structured agent context lives in `.stk/context/` (architecture, commands, verification, frontend).
 
 ```bash
-uv run quart inspect routes --json   # Route map with auth and source info
-uv run quart inspect context --json  # Routes + models in one contract
-uv run quart verify --json           # Lint, sanity, migration checks (exit 0/1)
-uv run quart smoke --json            # Real-browser behavioral check (Playwright)
-uv run quart report                  # Static project review artifact
-uv run quart shell                   # Async REPL: app, live db session, models, top-level await (ptpython)
-uv run quart shell -c "await count(User)"  # One-shot query, prints last expression
-uv run quart new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
+uv run stk inspect routes --json   # Route map with auth and source info
+uv run stk inspect context --json  # Routes + models in one contract
+uv run stk verify --json           # Lint, sanity, migration checks (exit 0/1)
+uv run stk smoke --json            # Real-browser behavioral check (Playwright)
+uv run stk report                 # Static project review artifact
+uv run stk shell                  # Async REPL: app, live db session, models, top-level await (ptpython)
+uv run stk shell -c "await count(User)"  # One-shot query, prints last expression
+uv run stk new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
 uv run python -m unittest discover -s tests
 ```
 
 ### Database Migrations (Alembic)
 
 ```bash
-uv run quart db upgrade [revision]              # Apply migrations (default: head)
-uv run quart db downgrade <revision>            # Rollback (e.g. -1 for one step)
-uv run quart db revision -m "description"       # Autogenerate new revision
-uv run quart db revision -m "desc" --empty      # Empty revision for manual SQL
-uv run quart db current                         # Show current revision
-uv run quart db history                         # Show migration history
-uv run quart db stamp head                      # Adopt Alembic on existing DB
-uv run quart db check                           # Fail if models drifted from migrations
+uv run stk db upgrade [revision]              # Apply migrations (default: head)
+uv run stk db downgrade <revision>            # Rollback (e.g. -1 for one step)
+uv run stk db revision -m "description"       # Autogenerate new revision
+uv run stk db revision -m "desc" --empty      # Empty revision for manual SQL
+uv run stk db current                         # Show current revision
+uv run stk db history                         # Show migration history
+uv run stk db stamp head                      # Adopt Alembic on existing DB
+uv run stk db check                           # Fail if models drifted from migrations
 ```
 
 Migration config lives in `stk/migrations.py`. Alembic env in `alembic/env.py`. Revisions in `alembic/versions/`. SQLite uses batch mode automatically for ALTER TABLE support.
