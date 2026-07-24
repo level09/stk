@@ -5,7 +5,9 @@ import io
 import unittest
 from contextlib import redirect_stdout
 
-from stk.shell import _run_source, discover_models
+from sqlalchemy.exc import PendingRollbackError
+
+from stk.shell import _run_source, build_namespace, discover_models
 
 
 def _await(coro):
@@ -47,6 +49,31 @@ class RunSourceTest(unittest.TestCase):
         output, namespace = self.run_source("x = 5")
         self.assertEqual(output, "")
         self.assertEqual(namespace["x"], 5)
+
+
+class SessionRecoveryTest(unittest.TestCase):
+    """A failed write must not leave every later query raising."""
+
+    class PoisonedSession:
+        def __init__(self):
+            self.poisoned = True
+            self.rollbacks = 0
+
+        async def execute(self, statement, params=None):
+            if self.poisoned:
+                raise PendingRollbackError("previous flush failed")
+            return "rows"
+
+        async def rollback(self):
+            self.rollbacks += 1
+            self.poisoned = False
+
+    def test_execute_rolls_back_and_retries_once(self):
+        session = self.PoisonedSession()
+        execute = build_namespace(app=None, db=session)["execute"]
+
+        self.assertEqual(asyncio.run(execute("select 1")), "rows")
+        self.assertEqual(session.rollbacks, 1)
 
 
 class DiscoverModelsTest(unittest.TestCase):

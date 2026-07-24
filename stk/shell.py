@@ -15,6 +15,7 @@ from pathlib import Path
 from quart import g
 from rich.console import Console
 from sqlalchemy import delete, func, select, text, update
+from sqlalchemy.exc import PendingRollbackError, SQLAlchemyError
 
 import stk.extensions as ext
 from stk.migrations import import_model_modules
@@ -46,20 +47,31 @@ def build_namespace(app, db) -> dict:
     """Build the shell namespace: app, session, models, query helpers."""
     from stk.cli.reports import build_routes_report
 
+    async def execute(statement, params=None):
+        """Run a statement; never leave the session poisoned by an earlier failure."""
+        try:
+            return await db.execute(statement, params)
+        except PendingRollbackError:
+            # The failure was already reported where it happened; recover silently.
+            await db.rollback()
+            return await db.execute(statement, params)
+        except SQLAlchemyError:
+            await db.rollback()
+            raise
+
     async def find(model, **filters):
-        stmt = select(model).filter_by(**filters)
-        return (await db.execute(stmt)).scalars().all()
+        return (await execute(select(model).filter_by(**filters))).scalars().all()
 
     async def first(model, **filters):
         stmt = select(model).filter_by(**filters).limit(1)
-        return (await db.execute(stmt)).scalars().first()
+        return (await execute(stmt)).scalars().first()
 
     async def count(model, **filters):
         stmt = select(func.count()).select_from(model).filter_by(**filters)
-        return (await db.execute(stmt)).scalar_one()
+        return (await execute(stmt)).scalar_one()
 
     async def sql(statement, **params):
-        result = await db.execute(
+        result = await execute(
             text(statement) if isinstance(statement, str) else statement, params
         )
         return result.all() if result.returns_rows else result.rowcount
@@ -94,6 +106,7 @@ def build_namespace(app, db) -> dict:
         "first": first,
         "count": count,
         "sql": sql,
+        "execute": execute,
         "routes": routes,
     }
     namespace.update(discover_models())

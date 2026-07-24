@@ -23,11 +23,9 @@ def _describe_diff(diff):
     """Render an autogenerate diff tuple as one readable line."""
     parts = []
     for element in diff[1:]:
-        name = getattr(element, "name", None)
-        if name is None and element is not None:
-            name = element
-        if name not in (None, {}):
-            parts.append(str(name))
+        if element is None or isinstance(element, dict):  # schema, autogenerate opts
+            continue
+        parts.append(str(getattr(element, "name", element)))
     return f"{diff[0]}: {' '.join(parts)}".strip()
 
 
