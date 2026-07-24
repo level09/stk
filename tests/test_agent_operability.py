@@ -150,6 +150,28 @@ class AgentOperabilityTests(unittest.TestCase):
             report["pages"][1]["problems"],
         )
 
+    def test_smoke_report_fails_on_invisible_text(self):
+        """Text the same colour as its background raises no console error."""
+        report = build_smoke_report(
+            [
+                {
+                    "name": "home",
+                    "path": "/",
+                    "status": 200,
+                    "console": [],
+                    "failed_requests": [],
+                    "low_contrast": [{"label": "GO TO DASHBOARD", "ratio": 1.0}],
+                }
+            ],
+            dashboard_screenshot=".stk/smoke/dashboard.png",
+        )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertIn(
+            'invisible text: "GO TO DASHBOARD" contrast 1.0:1',
+            report["pages"][0]["problems"],
+        )
+
 
 class AgentLoginConfigTests(unittest.TestCase):
     def test_agent_login_is_disabled_by_default(self):

@@ -20,6 +20,57 @@ SMOKE_EMAIL = "smoke@example.com"
 SMOKE_PASSWORD = "SmokePassword123!"
 SMOKE_SCREENSHOT = Path(".stk/smoke/dashboard.png")
 
+# Text the same colour as what it sits on renders invisible without raising a
+# console error, so the browser has to measure it. 3:1 is the WCAG floor for
+# large/bold text; below ~1.5 the element is effectively gone.
+MIN_CONTRAST_RATIO = 3.0
+_CONTRAST_TEMPLATE = """() => {
+  const parse = (value) => {
+    const parts = value.match(/[\\d.]+/g);
+    if (!parts) return null;
+    const nums = parts.map(Number);
+    const scale = value.startsWith('color(') ? 255 : 1;
+    return {r: nums[0] * scale, g: nums[1] * scale, b: nums[2] * scale,
+            a: nums.length > 3 ? nums[3] : 1};
+  };
+  const luminance = ({r, g, b}) => {
+    const channel = (v) => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  };
+  const flatten = (fg, bg) => ({
+    r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a),
+    b: fg.b * fg.a + bg.b * (1 - fg.a),
+    a: 1,
+  });
+  const backdrop = (element) => {
+    for (let node = element; node; node = node.parentElement) {
+      const background = parse(getComputedStyle(node).backgroundColor);
+      if (background && background.a > 0.5) return background;
+    }
+    return {r: 255, g: 255, b: 255, a: 1};
+  };
+  const findings = [];
+  for (const element of document.querySelectorAll('.v-btn, .v-chip, .v-alert')) {
+    if (!element.offsetParent || !element.innerText.trim()) continue;
+    const foreground = parse(getComputedStyle(element).color);
+    if (!foreground) continue;
+    const background = backdrop(element);
+    const text = flatten(foreground, background);
+    const [a, b] = [luminance(text), luminance(background)];
+    const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    if (ratio < __MIN_RATIO__) {
+      findings.push({label: element.innerText.trim().slice(0, 32),
+                     ratio: Math.round(ratio * 100) / 100});
+    }
+  }
+  return findings;
+}"""
+CONTRAST_JS = _CONTRAST_TEMPLATE.replace("__MIN_RATIO__", str(MIN_CONTRAST_RATIO))
+
 
 def build_smoke_report(pages, dashboard_screenshot):
     """Return a browser smoke report with per-page failure reasons."""
@@ -40,6 +91,11 @@ def build_smoke_report(pages, dashboard_screenshot):
             failure = request.get("failure") or "unknown"
             problems.append(f"request failed: {request['url']} {failure}")
 
+        for finding in page.get("low_contrast", []):
+            problems.append(
+                f'invisible text: "{finding["label"]}" contrast {finding["ratio"]}:1'
+            )
+
         page_reports.append(
             {
                 "name": page["name"],
@@ -48,6 +104,7 @@ def build_smoke_report(pages, dashboard_screenshot):
                 "status": "failed" if problems else "passed",
                 "console": page.get("console", []),
                 "failed_requests": page.get("failed_requests", []),
+                "low_contrast": page.get("low_contrast", []),
                 "problems": problems,
             }
         )
@@ -94,13 +151,11 @@ def _smoke_env(database_path):
 
 def _run_smoke_setup(env):
     commands = [
-        [sys.executable, "-m", "quart", "--app", "run:app", "db", "upgrade"],
+        [sys.executable, "-m", "stk", "db", "upgrade"],
         [
             sys.executable,
             "-m",
-            "quart",
-            "--app",
-            "run:app",
+            "stk",
             "install",
             "--email",
             SMOKE_EMAIL,
@@ -148,9 +203,7 @@ def _start_smoke_server(port, env):
         [
             sys.executable,
             "-m",
-            "quart",
-            "--app",
-            "run:app",
+            "stk",
             "run",
             "--host",
             "127.0.0.1",
@@ -212,6 +265,7 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
     page.on("console", _record_console)
     page.on("requestfailed", _record_failed_request)
     response = await page.goto(f"{base_url}{path}", wait_until="networkidle")
+    low_contrast = await page.evaluate(CONTRAST_JS)
     if screenshot_path is not None:
         screenshot_path.parent.mkdir(parents=True, exist_ok=True)
         await page.screenshot(path=str(screenshot_path), full_page=True)
@@ -222,6 +276,7 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
         "status": response.status if response else None,
         "console": console_entries,
         "failed_requests": failed_requests,
+        "low_contrast": low_contrast,
     }
 
 
@@ -239,6 +294,7 @@ async def _run_playwright_smoke(base_url, token):
             browser = await playwright.chromium.launch()
             context = await browser.new_context()
             pages = [
+                await _visit_smoke_page(context, base_url, "home", "/"),
                 await _visit_smoke_page(context, base_url, "login", "/login"),
                 await _visit_smoke_page(
                     context,
@@ -265,7 +321,9 @@ async def _run_playwright_smoke(base_url, token):
             ) from exc
         raise
 
-    pages[1]["path"] = "/_test/login?token=<redacted>"
+    for page in pages:
+        if page["name"] == "agent-login":
+            page["path"] = "/_test/login?token=<redacted>"
     return build_smoke_report(pages, SMOKE_SCREENSHOT)
 
 
@@ -299,6 +357,8 @@ def print_smoke_report(report):
         click.echo(f"  HTTP: {page['status_code']}")
         for entry in page["console"]:
             click.echo(f"  console {entry['type']}: {entry['text']}")
+        for finding in page.get("low_contrast", []):
+            click.echo(f"  invisible text: {finding['label']!r} {finding['ratio']}:1")
         for request in page["failed_requests"]:
             click.echo(
                 f"  request failed: {request['url']} {request.get('failure') or ''}"

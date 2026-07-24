@@ -215,11 +215,15 @@ body,
 }
 
 /* ===== Links ===== */
-a {
+/* Vuetify 4 ships its styles in cascade layers, so these unlayered rules win
+   over any Vuetify rule regardless of specificity. Exclude components that
+   render as an anchor (`v-btn` with href, list items) or their own text colour
+   is replaced by this one. */
+a:not(.v-btn, .v-list-item, .v-tab, .v-chip) {
     color: rgb(var(--v-theme-primary));
     transition: opacity 0.15s;
 }
 
-a:hover {
+a:not(.v-btn, .v-list-item, .v-tab, .v-chip):hover {
     opacity: 0.8;
 }
