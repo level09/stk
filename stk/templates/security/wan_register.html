@@ -4,7 +4,7 @@
 {% block content %}
 <v-container fluid class="pa-4">
     <v-card max-width="700" class="mx-auto">
-        <v-card-title class="text-h5">
+        <v-card-title class="text-headline-small">
             <i class="ti ti-fingerprint mr-2"></i>
             Passkeys
         </v-card-title>
@@ -20,8 +20,8 @@
             <v-card variant="outlined" class="mb-4">
                 <v-card-text class="text-center pa-8">
                     <v-progress-circular indeterminate color="primary" size="48" class="mb-4"></v-progress-circular>
-                    <div class="text-body-1 font-weight-medium">Complete registration on your device</div>
-                    <div class="text-caption text-medium-emphasis mt-1">Follow the prompts from your browser</div>
+                    <div class="text-body-large font-weight-medium">Complete registration on your device</div>
+                    <div class="text-body-small text-medium-emphasis mt-1">Follow the prompts from your browser</div>
                     <div id="wan-errors" class="mt-4"></div>
                 </v-card-text>
             </v-card>
@@ -63,8 +63,8 @@
             <v-card variant="tonal" color="grey-lighten-4" class="mb-4">
                 <v-card-text class="text-center pa-8">
                     <i class="ti ti-fingerprint text-medium-emphasis" style="font-size: 48px;"></i>
-                    <div class="text-body-1 mt-3">No passkeys registered yet</div>
-                    <div class="text-caption text-medium-emphasis">Add a passkey to sign in without a password</div>
+                    <div class="text-body-large mt-3">No passkeys registered yet</div>
+                    <div class="text-body-small text-medium-emphasis">Add a passkey to sign in without a password</div>
                 </v-card-text>
             </v-card>
             {% endif %}

@@ -46,7 +46,7 @@
                         <v-card-title>
                             <div class="d-flex align-center mb-5">
                                 <img src="/static/img/stk.svg" alt="Logo" height="40" class="mr-3">
-                                <span class="text-h5 font-weight-bold">Log in to your account</span>
+                                <span class="text-headline-small font-weight-bold">Log in to your account</span>
                             </div>
                         </v-card-title>
                         
@@ -101,7 +101,7 @@
                             {% if security.webauthn and security.wan_allow_as_first_factor or config.GOOGLE_AUTH_ENABLED or config.GITHUB_AUTH_ENABLED %}
                             <div class="d-flex align-center my-4">
                                 <v-divider></v-divider>
-                                <span class="mx-3 text-medium-emphasis text-caption">or</span>
+                                <span class="mx-3 text-medium-emphasis text-body-small">or</span>
                                 <v-divider></v-divider>
                             </div>
 
@@ -159,7 +159,7 @@
                             {% endif %}
 
                             <div class="text-center mt-4 mb-4">
-                                <p class="text-caption text-medium-emphasis">
+                                <p class="text-body-small text-medium-emphasis">
                                     By continuing, you agree to stk's 
                                     <a href="#" class="text-decoration-none">Terms of Service</a> and 
                                     <a href="#" class="text-decoration-none">Privacy Policy</a>.
@@ -181,7 +181,7 @@
                     <v-container fluid class="auth-overlay pa-0 ma-0">
                         <v-row align="center" justify="center" style="height: 100vh;">
                             <v-col cols="12" class="text-center">
-                                <div class="text-h2 font-weight-bold text-white">Secure. Scalable. Swift.</div>
+                                <div class="text-display-large font-weight-bold text-white">Secure. Scalable. Swift.</div>
                             </v-col>
                         </v-row>
                     </v-container>

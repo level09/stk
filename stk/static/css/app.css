@@ -21,8 +21,9 @@ body,
 
 .v-toolbar-title,
 .v-card-title,
-.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6,
-.text-subtitle-1, .text-subtitle-2,
+.text-display-large, .text-display-medium, .text-display-small,
+.text-headline-large, .text-headline-medium, .text-headline-small,
+.text-title-large, .text-title-medium, .text-title-small,
 .font-weight-bold,
 .v-list-item-title {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -44,7 +45,7 @@ body,
 .v-data-table th,
 .v-chip,
 .v-label,
-.text-caption, .text-overline,
+.text-body-small, .text-label-small,
 .v-field__input,
 .v-pagination {
     font-family: 'Inter', sans-serif !important;

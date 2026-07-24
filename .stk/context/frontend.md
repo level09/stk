@@ -9,16 +9,30 @@ Authoritative list: `stk/static/VERSIONS.txt`. Bump a version in `vendor.sh`, ru
 `./vendor.sh`, then `uv run quart smoke`.
 
 - **Vue**: 3.5.40 production build (`stk/static/js/vue.min.js`)
-- **Vuetify**: 3.12.11 (`stk/static/js/vuetify.min.js` + `stk/static/css/vuetify.min.css`)
+- **Vuetify**: 4.1.6 (`stk/static/js/vuetify.min.js` + `stk/static/css/vuetify.min.css`)
 - **Axios**: 1.18.1 (`stk/static/js/axios.min.js`)
 - **Tabler Icons**: 3.45.0, self-hosted (`stk/static/icons/`), woff2 only
 
-Vuetify 4 runs on this codebase (verified: no console errors, data tables and
-dialogs intact) but drops the Material Design 2 typography classes. stk uses 54 of
-them (`text-h5`, `text-body-2`, `text-caption`, ...), which silently lose their
-styling: no console error, so `quart smoke` still passes while headings render at
-body size. Treat Vuetify 4 as a design migration to `text-headline-*`,
-`text-title-*`, `text-body-*`, not a version bump.
+## Typography (Material Design 3)
+
+Vuetify 4 removed the Material Design 2 type classes. Use the MD3 names; the old
+ones apply no styling at all and produce no console error, so nothing will warn you.
+
+| Do not use (v3) | Use (v4)              | Size     |
+|-----------------|-----------------------|----------|
+| `text-h2`       | `text-display-large`  | 3.5625rem |
+| `text-h4`       | `text-headline-large` | 2rem     |
+| `text-h5`       | `text-headline-small` | 1.5rem   |
+| `text-h6`       | `text-title-large`    | 1.375rem |
+| `text-subtitle-1` | `text-title-medium` | 1rem     |
+| `text-subtitle-2` | `text-title-small`  | .875rem  |
+| `text-body-1`   | `text-body-large`     | 1rem     |
+| `text-body-2`   | `text-body-medium`    | .875rem  |
+| `text-caption`  | `text-body-small`     | .75rem   |
+| `text-overline` | `text-label-small`    | .6875rem |
+
+The font-family overrides in `stk/static/css/app.css` select on the MD3 names, so a
+stray MD2 class also loses the Plus Jakarta Sans / Inter treatment.
 
 Never reintroduce the Vue development build. Vue 3.5's production reactivity loops
 forever on state mutated inside a computed, where the dev build only warns; that is

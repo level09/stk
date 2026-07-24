@@ -1,4 +1,4 @@
 vue 3.5.40
-vuetify 3.12.11
+vuetify 4.1.6
 axios 1.18.1
 @tabler/icons-webfont 3.45.0

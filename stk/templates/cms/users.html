@@ -123,7 +123,7 @@
                 </template>
             </v-toolbar>
             <v-card-text>
-                <p class="mb-4 text-body-2">Set a new password for <strong>${resetUser.email}</strong></p>
+                <p class="mb-4 text-body-medium">Set a new password for <strong>${resetUser.email}</strong></p>
                 <v-text-field label="New Password" type="password" v-model="resetPassword" :rules="[v => !!v && v.length >= 12 || 'Min 12 characters']"></v-text-field>
             </v-card-text>
             <v-card-actions>

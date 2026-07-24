@@ -67,7 +67,7 @@
                 <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" icon variant="text" size="small" class="ml-1">
                         <v-avatar color="primary" size="32">
-                            <span class="text-body-2">{{ current_user.name[:2]|upper if current_user.name else 'U' }}</span>
+                            <span class="text-body-medium">{{ current_user.name[:2]|upper if current_user.name else 'U' }}</span>
                         </v-avatar>
                     </v-btn>
                 </template>
