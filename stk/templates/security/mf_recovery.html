@@ -11,7 +11,7 @@
         </div>
 
         <form action="{{ url_for_security('mf_recovery') }}" method="POST" name="mf_recovery_form">
-            {{ mf_recovery_form.hidden_tag() }}
+            {{ recovery_form.hidden_tag() }}
 
             <v-text-field
                 name="code"
@@ -28,9 +28,9 @@
 
             {% include "security/_messages.html" %}
 
-            {% if mf_recovery_form.errors and mf_recovery_form.errors.code %}
+            {% if recovery_form.errors and recovery_form.errors.code %}
             <v-alert type="error" variant="tonal" class="mb-4">
-                {{ mf_recovery_form.errors.code[0] }}
+                {{ recovery_form.errors.code[0] }}
             </v-alert>
             {% endif %}
 

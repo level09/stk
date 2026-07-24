@@ -9,6 +9,7 @@ from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
 from stk.cli.reports import (
     _command_runner,
+    _guards,
     build_context_report,
     build_project_report_html,
     build_routes_report,
@@ -32,6 +33,25 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn("source", by_rule["/dashboard/"])
         self.assertTrue(by_rule["/users/"]["auth"]["required"])
         self.assertEqual(by_rule["/users/"]["auth"]["source"], "blueprint")
+        # Decorated directly by quart-security, not by any stk blueprint.
+        self.assertTrue(by_rule["/change"]["auth"]["required"])
+        self.assertEqual(by_rule["/change"]["auth"]["source"], "route")
+        self.assertFalse(by_rule["/login"]["auth"]["required"])
+
+    def test_guard_detection_survives_quart_security(self):
+        """If upstream renames its decorator internals, fail here, not silently."""
+        from quart_security import auth_required, roles_required
+
+        @auth_required("session")
+        @roles_required("admin")
+        async def guarded():
+            return "ok"
+
+        async def open_view():
+            return "ok"
+
+        self.assertEqual(_guards(guarded), ["auth_required", "roles_required"])
+        self.assertEqual(_guards(open_view), [])
 
     def test_context_report_exposes_routes_and_models(self):
         report = build_context_report(create_app())

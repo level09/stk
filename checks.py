@@ -282,6 +282,33 @@ async def check_api_requires_auth(app):
     )
 
 
+@check("Reported route auth matches real requests")
+async def check_route_auth_is_honest(app):
+    """Every route the report calls guarded must actually reject anonymous access.
+
+    Agents read `quart inspect routes` to decide what is exposed, so a route
+    claiming protection it does not have is the expensive direction of wrong.
+    """
+    from stk.cli.reports import build_routes_report
+
+    client = app.test_client()
+    liars = []
+    for route in build_routes_report(app):
+        if not route["auth"]["required"] or "GET" not in route["methods"]:
+            continue
+        if route["arguments"] or route["endpoint"].endswith(".static"):
+            continue
+        response = await client.get(route["rule"])
+        location = response.headers.get("Location", "")
+        denied = response.status_code in (401, 403) or (
+            response.status_code in (301, 302) and "/login" in location
+        )
+        if not denied:
+            liars.append(f"{route['rule']} -> HTTP {response.status_code}")
+
+    assert not liars, "Routes reported as guarded but reachable: " + ", ".join(liars)
+
+
 @check("CLI commands registered")
 def check_cli_commands(app):
     commands = list(app.cli.commands.keys())

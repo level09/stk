@@ -46,17 +46,38 @@ def _route_source(view_func):
     return source
 
 
-def _route_auth(rule):
+def _guards(func):
+    """Return the quart-security guards wrapping `func`, outermost first.
+
+    ponytail: identifies the guards by the decorator's closure qualname because
+    quart-security exposes no marker. `checks.py` asserts the result against real
+    requests, so a rename upstream fails the gate instead of silently reporting
+    every route as open.
+    """
+    guards = []
+    while func is not None:
+        qualname = getattr(getattr(func, "__code__", None), "co_qualname", "")
+        for guard in ("auth_required", "roles_required"):
+            if qualname.startswith(f"{guard}."):
+                guards.append(guard)
+        func = getattr(func, "__wrapped__", None)
+    return guards
+
+
+def _route_auth(app, rule):
+    """Report whether a route is guarded, and where the guard is declared."""
     if rule.rule.startswith("/_test/"):
         return {"required": False, "source": "test-only", "scheme": "agent-token"}
+
     blueprint = rule.endpoint.rsplit(".", 1)[0] if "." in rule.endpoint else None
-    if blueprint in {"portal", "users"}:
-        return {"required": True, "source": "blueprint", "scheme": "session"}
-    if rule.rule.startswith("/api/") or rule.rule in {"/dashboard/"}:
+    if _guards(app.view_functions.get(rule.endpoint)):
         return {"required": True, "source": "route", "scheme": "session"}
-    if rule.rule in {"/login", "/register", "/reset", "/confirm"}:
-        return {"required": False, "source": "security", "scheme": "public"}
-    return {"required": False, "source": "default", "scheme": "public"}
+
+    for func in app.before_request_funcs.get(blueprint, []):
+        if _guards(func):
+            return {"required": True, "source": "blueprint", "scheme": "session"}
+
+    return {"required": False, "source": "unguarded", "scheme": "public"}
 
 
 def build_routes_report(app):
@@ -73,7 +94,7 @@ def build_routes_report(app):
                 "blueprint": blueprint,
                 "methods": methods,
                 "arguments": sorted(rule.arguments),
-                "auth": _route_auth(rule),
+                "auth": _route_auth(app, rule),
                 "source": _route_source(view_func),
             }
         )
