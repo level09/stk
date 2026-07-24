@@ -9,7 +9,7 @@ from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-import stk.commands as commands
+import stk.cli as cli
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
@@ -29,8 +29,7 @@ def create_app(config_object=Config):
     register_blueprints(app)
     register_extensions(app)
     register_errorhandlers(app)
-    register_shellcontext(app)
-    register_commands(app, commands)
+    register_commands(app, cli)
     return app
 
 
@@ -181,16 +180,6 @@ def register_errorhandlers(app):
     for errcode in [401, 404, 500]:
         app.errorhandler(errcode)(render_error)
     return None
-
-
-def register_shellcontext(app):
-    """Register shell context objects."""
-
-    def shell_context():
-        """Shell context objects."""
-        return {"User": User, "Role": Role}
-
-    app.shell_context_processor(shell_context)
 
 
 def register_commands(app: Quart, commands_module):

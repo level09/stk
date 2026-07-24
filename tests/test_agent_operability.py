@@ -7,15 +7,14 @@ from quart_security import hash_password
 import stk.extensions as ext
 from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
-from stk.commands import (
+from stk.cli.reports import (
     _command_runner,
     build_context_report,
     build_project_report_html,
     build_routes_report,
-    build_smoke_report,
     build_verify_report,
-    smoke_exit_code,
 )
+from stk.cli.smoke import build_smoke_report, smoke_exit_code
 from stk.user.models import Role, User
 
 
@@ -67,7 +66,7 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertEqual(report["checks"][0]["status"], "skipped")
 
     def test_command_runner_reports_missing_ruff_as_skipped(self):
-        with patch("stk.commands.subprocess.run") as run:
+        with patch("stk.cli.reports.subprocess.run") as run:
             run.side_effect = FileNotFoundError
 
             returncode, stdout, stderr = _command_runner(["ruff", "check", "."])

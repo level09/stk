@@ -3,7 +3,7 @@
 Use the smallest verification set that catches the risk introduced by the change.
 
 Default checks:
-- `uv run python -m unittest tests/test_agent_operability.py`
+- `uv run python -m unittest discover -s tests`
 - `uv run ruff check .`
 - `uv run python checks.py`
 - `uv run quart verify`
@@ -11,9 +11,9 @@ Default checks:
 For frontend-touching changes, also run:
 - `uv run quart smoke`
 
-For database changes, also run:
+For model or migration changes, also run:
+- `uv run quart db check` (fails if models drifted away from migrations; part of `quart verify`)
 - `uv run quart db current`
-- `uv run quart db history`
 
 For auth or route changes, also run:
 - `uv run quart inspect routes --json`

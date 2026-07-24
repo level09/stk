@@ -44,8 +44,10 @@ uv run quart inspect context --json  # Routes + models in one contract
 uv run quart verify --json           # Lint, sanity, migration checks (exit 0/1)
 uv run quart smoke --json            # Real-browser behavioral check (Playwright)
 uv run quart report                  # Static project review artifact
+uv run quart shell                   # Async REPL: app, live db session, models, top-level await
+uv run quart shell -c "await count(User)"  # One-shot query, prints last expression
 uv run quart new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
-uv run python -m unittest tests/test_agent_operability.py tests/test_scaffolder.py
+uv run python -m unittest discover -s tests
 ```
 
 ### Database Migrations (Alembic)
@@ -58,6 +60,7 @@ uv run quart db revision -m "desc" --empty      # Empty revision for manual SQL
 uv run quart db current                         # Show current revision
 uv run quart db history                         # Show migration history
 uv run quart db stamp head                      # Adopt Alembic on existing DB
+uv run quart db check                           # Fail if models drifted from migrations
 ```
 
 Migration config lives in `stk/migrations.py`. Alembic env in `alembic/env.py`. Revisions in `alembic/versions/`. SQLite uses batch mode automatically for ALTER TABLE support.
@@ -87,7 +90,7 @@ All relationships must use `lazy="selectin"` for async compatibility.
 
 ### CLI Commands
 
-Sync click commands wrapping `asyncio.run()` in `stk/commands.py`. Quart CLI doesn't support async click commands. The `db` group is a click.Group with Alembic subcommands. All commands are auto-registered via `register_commands()` in `app.py`.
+Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `agent.py` (inspect, verify, smoke, report, shell, new), `database.py` (create-db, db group, migration drift), `users.py` (install, create, add-role, reset, sessions, browser-token), plus `reports.py` and `smoke.py` for the machine-readable builders behind them. Quart CLI doesn't support async click commands. All commands re-exported from `stk/cli/__init__.py` are auto-registered via `register_commands()` in `app.py`.
 
 ### Blueprints
 

@@ -293,6 +293,7 @@ def check_cli_commands(app):
         "reset",
         "migrate",
         "migration-status",
+        "shell",
     ]
     for cmd in required:
         assert cmd in commands, f"Missing CLI command: {cmd}"

@@ -16,10 +16,12 @@ Common commands:
 Agent-operability commands:
 - `uv run quart inspect routes --json`
 - `uv run quart inspect context --json`
-- `uv run quart verify`
+- `uv run quart verify` (ruff + checks.py + migration drift)
 - `uv run quart verify --json`
 - `uv run quart smoke`
 - `uv run quart smoke --json`
 - `uv run quart report`
+- `uv run quart shell` (async REPL: app, live `db` session, all models, top-level await)
+- `uv run quart shell -c "await count(User)"` (one-shot query, prints the last expression)
 
 Run `uv run quart smoke` for frontend-touching changes. It is the behavioral browser check for this no-build Vue/Vuetify frontend.

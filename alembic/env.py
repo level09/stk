@@ -34,7 +34,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_database_url(sync=True)
+    # Callers (e.g. `quart db check`) may point migrations at a throwaway database.
+    configuration["sqlalchemy.url"] = config.get_main_option(
+        "sqlalchemy.url"
+    ) or get_database_url(sync=True)
 
     connectable = engine_from_config(
         configuration,

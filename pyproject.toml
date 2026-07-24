@@ -39,6 +39,10 @@ dependencies = [
 ]
 
 
+# Overrides Quart's built-in `shell` (plugin commands win over built-ins).
+[project.entry-points."quart.commands"]
+shell = "stk.cli:shell"
+
 [project.optional-dependencies]
 full = [
     "asyncpg>=0.30.0",

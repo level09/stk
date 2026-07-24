@@ -12,7 +12,8 @@ stk/
 │   ├── app.py             # Application factory
 │   ├── settings.py        # Configuration
 │   ├── extensions.py      # Async SQLAlchemy setup
-│   ├── commands.py        # CLI commands
+│   ├── cli/               # CLI commands (agent, database, users, reports, smoke)
+│   ├── shell.py           # Async REPL behind `quart shell`
 │   ├── tasks.py           # Async background tasks
 │   ├── websocket.py       # WebSocket endpoint
 │   ├── portal/            # Blueprint: Protected routes
