@@ -1,6 +1,7 @@
 """Agent-facing commands: inspect, verify, smoke, report, shell, scaffold."""
 
 import json
+import time
 from pathlib import Path
 
 import click
@@ -62,23 +63,70 @@ def shell(source):
     run_shell(create_app(), source)
 
 
+MARKERS = {"passed": "[green]✓[/]", "failed": "[red]✗[/]", "skipped": "[yellow]-[/]"}
+
+
+def _print_verify_report(report, detail_lines=5):
+    for check in report["checks"]:
+        console.print(f"{MARKERS[check['status']]} {check['name']}", highlight=False)
+        if check["status"] != "failed":
+            continue
+        output = check["stdout"].strip() or check["stderr"].strip()
+        for line in output.splitlines()[-detail_lines:]:
+            console.print(f"    [dim]{line}[/]", highlight=False)
+        if check["remedy"]:
+            console.print(f"    [cyan]→ {check['remedy']}[/]", highlight=False)
+
+
 @click.command()
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
-def verify(as_json):
+@click.option(
+    "-w", "--watch", is_flag=True, help="Re-run affected checks on every file save."
+)
+def verify(as_json, watch):
     """Run STK verification checks."""
+    if watch:
+        _watch_and_verify()
+        return
+
     report = build_verify_report()
     if as_json:
         click.echo(json.dumps(report, indent=2))
         raise click.exceptions.Exit(0 if report["status"] == "passed" else 1)
 
-    for check in report["checks"]:
-        marker = "✓" if check["status"] == "passed" else "✗"
-        click.echo(f"{marker} {check['name']}")
-        if check["status"] == "failed":
-            detail = check["stdout"].strip() or check["stderr"].strip()
-            for line in detail.splitlines()[-5:]:
-                click.echo(f"    {line}")
+    _print_verify_report(report)
     raise click.exceptions.Exit(0 if report["status"] == "passed" else 1)
+
+
+def _watch_and_verify(interval=0.5):
+    """Verify now, then re-verify whatever the next edit could have broken."""
+    from stk.cli import watch as watcher
+    from stk.cli.reports import VERIFY_COMMANDS
+
+    root = Path.cwd()
+    console.print("[bold]stk verify --watch[/] [dim]ctrl-c to stop[/]\n")
+    _print_verify_report(build_verify_report())
+    seen = watcher.scan(root)
+
+    while True:
+        time.sleep(interval)
+        current = watcher.scan(root)
+        touched = watcher.changed(seen, current)
+        seen = current
+        if not touched:
+            continue
+
+        names = watcher.checks_for(touched)
+        if not names:
+            continue
+        shown = ", ".join(
+            str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
+            for path in touched[:3]
+        )
+        extra = f" +{len(touched) - 3}" if len(touched) > 3 else ""
+        console.print(f"\n[dim]changed:[/] {shown}{extra}")
+        commands = [item for item in VERIFY_COMMANDS if item[0] in names]
+        _print_verify_report(build_verify_report(commands))
 
 
 @click.command()
@@ -91,6 +139,37 @@ def smoke(as_json):
     else:
         print_smoke_report(report)
     raise click.exceptions.Exit(smoke_exit_code(report))
+
+
+# Named `doctor_cmd` because `stk.cli.doctor` is the module that backs it, and
+# importing a submodule rebinds that attribute on the package.
+@click.command("doctor")
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
+def doctor_cmd(as_json):
+    """Report the state of this checkout, and what to run for anything wrong."""
+    from stk.cli.doctor import build_doctor_report
+
+    report = build_doctor_report()
+    if as_json:
+        click.echo(json.dumps(report, indent=2))
+        raise click.exceptions.Exit(0 if report["status"] != "fail" else 1)
+
+    marks = {"ok": "[green]✓[/]", "warn": "[yellow]![/]", "fail": "[red]✗[/]"}
+    for finding in report["findings"]:
+        console.print(
+            f"{marks[finding['status']]} [bold]{finding['name']:14}[/] {finding['detail']}",
+            highlight=False,
+        )
+        if finding["remedy"]:
+            console.print(f"    [cyan]→ {finding['remedy']}[/]", highlight=False)
+
+    summary = {
+        "ok": "[green]Everything is ready.[/]",
+        "warn": "[yellow]Usable, with the warnings above.[/]",
+        "fail": "[red]Fix the failures above before building.[/]",
+    }
+    console.print(f"\n{summary[report['status']]}")
+    raise click.exceptions.Exit(0 if report["status"] != "fail" else 1)
 
 
 @click.command()
@@ -121,12 +200,21 @@ def report(output, as_json):
 
 @click.command("new")
 @click.argument("name")
-def new_module(name):
-    """Scaffold a new blueprint module.
+@click.option(
+    "--migrate/--no-migrate",
+    default=True,
+    help="Autogenerate and apply the migration for the new model.",
+)
+@click.option("--port", default=5000, show_default=True, help="Port used in the URL.")
+def new_module(name, migrate, port):
+    """Scaffold a new blueprint module, ending at a page you can open.
 
     NAME must be a lowercase snake_case identifier (e.g. blog_post).
     Generates blueprint package, template, and wires into app.py + navigation.js.
     """
+    from alembic import command
+    from stk.cli.database import run_alembic
+    from stk.migrations import build_alembic_config
     from stk.scaffold.generator import generate_module
 
     try:
@@ -138,16 +226,23 @@ def new_module(name):
     for action in actions:
         console.print(f"  [blue]+[/] {action}")
 
+    if migrate:
+        config = build_alembic_config()
+        # Skip alembic's own logging config; the scaffold output is the message here.
+        config.config_file_name = None
+        run_alembic(command.revision, config, message=f"add {name}", autogenerate=True)
+        run_alembic(command.upgrade, config, "head")
+        console.print(f"  [blue]+[/] migration generated and applied for {name}")
+
+    url = f"http://localhost:{port}/{name}s/"
+    console.print(f"\n[green]Open:[/] [bold]{url}[/]  [dim](start it with: stk run)[/]")
     console.print(
-        f"""
-[yellow]Post-generation checklist:[/]
-  1. Customize [bold]stk/{name}/models.py[/] -- add/rename fields to fit your domain.
-  2. Run migration autogenerate:
-       [bold]uv run quart db revision -m "add {name}"[/]
-     Review [bold]alembic/versions/<rev>_add_{name}.py[/] for correctness.
-  3. Apply migration:
-       [bold]uv run quart db upgrade[/]
-  4. Verify:
-       [bold]uv run quart verify && uv run quart smoke[/]
+        f"""[dim]Then:[/]
+  Shape the domain in [bold]stk/{name}/models.py[/]{
+            ', and re-run `stk db revision -m "..." && stk db upgrade`'
+            if migrate
+            else ', then `stk db revision -m "add ' + name + '"` and `stk db upgrade`'
+        }
+  Keep it honest with [bold]stk verify --watch[/] while you edit
 """
     )

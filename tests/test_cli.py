@@ -26,6 +26,16 @@ class StkCommandTest(unittest.TestCase):
 
         self.assertNotIn("Other:", result.output)
 
+    def test_commands_survive_importing_their_backing_modules(self):
+        """A submodule named like its command rebinds the package attribute."""
+        from stk.cli.doctor import build_doctor_report  # noqa: F401
+        from stk.cli.smoke import build_smoke_report  # noqa: F401
+
+        result = self.runner.invoke(main, ["--help"])
+
+        self.assertIn("doctor", result.output)
+        self.assertIn("smoke", result.output)
+
     def test_version_reports_stk_not_quart(self):
         result = self.runner.invoke(main, ["--version"])
 

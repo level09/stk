@@ -1,4 +1,4 @@
-"""Machine-readable reports behind `quart inspect`, `verify`, and `report`."""
+"""Machine-readable reports behind `stk inspect`, `stk verify`, and `stk report`."""
 
 import html
 import inspect as pyinspect
@@ -13,6 +13,14 @@ VERIFY_COMMANDS = [
     ("checks", [sys.executable, "checks.py"]),
     ("migration-drift", [sys.executable, "-m", "stk", "db", "check"]),
 ]
+
+# A failing check that does not say how to fix it makes the reader do the work
+# twice. Every check names its remedy, in the report and in the JSON an agent reads.
+REMEDIES = {
+    "ruff": "uv run ruff check --fix . && uv run ruff format .",
+    "checks": "read the failed assertion above; each check names what it expected",
+    "migration-drift": 'uv run stk db revision -m "describe change" && uv run stk db upgrade',
+}
 
 
 def _command_runner(command):
@@ -148,6 +156,7 @@ def build_verify_report(commands=None, runner=_command_runner):
                 else "failed",
                 "stdout": stdout.strip(),
                 "stderr": stderr.strip(),
+                "remedy": REMEDIES.get(name),
             }
         )
     status = (

@@ -201,8 +201,6 @@ uv run stk db downgrade <rev>     # Roll back migrations
 uv run stk db revision -m "msg"   # Generate new migration
 uv run stk db current             # Show current revision
 uv run stk db history             # Show migration history
-uv run stk migrate                # Alias for upgrade head
-uv run stk migration-status       # Show current revision
 uv run stk inspect routes --json  # Machine-readable route map
 uv run stk inspect context --json # Routes and models in one contract
 uv run stk verify                 # Lint, sanity, and migration checks

@@ -49,12 +49,14 @@ Prefer these over guessing from files. Structured agent context lives in `.stk/c
 ```bash
 uv run stk inspect routes --json   # Route map with auth and source info
 uv run stk inspect context --json  # Routes + models in one contract
+uv run stk doctor                  # Environment/app state, each line with its fix
+uv run stk verify --watch          # Re-run affected checks on every save
 uv run stk verify --json           # Lint, sanity, migration checks (exit 0/1)
 uv run stk smoke --json            # Real-browser behavioral check (Playwright)
 uv run stk report                 # Static project review artifact
 uv run stk shell                  # Async REPL: app, live db session, models, top-level await (ptpython)
 uv run stk shell -c "await count(User)"  # One-shot query, prints last expression
-uv run stk new <module>            # Deterministic module scaffold (blueprint, views, template, nav)
+uv run stk new <module>            # Scaffold + migrate, ends at a URL you can open
 uv run python -m unittest discover -s tests
 ```
 

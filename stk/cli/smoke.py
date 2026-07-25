@@ -135,7 +135,6 @@ def _smoke_env(database_path):
     env = os.environ.copy()
     env.update(
         {
-            "QUART_APP": "run:app",
             "SECRET_KEY": secrets.token_urlsafe(32),
             "SECURITY_PASSWORD_SALT": secrets.token_urlsafe(32),
             "SQLALCHEMY_DATABASE_URI": f"sqlite+aiosqlite:///{database_path}",
