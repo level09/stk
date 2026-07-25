@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v14.1.0 (2026-07-25)
 
 ### Added
 - `stk doctor`: env, secrets, database, migration state, admin user, vendored
