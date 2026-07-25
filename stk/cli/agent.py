@@ -227,6 +227,8 @@ def new_module(name, migrate, port):
 
     if migrate:
         config = build_alembic_config()
+        # Skip alembic's own logging config; the scaffold output is the message here.
+        config.config_file_name = None
         command.revision(config, message=f"add {name}", autogenerate=True)
         command.upgrade(config, "head")
         console.print(f"  [blue]+[/] migration generated and applied for {name}")
