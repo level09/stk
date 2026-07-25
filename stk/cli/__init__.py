@@ -1,6 +1,7 @@
 """Click commands, grouped by concern. `register_commands` registers everything here."""
 
 from stk.cli.agent import (
+    doctor_cmd,
     inspect_cmd,
     new_module,
     report,
@@ -32,6 +33,7 @@ __all__ = [
     "create",
     "create_db",
     "db",
+    "doctor_cmd",
     "inspect_cmd",
     "install",
     "migrate",

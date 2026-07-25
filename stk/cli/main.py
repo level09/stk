@@ -12,7 +12,7 @@ from quart.cli import QuartGroup
 SECTIONS = [
     ("Develop", ["run", "shell", "new", "routes"]),
     ("Database", ["db", "create-db", "migrate", "migration-status"]),
-    ("Verify", ["verify", "smoke", "inspect", "report"]),
+    ("Verify", ["doctor", "verify", "smoke", "inspect", "report"]),
     (
         "Accounts",
         ["install", "create", "add-role", "reset", "cleanup-sessions", "browser-token"],

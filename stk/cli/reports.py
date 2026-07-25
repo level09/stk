@@ -14,6 +14,23 @@ VERIFY_COMMANDS = [
     ("migration-drift", [sys.executable, "-m", "stk", "db", "check"]),
 ]
 
+# A failing check that does not say how to fix it makes the reader do the work
+# twice. Every check names its remedy, in the report and in the JSON an agent reads.
+REMEDIES = {
+    "ruff": "uv run ruff check --fix . && uv run ruff format .",
+    "checks": "read the failed assertion above; each check names what it expected",
+    "migration-drift": 'uv run stk db revision -m "describe change" && uv run stk db upgrade',
+}
+
+# Checks worth re-running when a file of this kind changes.
+WATCHED_SUFFIXES = {
+    ".py": ("ruff", "checks", "migration-drift"),
+    ".html": ("checks",),
+    ".jinja2": ("checks",),
+    ".js": ("checks",),
+    ".css": ("checks",),
+}
+
 
 def _command_runner(command):
     try:
@@ -148,6 +165,7 @@ def build_verify_report(commands=None, runner=_command_runner):
                 else "failed",
                 "stdout": stdout.strip(),
                 "stderr": stderr.strip(),
+                "remedy": REMEDIES.get(name),
             }
         )
     status = (

@@ -2,6 +2,14 @@
 
 Use the smallest verification set that catches the risk introduced by the change.
 
+Start with `uv run stk doctor` when anything behaves oddly: it reports env, secrets,
+database, migration state, admin user, vendored assets, and agent-login exposure, and
+each non-ok line carries the exact command that fixes it. `--json` for machine use.
+
+While editing, leave `uv run stk verify --watch` running. It re-runs only the checks a
+changed file can break (models touch migration drift, templates do not) and prints the
+remedy under any failure.
+
 Default checks:
 - `uv run python -m unittest discover -s tests`
 - `uv run ruff check .`
