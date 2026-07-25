@@ -11,7 +11,7 @@ from stk.cli.base import console
 from stk.migrations import build_alembic_config, get_target_metadata
 
 
-def _alembic(action, *args, **kwargs):
+def run_alembic(action, *args, **kwargs):
     """Run an alembic command, reporting its complaint instead of a traceback."""
     from alembic.util.exc import CommandError
 
@@ -80,7 +80,7 @@ def create_db():
 
     instance_dir = os.path.join(Config.PROJECT_ROOT, "instance")
     os.makedirs(instance_dir, exist_ok=True)
-    _alembic(command.upgrade, build_alembic_config(), "head")
+    run_alembic(command.upgrade, build_alembic_config(), "head")
     console.print("[green]Database migrations applied successfully[/]")
 
 
@@ -93,14 +93,14 @@ def db():
 @click.argument("revision", default="head")
 def db_upgrade(revision):
     """Upgrade the database to a target revision."""
-    _alembic(command.upgrade, build_alembic_config(), revision)
+    run_alembic(command.upgrade, build_alembic_config(), revision)
 
 
 @db.command("downgrade")
 @click.argument("revision")
 def db_downgrade(revision):
     """Downgrade the database to a target revision."""
-    _alembic(command.downgrade, build_alembic_config(), revision)
+    run_alembic(command.downgrade, build_alembic_config(), revision)
 
 
 @db.command("revision")
@@ -112,7 +112,7 @@ def db_downgrade(revision):
 )
 def db_revision(message, autogenerate):
     """Create a new migration revision."""
-    _alembic(
+    run_alembic(
         command.revision,
         build_alembic_config(),
         message=message,
@@ -139,29 +139,29 @@ def db_check():
 @db.command("current")
 def db_current():
     """Show the current database revision."""
-    _alembic(command.current, build_alembic_config())
+    run_alembic(command.current, build_alembic_config())
 
 
 @db.command("history")
 def db_history():
     """Show migration history."""
-    _alembic(command.history, build_alembic_config())
+    run_alembic(command.history, build_alembic_config())
 
 
 @db.command("stamp")
 @click.argument("revision", default="head")
 def db_stamp(revision):
     """Stamp a database with a revision without running migrations."""
-    _alembic(command.stamp, build_alembic_config(), revision)
+    run_alembic(command.stamp, build_alembic_config(), revision)
 
 
 @click.command()
 def migrate():
     """Apply all database migrations (legacy alias for upgrade head)."""
-    _alembic(command.upgrade, build_alembic_config(), "head")
+    run_alembic(command.upgrade, build_alembic_config(), "head")
 
 
 @click.command("migration-status")
 def migration_status():
     """Show the current Alembic migration revision."""
-    _alembic(command.current, build_alembic_config())
+    run_alembic(command.current, build_alembic_config())

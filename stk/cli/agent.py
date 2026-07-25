@@ -213,6 +213,7 @@ def new_module(name, migrate, port):
     Generates blueprint package, template, and wires into app.py + navigation.js.
     """
     from alembic import command
+    from stk.cli.database import run_alembic
     from stk.migrations import build_alembic_config
     from stk.scaffold.generator import generate_module
 
@@ -229,8 +230,8 @@ def new_module(name, migrate, port):
         config = build_alembic_config()
         # Skip alembic's own logging config; the scaffold output is the message here.
         config.config_file_name = None
-        command.revision(config, message=f"add {name}", autogenerate=True)
-        command.upgrade(config, "head")
+        run_alembic(command.revision, config, message=f"add {name}", autogenerate=True)
+        run_alembic(command.upgrade, config, "head")
         console.print(f"  [blue]+[/] migration generated and applied for {name}")
 
     url = f"http://localhost:{port}/{name}s/"
