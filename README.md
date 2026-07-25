@@ -41,7 +41,7 @@ stk ships what actually matters:
 
 **Async all the way down.** Quart + async SQLAlchemy + aiosmtplib + native WebSockets. Not async bolted onto a sync framework. Real concurrency without threads, workers, or callback hell.
 
-**No JS build step.** Vue 3 + Vuetify 3 loaded directly in the browser. No webpack, no vite, no node_modules, no npm. Delete your frontend toolchain. Still get a polished admin dashboard with data tables, dark mode, collapsible sidebar, 5000+ icons.
+**No JS build step.** Vue 3 + Vuetify 4 loaded directly in the browser. No webpack, no vite, no node_modules, no npm. Delete your frontend toolchain. Still get a polished admin dashboard with data tables, dark mode, collapsible sidebar, 5000+ icons.
 
 **SQLite by default.** Deploy anywhere. No managed database required. PostgreSQL when you need it, not when the framework demands it.
 
@@ -77,7 +77,7 @@ stk ships what actually matters:
 - JSON API endpoints for all admin operations
 
 ### Frontend
-- Vue 3 + Vuetify 3 (zero build step)
+- Vue 3 + Vuetify 4 (zero build step, versions pinned in `stk/static/VERSIONS.txt`)
 - Dark/light theme with system preference detection
 - Collapsible sidebar navigation
 - Notification dropdown
@@ -87,7 +87,7 @@ stk ships what actually matters:
 ### Infrastructure
 - Async email (aiosmtplib) with HTML + text templates
 - Fire-and-forget background tasks (no Celery)
-- CLI commands: create-db, db upgrade/downgrade/revision, install, create user, reset password, add role, cleanup sessions
+- One CLI: `stk` (run, shell, new, db, verify, smoke, report, inspect, install, users), grouped in `stk --help`
 - Docker Compose: PostgreSQL, Redis, Nginx (one command)
 - VPS deploy script with auto-SSL via Caddy
 - Pre-commit hooks, ruff linting
@@ -97,7 +97,9 @@ stk ships what actually matters:
 - Ships with Claude Code instructions (`CLAUDE.md`) and agent primitives
 - AI-assisted scaffolding skills for blueprints, APIs, and migrations
 - Structured agent context in `.stk/context/`
-- Route inspection, verification, and review artifacts via `quart inspect`, `quart verify`, and `quart report`
+- Route inspection, verification, and review artifacts via `stk inspect`, `stk verify`, and `stk report`
+- Behavioral gate: `stk verify` (lint, sanity, migration drift) and `stk smoke` (real browser, console errors, invisible text)
+- `stk shell`: async REPL with the app, a live DB session, every model, and top-level `await`
 - Your AI already knows the codebase conventions
 
 ## Stack
@@ -110,7 +112,7 @@ stk ships what actually matters:
 | Database | SQLite (default), PostgreSQL (optional) |
 | Migrations | Alembic |
 | Auth | [quart-security](https://quart-security.readthedocs.io/) (2FA, WebAuthn, OAuth) |
-| Frontend | Vue 3, Vuetify 3, Axios |
+| Frontend | Vue 3, Vuetify 4, Axios |
 | WebSockets | Native Quart WebSocket support |
 | Email | aiosmtplib |
 | Server | Uvicorn (ASGI) |

@@ -1497,7 +1497,7 @@ asyncio = [
 
 [[package]]
 name = "stk"
-version = "13.4.1"
+version = "14.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosmtplib" },
