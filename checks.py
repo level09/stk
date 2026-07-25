@@ -318,8 +318,7 @@ def check_cli_commands(app):
         "create",
         "add-role",
         "reset",
-        "migrate",
-        "migration-status",
+        "db",
         "shell",
     ]
     for cmd in required:

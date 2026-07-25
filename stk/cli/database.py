@@ -153,15 +153,3 @@ def db_history():
 def db_stamp(revision):
     """Stamp a database with a revision without running migrations."""
     run_alembic(command.stamp, build_alembic_config(), revision)
-
-
-@click.command()
-def migrate():
-    """Apply all database migrations (legacy alias for upgrade head)."""
-    run_alembic(command.upgrade, build_alembic_config(), "head")
-
-
-@click.command("migration-status")
-def migration_status():
-    """Show the current Alembic migration revision."""
-    run_alembic(command.current, build_alembic_config())

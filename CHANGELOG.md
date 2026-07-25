@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `stk doctor`: env, secrets, database, migration state, admin user, vendored
+  assets, agent-login exposure, browser, and REPL, each problem with the command
+  that fixes it. `--json` for tooling.
+- `stk verify --watch`: re-runs only the checks a changed file can break (models
+  touch migration drift, templates do not) and prints the remedy under a failure.
+- Every verify check now carries its remedy, in the text output and in the JSON.
+- `stk new <name>` generates and applies the migration, then prints the URL of the
+  page it created. `--no-migrate` opts out.
+- Docs: `build-loop.mdx` and `shell.mdx`, both example-first.
+
+### Changed
+- Alembic failures report one line plus a next step instead of a traceback.
+- CI actions bumped off Node 20 (checkout v7, setup-uv v9, upload-artifact v7).
+- `alembic.ini` sets `path_separator`, silencing the deprecation warning.
+
+### Removed
+- `stk migrate` and `stk migration-status`, pure aliases for `stk db upgrade` and
+  `stk db current`.
+
 ## v14.0.0 (2026-07-25)
 
 Bundles the unreleased 13.4.x work (hardened auth via quart-security 1.4.1) with a

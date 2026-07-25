@@ -11,7 +11,7 @@ from quart.cli import QuartGroup
 
 SECTIONS = [
     ("Develop", ["run", "shell", "new", "routes"]),
-    ("Database", ["db", "create-db", "migrate", "migration-status"]),
+    ("Database", ["db", "create-db"]),
     ("Verify", ["doctor", "verify", "smoke", "inspect", "report"]),
     (
         "Accounts",
