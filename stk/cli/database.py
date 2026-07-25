@@ -11,6 +11,16 @@ from stk.cli.base import console
 from stk.migrations import build_alembic_config, get_target_metadata
 
 
+def _alembic(action, *args, **kwargs):
+    """Run an alembic command, reporting its complaint instead of a traceback."""
+    from alembic.util.exc import CommandError
+
+    try:
+        return action(*args, **kwargs)
+    except CommandError as exc:
+        raise click.ClickException(f"{exc}\nrun: uv run stk doctor") from exc
+
+
 def _flatten(diffs):
     for diff in diffs:
         if isinstance(diff, list):
@@ -70,7 +80,7 @@ def create_db():
 
     instance_dir = os.path.join(Config.PROJECT_ROOT, "instance")
     os.makedirs(instance_dir, exist_ok=True)
-    command.upgrade(build_alembic_config(), "head")
+    _alembic(command.upgrade, build_alembic_config(), "head")
     console.print("[green]Database migrations applied successfully[/]")
 
 
@@ -83,14 +93,14 @@ def db():
 @click.argument("revision", default="head")
 def db_upgrade(revision):
     """Upgrade the database to a target revision."""
-    command.upgrade(build_alembic_config(), revision)
+    _alembic(command.upgrade, build_alembic_config(), revision)
 
 
 @db.command("downgrade")
 @click.argument("revision")
 def db_downgrade(revision):
     """Downgrade the database to a target revision."""
-    command.downgrade(build_alembic_config(), revision)
+    _alembic(command.downgrade, build_alembic_config(), revision)
 
 
 @db.command("revision")
@@ -102,7 +112,8 @@ def db_downgrade(revision):
 )
 def db_revision(message, autogenerate):
     """Create a new migration revision."""
-    command.revision(
+    _alembic(
+        command.revision,
         build_alembic_config(),
         message=message,
         autogenerate=autogenerate,
@@ -121,36 +132,36 @@ def db_check():
     for line in drift:
         console.print(f"  [yellow]{line}[/]")
     raise click.ClickException(
-        'run: uv run quart db revision -m "describe change" && uv run quart db upgrade'
+        'run: uv run stk db revision -m "describe change" && uv run stk db upgrade'
     )
 
 
 @db.command("current")
 def db_current():
     """Show the current database revision."""
-    command.current(build_alembic_config())
+    _alembic(command.current, build_alembic_config())
 
 
 @db.command("history")
 def db_history():
     """Show migration history."""
-    command.history(build_alembic_config())
+    _alembic(command.history, build_alembic_config())
 
 
 @db.command("stamp")
 @click.argument("revision", default="head")
 def db_stamp(revision):
     """Stamp a database with a revision without running migrations."""
-    command.stamp(build_alembic_config(), revision)
+    _alembic(command.stamp, build_alembic_config(), revision)
 
 
 @click.command()
 def migrate():
     """Apply all database migrations (legacy alias for upgrade head)."""
-    command.upgrade(build_alembic_config(), "head")
+    _alembic(command.upgrade, build_alembic_config(), "head")
 
 
 @click.command("migration-status")
 def migration_status():
     """Show the current Alembic migration revision."""
-    command.current(build_alembic_config())
+    _alembic(command.current, build_alembic_config())

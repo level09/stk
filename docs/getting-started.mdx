@@ -30,6 +30,14 @@ uv run stk run          # Start server
 
 Visit `http://localhost:5000` to see your application.
 
+Anything unclear about the state of your checkout? One command answers it:
+
+```bash
+uv run stk doctor       # env, database, migrations, admin, assets, browser
+```
+
+Then read [The Build Loop](/build-loop) for the scaffold, watch, and verify cycle.
+
 ## Docker Setup
 
 Full production stack with one command:
@@ -46,8 +54,8 @@ Key variables in `.env`:
 
 ```bash
 SECRET_KEY=your_secret_key
-QUART_APP=run.py
 QUART_DEBUG=1                    # 0 in production
+# QUART_APP is only needed for the `quart` command; `stk` knows the app factory
 
 # PostgreSQL (optional - SQLite works by default)
 # SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
@@ -61,3 +69,5 @@ QUART_DEBUG=1                    # 0 in production
 - [Authentication](/authentication) - User management and OAuth setup
 - [Deployment](/deployment) - Production deployment guide
 - [Development](/development) - Development guidelines and best practices
+- [Build Loop](/build-loop) - doctor, scaffold, watch, smoke
+- [Shell](/shell) - async REPL with your models loaded

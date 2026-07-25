@@ -1,0 +1,77 @@
+---
+title: "The Shell"
+description: "An async REPL with your app, your database, and your models already loaded"
+sidebarTitle: "Shell"
+---
+
+```bash
+uv run stk shell
+```
+
+```
+stk shell python 3.12.12
+db: sqlite+aiosqlite:////path/to/instance/stk.db
+models: Activity, OAuth, Role, Session, User, WebAuthn
+  find(Model, **kw)      list rows matching equality filters
+  first(Model, **kw)     first row matching equality filters
+  count(Model, **kw)     row count
+  sql('select 1')        run raw SQL, return rows
+  routes('user')         print routes, optionally filtered
+  db                     live AsyncSession (also g.db_session)
+top-level await works. tab completes, F2 opens the menu, ctrl-d exits.
+```
+
+Every model is already in scope by class name, along with `select`, `func`, `text`,
+`delete`, `update`, `datetime`, and `timedelta`. `await` works at the prompt, so code
+copied out of a view runs unchanged.
+
+## Examples
+
+```python
+>>> await count(User)
+1
+
+>>> u = await first(User, email="admin@example.com")
+>>> u.email, u.active
+('admin@example.com', True)
+
+>>> [r.name for r in await find(Role)]
+['admin']
+
+>>> await sql("select count(*) from session where active = 1")
+[(3,)]
+
+>>> routes("wan")            # which passkey routes exist, and are they guarded?
+GET,POST  /wan-register      auth   security.wan_register
+GET,POST  /wan-verify        auth   security.wan_verify
+```
+
+Writing works too, through the same session your views use:
+
+```python
+>>> u.name = "Renamed"
+>>> await db.commit()
+```
+
+A failed write cannot wedge the session: the helpers roll back and retry once, so the
+next query works instead of raising `PendingRollbackError` forever.
+
+## One-shot mode
+
+Skip the prompt entirely. The last expression is printed, which makes it useful in
+scripts and for agents:
+
+```bash
+uv run stk shell -c "await count(User)"
+uv run stk shell -c "[u.email for u in await find(User, active=True)]"
+```
+
+## Notes
+
+- With the dev extra installed you get syntax highlighting, fuzzy completion, and
+  fish-style suggestions from history via ptpython. Without it, or when stdin is not a
+  terminal, it falls back to the stdlib console and everything above still works.
+- History is kept in `instance/.stk_shell_history`. It records what you type, so avoid
+  pasting production secrets into the prompt.
+- The shell points at whatever `SQLALCHEMY_DATABASE_URI` is configured. The banner
+  prints it with the password masked, so you always know what you are about to edit.

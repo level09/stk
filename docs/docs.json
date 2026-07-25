@@ -18,7 +18,8 @@
             "group": "Getting Started",
             "pages": [
               "introduction",
-              "getting-started"
+              "getting-started",
+              "build-loop"
             ]
           },
           {
@@ -32,6 +33,7 @@
             "group": "Development",
             "pages": [
               "development",
+              "shell",
               "cursor-rules"
             ]
           }
@@ -50,4 +52,4 @@
       "href": "https://github.com/level09/stk"
     }
   }
-} 
+}

@@ -1,0 +1,106 @@
+---
+title: "The Build Loop"
+description: "Scaffold, edit, and know instantly whether you broke something"
+sidebarTitle: "Build Loop"
+---
+
+Every stk command lives under `stk`. Run `stk --help` to see them grouped by purpose.
+
+```bash
+uv run stk --help
+```
+
+Prefer bare `stk`? Activate the venv once per shell:
+
+```bash
+source .venv/bin/activate
+stk run
+```
+
+## 1. Is everything ready?
+
+```bash
+uv run stk doctor
+```
+
+```
+✓ env file       .env
+✓ secrets        SECRET_KEY and password salt look random
+✓ database       sqlite stk.db (108 KiB)
+✗ migrations     database is stamped at 20260715_0002, which no migration defines
+    → uv run stk db stamp 228ac4e0ebf5 (after checking the schema matches)
+✓ admin user     1 admin(s)
+✓ assets         vue 3.5.40 vuetify 4.1.6
+✓ agent login    disabled
+✓ browser        chromium ready for stk smoke
+✓ shell          ptpython: highlighting and completion
+```
+
+Every line that is not `✓` tells you the command that fixes it. Exit code is `1` only
+when something actually failed, so it works in scripts. `--json` for tooling.
+
+## 2. Scaffold a feature
+
+```bash
+uv run stk new invoice
+```
+
+This writes the blueprint, views, template, and nav entry, wires them into `app.py`,
+generates the migration for the new model, applies it, and then tells you where to look:
+
+```
+Open: http://localhost:5000/invoices/  (start it with: stk run)
+```
+
+Pass `--no-migrate` if you would rather write the migration yourself.
+
+## 3. Keep the gate running while you edit
+
+```bash
+uv run stk verify --watch
+```
+
+It checks everything once, then re-runs only what your change can break. Editing a
+model re-checks migration drift; editing a template does not.
+
+```
+changed: stk/invoice/models.py
+✗ migration-drift
+    add_column: invoice due_date
+    → uv run stk db revision -m "describe change" && uv run stk db upgrade
+✓ ruff
+✓ checks
+```
+
+Leave it in a split pane. You find out the moment you break something, not ten
+minutes later, and the fix is on screen.
+
+## 4. Prove it in a real browser
+
+```bash
+uv run stk smoke
+```
+
+Boots a throwaway app on a free port, drives Chromium through the home page, login,
+dashboard, and admin, and fails on any of: a non-2xx response, a console error, a
+failed request, or text whose colour does not contrast with its background. That last
+one catches the class of bug no console error ever reports.
+
+## 5. Ship
+
+```bash
+uv run stk verify && uv run stk smoke
+uv run stk report          # docs/stk-report.html: routes, auth, gate results
+```
+
+`stk verify` runs lint, sanity checks, and migration drift. It is what CI runs, so a
+green local run means a green pipeline.
+
+## The whole loop
+
+```bash
+uv run stk doctor              # am I ready?
+uv run stk new invoice         # scaffold to a clickable URL
+uv run stk verify --watch      # instant feedback while editing
+uv run stk smoke               # real browser before shipping
+```
