@@ -1,4 +1,4 @@
-"""Machine-readable reports behind `quart inspect`, `verify`, and `report`."""
+"""Machine-readable reports behind `stk inspect`, `stk verify`, and `stk report`."""
 
 import html
 import inspect as pyinspect
@@ -20,15 +20,6 @@ REMEDIES = {
     "ruff": "uv run ruff check --fix . && uv run ruff format .",
     "checks": "read the failed assertion above; each check names what it expected",
     "migration-drift": 'uv run stk db revision -m "describe change" && uv run stk db upgrade',
-}
-
-# Checks worth re-running when a file of this kind changes.
-WATCHED_SUFFIXES = {
-    ".py": ("ruff", "checks", "migration-drift"),
-    ".html": ("checks",),
-    ".jinja2": ("checks",),
-    ".js": ("checks",),
-    ".css": ("checks",),
 }
 
 

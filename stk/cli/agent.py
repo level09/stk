@@ -101,7 +101,7 @@ def verify(as_json, watch):
 def _watch_and_verify(interval=0.5):
     """Verify now, then re-verify whatever the next edit could have broken."""
     from stk.cli import watch as watcher
-    from stk.cli.reports import VERIFY_COMMANDS, WATCHED_SUFFIXES
+    from stk.cli.reports import VERIFY_COMMANDS
 
     root = Path.cwd()
     console.print("[bold]stk verify --watch[/] [dim]ctrl-c to stop[/]\n")
@@ -116,7 +116,7 @@ def _watch_and_verify(interval=0.5):
         if not touched:
             continue
 
-        names = watcher.checks_for(touched, WATCHED_SUFFIXES)
+        names = watcher.checks_for(touched)
         if not names:
             continue
         shown = ", ".join(

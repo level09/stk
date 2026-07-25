@@ -1,17 +1,13 @@
 """Watch loop, doctor report, and remedies: the parts that must not lie."""
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
 from stk.cli import watch
 from stk.cli.doctor import build_doctor_report
-from stk.cli.reports import (
-    REMEDIES,
-    VERIFY_COMMANDS,
-    WATCHED_SUFFIXES,
-    build_verify_report,
-)
+from stk.cli.reports import REMEDIES, VERIFY_COMMANDS, build_verify_report
 
 
 class WatchScanTest(unittest.TestCase):
@@ -46,8 +42,6 @@ class WatchScanTest(unittest.TestCase):
         before = watch.scan(self.root)
 
         first.write_text("x = 2\n")
-        import os
-
         os.utime(first, (0, 0))  # deterministic mtime change
         added = self.write("stk/b.py")
         after = watch.scan(self.root)
@@ -61,9 +55,9 @@ class WatchScanTest(unittest.TestCase):
         py = self.root / "stk/models.py"
         css = self.root / "stk/static/app.css"
 
-        self.assertIn("migration-drift", watch.checks_for([py], WATCHED_SUFFIXES))
-        self.assertNotIn("migration-drift", watch.checks_for([css], WATCHED_SUFFIXES))
-        self.assertEqual(watch.checks_for([], WATCHED_SUFFIXES), [])
+        self.assertIn("migration-drift", watch.checks_for([py]))
+        self.assertNotIn("migration-drift", watch.checks_for([css]))
+        self.assertEqual(watch.checks_for([]), [])
 
 
 class RemedyTest(unittest.TestCase):
