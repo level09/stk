@@ -7,7 +7,17 @@ user-invocable: false
 
 # stk Framework Conventions
 
-Async Quart + SQLAlchemy 2.x async + quart-security + Vue 3/Vuetify 3 (Options API). No build step.
+Async Quart + SQLAlchemy 2.x async + quart-security + Vue 3.5/Vuetify 4 (Options API). No build step.
+
+Vuetify 4 removed the MD2 type classes (`text-h5`, `text-body-1`, ...). They apply no
+styling and produce no console error, so nothing warns you. Use the MD3 names; the
+mapping table is in `.stk/context/frontend.md`.
+
+## While You Work
+
+- `uv run stk verify --watch` — re-runs only the checks a changed file can break; leave it running.
+- `uv run stk doctor` — environment state; every problem names the command that fixes it.
+- `uv run stk shell` — async REPL with a live `db` session and top-level await.
 
 ## Critical Rules
 

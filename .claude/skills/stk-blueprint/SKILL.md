@@ -14,7 +14,7 @@ Create a complete blueprint for `$ARGUMENTS` in the stk framework.
 The scaffolder generates the full module structure. Run it first, then customize domain fields and logic.
 
 ```bash
-uv run quart new <name>
+uv run stk new <name>
 ```
 
 `<name>` must be lowercase snake_case (e.g. `blog_post`, `invoice_line`). Reserved names (`user`, `role`, `portal`, `public`, `session`, `admin`, etc.) are rejected with a clear error.
@@ -24,12 +24,13 @@ The command generates:
 - `stk/templates/cms/<name>.html`
 - Patches `stk/app.py` (import + `register_blueprint`)
 - Patches `stk/static/js/navigation.js` (nav entry)
+- Generates AND applies the Alembic migration, then prints the page URL
 
 Then:
 1. Customize `stk/<name>/models.py` -- add/rename fields to fit your domain
-2. Run: `uv run quart db revision -m "add <name>"` and review the generated migration
-3. Apply: `uv run quart db upgrade`
-4. Verify: `uv run quart verify && uv run quart smoke`
+2. If you changed the model after scaffolding: `uv run stk db revision -m "update <name>"` and review, then `uv run stk db upgrade`
+   (only needed for post-scaffold model edits; the initial migration is already applied. With `--no-migrate`, the first revision is manual)
+3. Verify: `uv run stk verify && uv run stk smoke`
 
 ## Customization reference
 

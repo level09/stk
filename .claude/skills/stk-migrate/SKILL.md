@@ -10,7 +10,7 @@ argument-hint: "[description]"
 ## Current state
 
 Current revision:
-!`cd /Users/level09/projects/stk && uv run quart db current 2>&1 | tail -5`
+!`uv run stk db current 2>&1 | tail -5`
 
 Recent migrations:
 !`ls -1t alembic/versions/*.py 2>/dev/null | head -10`
@@ -22,7 +22,7 @@ Models with tables:
 
 1. **Generate the migration:**
    ```bash
-   uv run quart db revision -m "$ARGUMENTS"
+   uv run stk db revision -m "$ARGUMENTS"
    ```
 
 2. **Review the generated file** in `alembic/versions/`. Check:
@@ -42,14 +42,14 @@ Models with tables:
 
 5. **Test the migration:**
    ```bash
-   uv run quart db upgrade    # apply
-   uv run quart db downgrade -1  # rollback
-   uv run quart db upgrade    # re-apply to confirm idempotency
+   uv run stk db upgrade    # apply
+   uv run stk db downgrade -1  # rollback
+   uv run stk db upgrade    # re-apply to confirm idempotency
    ```
 
 6. **Run checks:**
    ```bash
-   uv run python checks.py
+   uv run stk verify
    ```
 
 ## Model conventions to verify against

@@ -61,4 +61,4 @@ Existing API routes:
 
 8. **Verify:**
    - Run `uv run ruff check --fix . && uv run ruff format .`
-   - Run `uv run python checks.py`
+   - Run `uv run stk verify`
