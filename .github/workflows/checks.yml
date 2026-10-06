@@ -131,7 +131,7 @@ jobs:
           assert 'strict-transport-security:' in headers
           assert 'secure' in headers and 'httponly' in headers
           assert 'x-content-type-options: nosniff' in headers
-          assert 'csrf-token' in Path('/tmp/stk-container-login.html').read_text()
+          assert 'name="csrf_token"' in Path('/tmp/stk-container-login.html').read_text()
           PYTHON
           test "$(curl -ksS -o /dev/null -w '%{http_code}' -X POST https://localhost/api/role/ -H 'Content-Type: application/json' -d '{"item":{"name":"untrusted"}}')" = 400
           test "$(docker compose exec -T postgres psql -U postgres -d stk -Atc "SELECT rolsuper FROM pg_roles WHERE rolname='stk'")" = f

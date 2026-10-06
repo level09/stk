@@ -113,12 +113,19 @@ Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `ag
 
 `SQLAlchemyUserDatastore` with session factory callable (`lambda: g.db_session`). Key decorators: `@auth_required("session")`, `@roles_required('admin')`.
 
+**Security policy:**
+- Public password registration is disabled by default.
+- All mutations require CSRF; Axios uses the shared layout token.
+- OAuth uses single-use state and PKCE, requires verified email, and enforces local MFA. It does not auto-link matching emails.
+- WebSockets require an allowed origin, recheck session validity, bound resources, and require an explicit broadcast recipient.
+- See `SECURITY.md` for production settings and upgrade requirements.
+
 **Features enabled:**
 - Session auth with tracking (IP, device, browser via `Session` model)
 - 2FA via TOTP authenticator (`SECURITY_TWO_FACTOR = True`)
 - WebAuthn as first or multi-factor (`SECURITY_WEBAUTHN = True`)
 - OAuth (Google, GitHub) via AuthLib `AsyncOAuth2Client`
-- Password hashing: pbkdf2_sha512, min 12 chars
+- Password hashing: Argon2id, min 12 chars; legacy hashes upgrade on login
 - Account lockout: `failed_login_count` + `locked_until` on User model
 - Recovery codes (3 codes, hashed at rest, displayed only once at generation)
 - Session freshness: 60-minute window, enforced on 2FA/recovery/passkey management routes (stale session gets 401)
@@ -130,7 +137,7 @@ Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `ag
 - `@password_changed.connect` - logs change, marks password as user-set
 - `@tf_profile_changed.connect` - logs 2FA modifications
 
-**Rate limiting** on auth endpoints (login, register, reset, confirm): 10 req/60s per IP. In-memory sliding window in `stk/utils/ratelimit.py`.
+**Rate limiting**: atomic SQL windows in `stk/utils/ratelimit.py`, shared across workers and auth endpoints. Defaults are 10 attempts and 120 auth requests per IP per minute. OAuth requests are included; logout remains available.
 
 ### Models (`stk/user/models.py`)
 
@@ -138,7 +145,7 @@ Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `ag
 - **Role** - RoleMixin. Many-to-many with User via `roles_users`.
 - **WebAuthn** - credential storage, FK to User via `fs_webauthn_user_handle`.
 - **OAuth** - provider accounts linked to users. Unique on `(provider, provider_user_id)`.
-- **Activity** - audit log. `register()` logs + broadcasts via WebSocket.
+- **Activity** - audit log. `register()` stores events without broadcasting.
 - **Session** - tracks active sessions with IP, device meta, expiry.
 
 ### Background Tasks
