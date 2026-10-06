@@ -1,0 +1,29 @@
+{
+  "version": "16.0.0",
+  "unit_tests": {
+    "count": 126,
+    "passed": true,
+    "skipped": 1
+  },
+  "security_backend_tests": {
+    "count": 25,
+    "passed": true,
+    "postgresql": "17.11 temporary local",
+    "redis": "temporary local real service"
+  },
+  "restricted_postgres_role_migrations": true,
+  "sqlite_migrations_and_drift": true,
+  "sanity_checks": {
+    "count": 26,
+    "passed": true
+  },
+  "browser_smoke": "passed",
+  "nginx_tls_syntax": true,
+  "compose_config": true,
+  "known_runtime_advisories": 0,
+  "limitations": [
+    "Complete Docker startup not tested locally",
+    "No live OAuth provider account or physical passkey",
+    "No deployed TLS proxy, failover, recovery, or production load test"
+  ]
+}

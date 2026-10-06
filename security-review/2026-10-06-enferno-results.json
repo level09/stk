@@ -1,0 +1,11 @@
+{
+  "api_no_csrf_foreign_origin": 400,
+  "clear_admin_roles_response": 200,
+  "admin_access_after_clear_roles": 200,
+  "oauth_link_response": 302,
+  "oauth_access_without_totp": 200,
+  "email_linked_to_existing_user": true,
+  "single_session_previous_access": 200,
+  "server_sid_preserved_on_login": true,
+  "pre_login_cookie_access_after_victim_login": 200
+}

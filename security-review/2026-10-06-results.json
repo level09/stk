@@ -1,0 +1,29 @@
+{
+  "anonymous_admin_api": 401,
+  "api_no_csrf_foreign_origin": 200,
+  "api_simple_content_type": 500,
+  "login_without_csrf": 400,
+  "clear_admin_roles_response": 200,
+  "admin_access_after_clear_roles": 200,
+  "non_admin_api": 403,
+  "websocket_foreign_origin": "connected",
+  "non_admin_receives_admin_event": {
+    "type": "activity",
+    "action": "Role Create",
+    "user_id": 1
+  },
+  "websocket_receives_after_logout": {
+    "type": "activity",
+    "action": "Review event after logout",
+    "user_id": 1
+  },
+  "single_session_after_password_rotation": 200,
+  "unverified_oauth_link_response": 302,
+  "oauth_access_without_totp": 200,
+  "unverified_email_linked_to_existing_user": true,
+  "missing_oauth_state_token_exchange_calls": 1,
+  "disabled_oauth_callback_access": 200,
+  "pre_registered_password_after_verified_oauth": 200,
+  "redis_sid_preserved_on_login": true,
+  "pre_login_redis_cookie_access_after_victim_login": 200
+}

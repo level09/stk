@@ -61,7 +61,7 @@ stk ships what actually matters:
 - Account lockout after failed attempts
 - Single-session mode (optional)
 - Rate limiting on auth endpoints (sliding window, no Redis)
-- PBKDF2-SHA512 password hashing, 12 char minimum
+- Argon2id password hashing, 12 char minimum; legacy hashes upgrade on login
 
 ### Real-time
 - Authenticated WebSocket endpoint with per-user message queues

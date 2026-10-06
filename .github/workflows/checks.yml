@@ -52,3 +52,52 @@ jobs:
           name: smoke-artifacts
           path: .stk/smoke/
           if-no-files-found: ignore
+
+  security-backends:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: review
+          POSTGRES_PASSWORD: isolated-review-password
+          POSTGRES_DB: review
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U review" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv python install 3.11
+      - run: uv sync --extra dev --extra full
+      - name: PostgreSQL migrations
+        env:
+          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://review:isolated-review-password@localhost/review
+        run: uv run stk db upgrade && uv run stk db check
+      - name: Restricted application database role
+        env:
+          PGHOST: localhost
+          PGUSER: review
+          PGPASSWORD: isolated-review-password
+          POSTGRES_USER: review
+          POSTGRES_DB: stk
+          DB_PASSWORD: isolated-app-password
+          SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://stk:isolated-app-password@localhost/stk
+        run: |
+          psql -d review -c 'CREATE DATABASE stk'
+          sh postgres/init-db.sh
+          test "$(psql -d stk -Atc "SELECT rolsuper FROM pg_roles WHERE rolname='stk'")" = f
+          uv run stk db upgrade
+          uv run stk db check
+      - name: Security controls with PostgreSQL and Redis
+        env:
+          STK_TEST_DATABASE_URL: postgresql+asyncpg://review:isolated-review-password@localhost/review
+          STK_TEST_REDIS_URL: redis://localhost:6379/0
+        run: uv run python -m unittest discover -s tests -p test_production_security.py -v
+      - name: Dependency advisories
+        run: |
+          uv export --frozen --no-hashes --no-emit-project --extra full --extra asgi -o /tmp/runtime.txt
+          uv run --no-project --with pip-audit python -m pip_audit -r /tmp/runtime.txt --no-deps --disable-pip

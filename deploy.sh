@@ -187,11 +187,21 @@ setup_python() {
 generate_env() {
     step "Generating .env file"
 
-    local cookie_secure="True"
-    [ "$SKIP_SSL" = "true" ] && cookie_secure="False"
+    local cookie_secure="True" scheme="https" environment="production"
+    if [ "$SKIP_SSL" = "true" ] || [ "$DOMAIN" = "localhost" ]; then
+        cookie_secure="False"
+        scheme="http"
+        environment="development"
+    fi
 
     cat > "${APP_DIR}/.env" << EOF
 QUART_APP=run.py
+QUART_DEBUG=0
+STK_ENV=${environment}
+STK_PUBLIC_URL=${scheme}://${DOMAIN}
+SECURITY_WAN_RP_ID=${DOMAIN}
+SECURITY_WAN_EXPECTED_ORIGIN=${scheme}://${DOMAIN}
+SECURITY_REGISTERABLE=False
 SECRET_KEY=$(openssl rand -hex 32)
 SECURITY_PASSWORD_SALT=$(openssl rand -hex 32)
 SESSION_COOKIE_SECURE=${cookie_secure}
@@ -252,7 +262,7 @@ User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${APP_DIR}/.env
-ExecStart=${APP_DIR}/.venv/bin/uvicorn run:app --host 127.0.0.1 --port ${PYTHON_PORT}
+ExecStart=${APP_DIR}/.venv/bin/uvicorn run:app --host 127.0.0.1 --port ${PYTHON_PORT} --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=always
 RestartSec=3
 

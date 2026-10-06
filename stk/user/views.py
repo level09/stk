@@ -111,10 +111,10 @@ async def api_user_reset_password(id):
     min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
     if not password or len(password) < min_len:
         return {"message": f"Password must be at least {min_len} characters"}, 400
-    from quart_security import hash_password
+    from quart_security.password import hash_password_async
 
     try:
-        user.password = hash_password(password)
+        user.password = await hash_password_async(password)
         user.password_set = True
         user.fs_uniquifier = uuid4().hex
         await Activity.register(

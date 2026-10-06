@@ -1,5 +1,4 @@
 import dataclasses
-import logging
 import secrets
 import string
 from datetime import datetime
@@ -7,6 +6,7 @@ from uuid import uuid4
 
 from quart import g
 from quart_security import RoleMixin, SecurityState, UserMixin, hash_password
+from quart_security.password import hash_password_async
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -118,16 +118,15 @@ class User(Base, UserMixin):
         self.username = json_dict.get("username", self.username)
         self.email = json_dict.get("email", self.email)
         if "password" in json_dict:
-            self.password = hash_password(json_dict["password"])
+            self.password = await hash_password_async(json_dict["password"])
             self.password_set = True
             self.fs_uniquifier = uuid4().hex
         if "roles" in json_dict:
             role_ids = [r.get("id") for r in json_dict["roles"]]
-            if role_ids:
-                result = await g.db_session.execute(
-                    select(Role).filter(Role.id.in_(role_ids))
-                )
-                self.roles = list(result.scalars().all())
+            result = await g.db_session.execute(
+                select(Role).where(Role.id.in_(role_ids))
+            )
+            self.roles = list(result.scalars().all())
         self.active = json_dict.get("active", self.active)
         return self
 
@@ -226,14 +225,6 @@ class Activity(Base):
     async def register(cls, user_id, action, data=None):
         activity = cls(user_id=user_id, action=action, data=data)
         g.db_session.add(activity)
-        try:
-            from stk.websocket import broadcast
-
-            await broadcast({"type": "activity", "action": action, "user_id": user_id})
-        except Exception:
-            logging.getLogger(__name__).warning(
-                "WebSocket broadcast failed", exc_info=True
-            )
         return activity
 
 
@@ -308,3 +299,10 @@ class Session(Base):
             stmt = stmt.where(cls.session_token != exclude_token)
         stmt = stmt.values(is_active=False)
         await g.db_session.execute(stmt)
+
+
+class RateLimitWindow(Base):
+    __tablename__ = "rate_limit_window"
+    key = Column(String(160), primary_key=True)
+    count = Column(Integer, nullable=False)
+    expires_at = Column(Integer, nullable=False, index=True)

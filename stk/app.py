@@ -1,10 +1,8 @@
 import asyncio
 import inspect
-from datetime import timedelta
 
 import click
 from quart import Quart, g, render_template, request
-from quart_rate_limiter import RateLimiter, limit_blueprint
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -97,6 +95,12 @@ def register_extensions(app):
         except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
+    from stk.security import register_security_controls
+    from stk.utils.ratelimit import register_rate_limits
+
+    register_rate_limits(app)
+    register_security_controls(app)
+
     Security(
         app,
         user_datastore,
@@ -112,12 +116,6 @@ def register_extensions(app):
     if app.config.get("SESSION_TYPE") == "redis":
         session.init_app(app)
     # For non-redis, fall back to Quart's built-in cookie sessions
-
-    # Rate limiting (replaces custom in-memory limiter)
-    RateLimiter(app)
-    security_bp = app.blueprints.get("security")
-    if security_bp:
-        limit_blueprint(security_bp, 10, timedelta(minutes=1))
 
     # CSRF token for POSTs outside quart-security templates (e.g. logout form).
     # Uses the library's own get-or-create so tokens stay in sync.

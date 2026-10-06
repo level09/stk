@@ -439,13 +439,13 @@ Global error handler in `app.py` catches unhandled exceptions, rolls back the se
 
 ## WebSocket Broadcasting
 
-Activity.register() auto-broadcasts via WebSocket. For custom broadcasts:
+Activity.register() stores audit events without broadcasting. Custom messages require an authorized recipient:
 
 ```python
 from stk.websocket import broadcast
 
-# Broadcast to all connected users
-await broadcast({"type": "notification", "text": "Something happened"})
+# Send only to an explicitly authorized recipient
+await broadcast({"type": "notification", "text": "Something happened"}, user_id=123)
 
 # Broadcast to specific user
 await broadcast({"type": "update", "data": {...}}, user_id=123)

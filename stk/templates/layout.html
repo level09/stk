@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Project stk</title>
     <meta name="description" content="A framework for the next decade">
     <meta name="author" content="stk">
@@ -191,6 +192,7 @@
 <script src="/static/js/config.js"></script>
 <script src="/static/js/vuetify.min.js"></script>
 <script src="/static/js/axios.min.js"></script>
+<script>axios.defaults.headers.common["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;</script>
 
 <!-- Navigation Data -->
 <script src="/static/js/navigation.js"></script>

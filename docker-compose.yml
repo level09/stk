@@ -4,30 +4,30 @@ services:
     container_name: redis 
     image: 'redis:7-alpine'
     user: "${DOCKER_UID:-1000}"
-    command: redis-server --requirepass ${REDIS_PASSWORD:-verystrongpass}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Set a unique REDIS_PASSWORD}
     volumes:
       - 'redis-data:/data'
-    ports:
-      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping']
       interval: 5s
       timeout: 3s
       retries: 3
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set a unique REDIS_PASSWORD}
 
   postgres:
     container_name: postgres
     image: 'postgres:15-alpine'
     volumes:
       - 'postgres-data:/var/lib/postgresql/data'
-    ports:
-      - '5432:5432'
+      - './postgres/init-db.sh:/docker-entrypoint-initdb.d/10-stk.sh:ro'
     environment:
-      - POSTGRES_USER=stk
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-verystrongpass}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASSWORD:?Set a unique DB_ADMIN_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:?Set a unique DB_PASSWORD}
       - POSTGRES_DB=stk
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "stk"]
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "stk"]
       interval: 5s
       timeout: 3s
       retries: 3
@@ -36,23 +36,26 @@ services:
     container_name: website
     build: .
     user: "${DOCKER_UID:-1000}"
-    volumes:
-      - './stk:/app/stk'
-      - './run.py:/app/run.py'
     depends_on:
-      - redis
-      - postgres
-    ports:
-      - '8000:5000'
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "stk db upgrade && exec uvicorn run:app --host 0.0.0.0 --port 5000 --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips='*'"]
     env_file:
       - .env
     environment:
       - QUART_APP=run.py
       - QUART_DEBUG=0
-      - SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://stk:${DB_PASSWORD:-verystrongpass}@postgres/stk
-      - REDIS_SESSION=redis://:${REDIS_PASSWORD:-verystrongpass}@redis:6379/1
+      - STK_ENV=production
+      - SESSION_COOKIE_SECURE=True
+      - STK_PUBLIC_URL=https://${STK_HOST:?Set the public DNS name}
+      - SECURITY_WAN_RP_ID=${STK_HOST:?Set the public DNS name}
+      - SECURITY_WAN_EXPECTED_ORIGIN=https://${STK_HOST:?Set the public DNS name}
+      - SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://stk:${DB_PASSWORD:?Set a unique DB_PASSWORD}@postgres/stk
+      - REDIS_SESSION=redis://:${REDIS_PASSWORD:?Set a unique REDIS_PASSWORD}@redis:6379/1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -63,11 +66,14 @@ services:
     image: 'nginx:alpine'
     user: "${DOCKER_UID:-1000}"
     ports:
-      - '80:80'
+      - '80:8080'
+      - '443:8443'
     volumes:
       - './stk/static/:/app/static/:ro'
       - './nginx/nginx.conf:/etc/nginx/nginx.conf:ro'
       - './nginx/stk.conf:/etc/nginx/conf.d/default.conf:ro'
+      - '${TLS_CERTIFICATE:?Set the TLS certificate path}:/etc/nginx/tls/fullchain.pem:ro'
+      - '${TLS_PRIVATE_KEY:?Set the TLS key path}:/etc/nginx/tls/key.pem:ro'
     tmpfs:
       - /tmp:exec
       - /var/run

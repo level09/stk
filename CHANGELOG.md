@@ -1,5 +1,19 @@
 # Changelog
 
+## v16.0.0 (2026-10-06)
+
+- Require CSRF tokens for application mutations and send them from Axios.
+- Use single-use OAuth state, PKCE, signed Google ID tokens, and verified GitHub email. Disable automatic email linking and enforce local MFA and account lockout.
+- Rotate Redis session IDs on authentication changes and keep tracking records aligned with revoked sessions.
+- Use atomic SQL authentication limits across workers. Apply migration `20261006_0002` before starting the app.
+- Bound WebSocket connections, queues, messages, and lifetime. Require same-origin connections and explicit broadcast recipients. Remove automatic audit broadcasts.
+- Enforce admin password policy and bound API pagination. Use Argon2id for new passwords; existing hashes still verify.
+- Disable public password registration by default. Set `SECURITY_REGISTERABLE=True` only when required.
+- Require unique database and Redis secrets plus TLS certificates in Docker Compose. Keep data services and the app port private.
+- Update vulnerable runtime packages and add PostgreSQL and Redis security checks to CI.
+
+See `SECURITY.md` for deployment requirements and review limits.
+
 ## v15.0.0 (2026-10-06)
 
 Requires quart-security 2.0.0 and a database migration before startup.
