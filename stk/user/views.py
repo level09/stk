@@ -1,5 +1,6 @@
 import datetime
 import logging
+from uuid import uuid4
 
 import orjson as json
 from quart import Blueprint, Response, current_app, g, render_template, request, session
@@ -115,6 +116,7 @@ async def api_user_reset_password(id):
     try:
         user.password = hash_password(password)
         user.password_set = True
+        user.fs_uniquifier = uuid4().hex
         await Activity.register(
             current_user.id,
             "Admin Password Reset",
@@ -272,7 +274,7 @@ async def user_authenticated_handler(app, user, authn_via, **extra_args):
     """Handle user authentication - create session record and check for new IP."""
     session_data = {
         "user_id": user.id,
-        "session_token": getattr(session, "sid", None) or session.get("_id", ""),
+        "session_token": session["_id"],
         "ip_address": request.remote_addr,
         "meta": {
             "browser": request.user_agent.browser,
@@ -321,7 +323,7 @@ async def after_tf_profile_change(sender, user, **extra_args):
 @user_logged_out.connect
 async def user_logged_out_handler(app, user, **extra_args):
     """Clear session on logout."""
-    token = getattr(session, "sid", None) or session.get("_id")
+    token = session.get("_id")
     if token:
         stmt = (
             Session.__table__.update()

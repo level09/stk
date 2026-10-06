@@ -118,6 +118,19 @@ stk ships what actually matters:
 | Server | Uvicorn (ASGI) |
 | Proxy | Nginx or Caddy |
 
+## quart-security 2 upgrade
+
+stk 15 requires quart-security 2.0.0 or later in the 2.x series.
+
+Before starting an existing app, run `uv run stk db upgrade` on its database.
+The migration adds `quart_security_state`, which all workers must share. Existing
+login cookies become invalid. Protect the database and its backups because pending
+authenticator secrets are stored in this table.
+
+Cookies default to HTTPS only. Set `SESSION_COOKIE_SECURE=False` for local HTTP
+development and `True` in production. Password resets and single-session mode
+now revoke authentication state, including copied cookies.
+
 ## Configuration
 
 Environment variables (`.env`):

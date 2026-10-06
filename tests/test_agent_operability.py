@@ -273,7 +273,7 @@ class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
             user = User(
                 email="admin@example.com",
                 name="Admin",
-                password=hash_password("TestPassword123!"),
+                password=hash_password("TestPassword123!", app=self.app),
                 active=True,
                 confirmed_at=datetime.now(),
             )

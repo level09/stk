@@ -1,5 +1,17 @@
 # Changelog
 
+## v15.0.0 (2026-10-06)
+
+Requires quart-security 2.0.0 and a database migration before startup.
+Run `uv run stk db upgrade` to add the shared authentication-state table.
+Existing login cookies are invalidated.
+
+- Share database sessions between authentication and application routes.
+- Revoke authentication state on logout, password resets, and single-session login.
+- Preserve local HTTP cookie configuration and default to secure cookies.
+- Pass application settings to password hashing in account commands.
+- Add regression checks for startup, copied cookies, session revocation, and TOTP replay.
+
 ## v14.1.0 (2026-07-25)
 
 ### Added

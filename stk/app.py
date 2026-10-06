@@ -38,9 +38,12 @@ def register_extensions(app):
     ext.engine = create_async_engine(app.config["SQLALCHEMY_DATABASE_URI"])
     ext.async_session_factory = async_sessionmaker(ext.engine, expire_on_commit=False)
 
-    @app.before_request
+    user_datastore = SQLAlchemyUserDatastore(
+        ext.async_session_factory, User, Role, webauthn_model=WebAuthn
+    )
+
     async def _open_session():
-        g.db_session = ext.async_session_factory()
+        g.db_session = user_datastore.session
 
     @app.after_request
     async def _close_session(response):
@@ -49,9 +52,8 @@ def register_extensions(app):
             await db_session.close()
         return response
 
-    @app.before_websocket
     async def _open_ws_session():
-        g.db_session = ext.async_session_factory()
+        g.db_session = user_datastore.session
 
     @app.after_websocket
     async def _close_ws_session(response):
@@ -95,15 +97,16 @@ def register_extensions(app):
         except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
-    user_datastore = SQLAlchemyUserDatastore(
-        lambda: g.db_session, User, Role, webauthn_model=WebAuthn
-    )
     Security(
         app,
         user_datastore,
         register_form=ExtendedRegisterForm,
         change_password_form=OAuthAwareChangePasswordForm,
     )
+    # The library resets its session before loading the user. Share that session
+    # so signals and application routes participate in the same transaction.
+    app.before_request(_open_session)
+    app.before_websocket(_open_ws_session)
 
     # Session initialization
     if app.config.get("SESSION_TYPE") == "redis":

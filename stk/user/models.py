@@ -6,7 +6,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from quart import g
-from quart_security import RoleMixin, UserMixin, hash_password
+from quart_security import RoleMixin, SecurityState, UserMixin, hash_password
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -18,11 +18,14 @@ from sqlalchemy import (
     String,
     Table,
     UniqueConstraint,
+    delete,
     select,
 )
 from sqlalchemy.orm import declared_attr, relationship
 
 from stk.extensions import Base
+
+SecurityState.__table__.to_metadata(Base.metadata)
 
 roles_users = Table(
     "roles_users",
@@ -116,6 +119,8 @@ class User(Base, UserMixin):
         self.email = json_dict.get("email", self.email)
         if "password" in json_dict:
             self.password = hash_password(json_dict["password"])
+            self.password_set = True
+            self.fs_uniquifier = uuid4().hex
         if "roles" in json_dict:
             role_ids = [r.get("id") for r in json_dict["roles"]]
             if role_ids:
@@ -288,6 +293,12 @@ class Session(Base):
 
     @classmethod
     async def deactivate_user_sessions(cls, user_id, exclude_token=None):
+        tokens = select(cls.session_token).where(cls.user_id == user_id)
+        if exclude_token:
+            tokens = tokens.where(cls.session_token != exclude_token)
+        await g.db_session.execute(
+            delete(SecurityState).where(SecurityState.token.in_(tokens))
+        )
         stmt = (
             cls.__table__.update()
             .where(cls.user_id == user_id)

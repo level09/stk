@@ -3,8 +3,10 @@
 import secrets
 import string
 from datetime import datetime
+from uuid import uuid4
 
 import click
+from quart.cli import ScriptInfo
 from quart_security import hash_password
 from sqlalchemy import select
 
@@ -46,6 +48,7 @@ def browser_token_create(email, ttl, next_path):
 @click.option("-p", "--password", default=None, help="Admin password")
 def install(email, password):
     """Install a default admin user and add an admin role to it."""
+    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
 
     async def _run():
         from stk.user.models import Role
@@ -85,7 +88,7 @@ def install(email, password):
             user = User(
                 email=email,
                 name="Super Admin",
-                password=hash_password(password),
+                password=hash_password(password, app=app),
                 active=True,
                 confirmed_at=datetime.now(),
             )
@@ -109,6 +112,7 @@ def install(email, password):
 @click.option("-p", "--password", prompt=True, default=None)
 def create(email, password):
     """Creates a user using an email."""
+    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
 
     async def _run():
         async with ext.async_session_factory() as session:
@@ -120,7 +124,7 @@ def create(email, password):
             else:
                 user = User(
                     email=email,
-                    password=hash_password(password),
+                    password=hash_password(password, app=app),
                     active=True,
                     confirmed_at=datetime.now(),
                 )
@@ -177,8 +181,9 @@ def add_role(email, role):
 @click.option("-p", "--password", hide_input=True, prompt=True, default=None)
 def reset(email, password):
     """Reset a user password using email"""
+    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
     try:
-        pwd = hash_password(password)
+        pwd = hash_password(password, app=app)
 
         async def _run():
             async with ext.async_session_factory() as session:
@@ -190,6 +195,8 @@ def reset(email, password):
                     return
 
                 u.password = pwd
+                u.password_set = True
+                u.fs_uniquifier = uuid4().hex
                 try:
                     await session.commit()
                     console.print(

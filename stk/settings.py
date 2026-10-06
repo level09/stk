@@ -74,8 +74,9 @@ class Config:
     SESSION_USE_SIGNER = False
     PERMANENT_SESSION_LIFETIME = 3600
     SESSION_COOKIE_SECURE = (
-        os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
+        os.environ.get("SESSION_COOKIE_SECURE", "True").lower() == "true"
     )
+    SECURITY_COOKIE_SECURE = SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = (
         os.environ.get("SESSION_COOKIE_HTTPONLY", "True").lower() == "true"
     )
