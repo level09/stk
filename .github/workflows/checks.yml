@@ -101,3 +101,40 @@ jobs:
         run: |
           uv export --frozen --no-hashes --no-emit-project --extra full --extra asgi -o /tmp/runtime.txt
           uv run --no-project --with pip-audit python -m pip_audit -r /tmp/runtime.txt --no-deps --disable-pip
+
+  production-container:
+    runs-on: ubuntu-latest
+    env:
+      DB_ADMIN_PASSWORD: isolated-container-admin
+      DB_PASSWORD: isolated-container-app
+      REDIS_PASSWORD: isolated-container-redis
+      STK_HOST: localhost
+      TLS_CERTIFICATE: /tmp/stk-container-cert.pem
+      TLS_PRIVATE_KEY: /tmp/stk-container-key.pem
+    steps:
+      - uses: actions/checkout@v7
+      - name: Isolated TLS and application settings
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TLS_PRIVATE_KEY" -out "$TLS_CERTIFICATE" -days 1 -subj /CN=localhost
+          chmod 644 "$TLS_PRIVATE_KEY"
+          printf '%s\n' 'SECRET_KEY=isolated-container-secret-key-for-ci' 'SECURITY_PASSWORD_SALT=isolated-container-salt-for-ci' > .env
+      - name: Start production stack
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: TLS, cookies, CSRF, and restricted database role
+        run: |
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://localhost/)" = 308
+          curl -fkSs https://localhost/health
+          curl -fkSs -D /tmp/stk-container-headers.txt https://localhost/login -o /tmp/stk-container-login.html
+          python - <<'PYTHON'
+          from pathlib import Path
+          headers = Path('/tmp/stk-container-headers.txt').read_text().lower()
+          assert 'strict-transport-security:' in headers
+          assert 'secure' in headers and 'httponly' in headers
+          assert 'x-content-type-options: nosniff' in headers
+          assert 'csrf-token' in Path('/tmp/stk-container-login.html').read_text()
+          PYTHON
+          test "$(curl -ksS -o /dev/null -w '%{http_code}' -X POST https://localhost/api/role/ -H 'Content-Type: application/json' -d '{"item":{"name":"untrusted"}}')" = 400
+          test "$(docker compose exec -T postgres psql -U postgres -d stk -Atc "SELECT rolsuper FROM pg_roles WHERE rolname='stk'")" = f
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --no-color

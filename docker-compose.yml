@@ -3,7 +3,6 @@ services:
   redis:
     container_name: redis 
     image: 'redis:7-alpine'
-    user: "${DOCKER_UID:-1000}"
     command: redis-server --requirepass ${REDIS_PASSWORD:?Set a unique REDIS_PASSWORD}
     volumes:
       - 'redis-data:/data'
@@ -35,13 +34,12 @@ services:
   website:
     container_name: website
     build: .
-    user: "${DOCKER_UID:-1000}"
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: ["sh", "-c", "stk db upgrade && exec uvicorn run:app --host 0.0.0.0 --port 5000 --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips='*'"]
+    command: ["sh", "-c", "python -m stk db upgrade && exec uvicorn run:app --host 0.0.0.0 --port 5000 --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips='*'"]
     env_file:
       - .env
     environment:
