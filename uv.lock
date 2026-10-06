@@ -1350,7 +1350,7 @@ wheels = [
 
 [[package]]
 name = "quart-security"
-version = "2.0.0"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosmtplib" },
@@ -1368,9 +1368,9 @@ dependencies = [
     { name = "webauthn" },
     { name = "wtforms" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/15/5428c60b79b2bfe9171a85f9234cf5a48c5665385b92bb0cebf0f3b9a732/quart_security-2.0.0.tar.gz", hash = "sha256:cdff01a8d71b0d88b8510e47fced05be58af49457e2f9a1705307d420cfe6757", size = 34126, upload-time = "2026-10-06T10:39:04.939Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/de/e2b0f19adf6dc2f781551264a0041f4683386c7dee5927d6f702d8a04433/quart_security-2.0.1.tar.gz", hash = "sha256:fa0fe168a819483229aa7d7292af84506c89fef0efd7d32b92e9314a96ea7d0b", size = 35667, upload-time = "2026-10-06T12:59:04.506Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/51/991f7df1505d70378f848ab3d33a13c3dcc8f08808fd8e2e281f1adf5329/quart_security-2.0.0-py3-none-any.whl", hash = "sha256:a6badbbaec4283a0a1b5793c016be238d13785394766d76876c5221fe42ae8b2", size = 40679, upload-time = "2026-10-06T10:39:03.695Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/2d/ac5e2c7bfe78b3103d5dc78db8139bf0a1d2867553b2f64cf87355eed1b1/quart_security-2.0.1-py3-none-any.whl", hash = "sha256:6a90561b3cbd05a1769985358a3e453caf8683b89b3fd12374c95314f93fb5ef", size = 41794, upload-time = "2026-10-06T12:59:03.231Z" },
 ]
 
 [[package]]
@@ -1553,7 +1553,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "quart", specifier = ">=0.20.0" },
-    { name = "quart-security", specifier = ">=2.0.0,<3" },
+    { name = "quart-security", specifier = ">=2.0.1,<3" },
     { name = "quart-session", specifier = ">=3.0.0" },
     { name = "redis", marker = "extra == 'full'", specifier = ">=7.1.0" },
     { name = "rich", specifier = ">=14.0.0" },

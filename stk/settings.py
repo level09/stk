@@ -57,6 +57,8 @@ class Config:
 
     SECURITY_TWO_FACTOR_ENABLED_METHODS = ["authenticator"]
     SECURITY_TWO_FACTOR = True
+    _totp_keys = os.environ.get("SECURITY_TOTP_ENCRYPTION_KEYS")
+    SECURITY_TOTP_ENCRYPTION_KEYS = _totp_keys.split(",") if _totp_keys else None
     SECURITY_API_ENABLED_METHODS = ["session"]
 
     SECURITY_FRESHNESS = timedelta(minutes=60)

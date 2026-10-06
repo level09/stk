@@ -607,3 +607,82 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertEqual(response.status_code, 401)
         checker.assert_not_awaited()
+
+    async def test_protect_mfa_encrypts_legacy_seeds_without_disclosing_them(self):
+        import subprocess
+        import sys
+        import tempfile
+
+        from quart_security.totp import decrypt_totp_secret
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+        secret = pyotp.random_base32()
+        with tempfile.TemporaryDirectory() as directory:
+            uri = f"sqlite+aiosqlite:///{directory}/mfa.db"
+            engine = create_async_engine(uri)
+            factory = async_sessionmaker(engine, expire_on_commit=False)
+            async with engine.begin() as connection:
+                await connection.run_sync(Base.metadata.create_all)
+            async with factory() as db:
+                db.add(
+                    User(
+                        email="mfa@example.com",
+                        password="fixture",
+                        active=True,
+                        tf_totp_secret=secret,
+                        tf_primary_method="authenticator",
+                    )
+                )
+                await db.commit()
+            environment = dict(
+                os.environ,
+                SQLALCHEMY_DATABASE_URI=uri,
+                SECRET_KEY=self.app.secret_key,
+                SECURITY_PASSWORD_SALT=self.app.config["SECURITY_PASSWORD_SALT"],
+            )
+            result = await asyncio.to_thread(
+                subprocess.run,
+                [sys.executable, "-m", "stk", "protect-mfa"],
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn(secret, result.stdout + result.stderr)
+            async with factory() as db:
+                user = await db.scalar(select(User))
+                self.assertTrue(user.tf_totp_secret.startswith("fernet$"))
+                self.assertEqual(
+                    decrypt_totp_secret(user.tf_totp_secret, app=self.app), secret
+                )
+            await engine.dispose()
+
+    async def test_pending_and_enrolled_mfa_seeds_are_encrypted(self):
+        from quart_security import SecurityState
+        from quart_security.totp import decrypt_totp_secret
+
+        client = self.app.test_client()
+        await self.login(client)
+        csrf = await self.csrf(client, "/tf-setup?setup=authenticator")
+        async with client.session_transaction() as cookie:
+            reference = cookie["tf_setup_state"]
+        async with ext.async_session_factory() as db:
+            pending = (await db.get(SecurityState, reference)).payload["secret"]
+        self.assertTrue(pending.startswith("fernet$"))
+        secret = decrypt_totp_secret(pending, app=self.app)
+        response = await client.post(
+            "/tf-setup",
+            form={
+                "action": "verify",
+                "token": pyotp.TOTP(secret).now(),
+                "csrf_token": csrf,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        async with ext.async_session_factory() as db:
+            user = await db.get(User, self.admin_id)
+            self.assertNotEqual(user.tf_totp_secret, secret)
+            self.assertTrue(user.tf_totp_secret.startswith("fernet$"))
+            self.assertEqual(
+                decrypt_totp_secret(user.tf_totp_secret, app=self.app), secret
+            )

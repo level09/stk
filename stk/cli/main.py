@@ -15,7 +15,15 @@ SECTIONS = [
     ("Verify", ["doctor", "verify", "smoke", "inspect", "report"]),
     (
         "Accounts",
-        ["install", "create", "add-role", "reset", "cleanup-sessions", "browser-token"],
+        [
+            "install",
+            "create",
+            "add-role",
+            "reset",
+            "cleanup-sessions",
+            "browser-token",
+            "protect-mfa",
+        ],
     ),
 ]
 

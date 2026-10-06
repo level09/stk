@@ -1,12 +1,12 @@
 {
   "version": "16.0.0",
   "unit_tests": {
-    "count": 127,
+    "count": 129,
     "passed": true,
     "skipped": 1
   },
   "security_backend_tests": {
-    "count": 26,
+    "count": 28,
     "passed": true,
     "postgresql": "17.11 temporary local",
     "redis": "temporary local real service"
@@ -22,8 +22,11 @@
   "compose_config": true,
   "known_runtime_advisories": 0,
   "limitations": [
-    "Complete Docker startup not tested locally",
     "No live OAuth provider account or physical passkey",
-    "No deployed TLS proxy, failover, recovery, or production load test"
-  ]
+    "No deployed production proxy, failover, recovery, or load test"
+  ],
+  "dependency_version": "quart-security 2.0.1",
+  "dependency_tests": 83,
+  "production_container_ci": true,
+  "mfa_encryption_and_upgrade_command": true
 }

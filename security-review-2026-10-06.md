@@ -383,7 +383,7 @@ versions. Scanner severity labels are not used as a substitute for host exposure
 
 ## Version 16 remediation
 
-All ten confirmed framework findings were addressed in version 16.0.0. The original source line references and probe results above refer to the version 15 commit and remain historical evidence.
+All ten original confirmed framework findings were addressed in version 16.0.0. The original source line references and probe results above refer to the version 15 commit and remain historical evidence.
 
 | Finding | Remediation | Verification |
 | --- | --- | --- |
@@ -402,8 +402,8 @@ Additional gaps addressed: shared atomic SQL rate limits across auth routes, tru
 
 Verification on the final source:
 
-- 127 unit tests: pass, with the real Redis test skipped in the default suite.
-- 26 security tests against temporary PostgreSQL 17 and real Redis: pass, including concurrent shared limits. No existing services or databases used.
+- 129 unit tests: pass, with the real Redis test skipped in the default suite.
+- 28 security tests against temporary PostgreSQL 17 and real Redis: pass, including concurrent shared limits. No existing services or databases used.
 - SQLite and PostgreSQL migrations reach head without model drift. New restricted PostgreSQL app role is not a superuser and can apply all migrations.
 - 26 isolated sanity checks: pass.
 - Browser smoke: pass on home, login, authenticated dashboard, and admin users.
@@ -412,3 +412,8 @@ Verification on the final source:
 - CI includes PostgreSQL 15, real Redis, restricted-role migrations, and dependency advisory checks.
 
 The source now meets the tested framework controls and improves on the confirmed shared Enferno defects. This is not a blanket approval of a production deployment. Live OAuth provider configuration, physical passkeys, deployed TLS/proxy behavior, certificate renewal, recovery/failover, and traffic capacity still need staging validation. Docker was not running locally, so the complete container stack was not started here. Existing OAuth links, saved provider tokens, and PostgreSQL role privileges need an operator review on upgrade. See `SECURITY.md`.
+
+
+A further MFA parity review found plaintext TOTP seeds in both enrolled records and pending SQL setup state. quart-security 2.0.1 now encrypts both with authenticated Fernet encryption. Legacy seeds remain readable and are upgraded on authentication; `stk protect-mfa` handles dormant accounts and key rotation. The dependency suite passes 83 tests, including wrong-key rejection, tampering, rotation, public helper compatibility, and SQL enrollment. stk adds real enrollment and operator-command regressions. QR generation runs off the event loop. Preserve the MFA keys as described in `SECURITY.md`.
+
+The production Docker stack also passes CI startup, TLS redirect/health, Secure/HttpOnly cookies, CSRF rejection, and restricted PostgreSQL role checks. Local Docker remains unavailable; this validation ran in isolated GitHub CI containers.

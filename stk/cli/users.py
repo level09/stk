@@ -218,3 +218,34 @@ def cleanup_sessions():
 
     run_async(cleanup_expired_sessions())
     console.print("[green]Session cleanup complete[/]")
+
+
+@click.command("protect-mfa")
+def protect_mfa():
+    """Encrypt legacy MFA seeds or rotate them to the current key."""
+    from quart_security.totp import encrypt_totp_secret
+    from sqlalchemy import update
+
+    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
+
+    async def _run():
+        count = 0
+        async with ext.async_session_factory() as database:
+            rows = await database.stream(
+                select(User.id, User.tf_totp_secret)
+                .where(User.tf_totp_secret.is_not(None))
+                .execution_options(yield_per=100)
+            )
+            async for user_id, secret in rows:
+                encrypted = encrypt_totp_secret(secret, app=app)
+                await database.execute(
+                    update(User)
+                    .where(User.id == user_id)
+                    .values(tf_totp_secret=encrypted)
+                )
+                count += 1
+            await database.commit()
+        return count
+
+    count = run_async(_run())
+    console.print(f"[green]Protected {count} MFA seeds[/]")

@@ -169,6 +169,6 @@ sudo systemctl start stk
 
 ### Version 16 security requirements
 
-See [SECURITY.md](https://github.com/level09/stk/blob/master/SECURITY.md) for the full deployment contract. Run `uv run stk db upgrade` before startup. Set `STK_PUBLIC_URL`, `SECURITY_WAN_RP_ID`, and `SECURITY_WAN_EXPECTED_ORIGIN` to the public HTTPS host and origin. Keep public registration disabled unless required. Use unique secrets and secure cookies.
+See [SECURITY.md](https://github.com/level09/stk/blob/master/SECURITY.md) for the full deployment contract. Run `uv run stk db upgrade` and `uv run stk protect-mfa` before startup. Preserve the MFA decryption keys. Set `STK_PUBLIC_URL`, `SECURITY_WAN_RP_ID`, and `SECURITY_WAN_EXPECTED_ORIGIN` to the public HTTPS host and origin. Keep public registration disabled unless required. Use unique secrets and secure cookies.
 
 Docker Compose requires database and Redis passwords, a public host, and readable TLS certificate and private key paths. It publishes only Nginx. New PostgreSQL volumes use a separate non-superuser application role. Existing database volumes require an operator review of role privileges because initialization scripts do not run on existing volumes. Do not deploy a Docker stack before providing TLS configuration.

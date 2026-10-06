@@ -115,6 +115,7 @@ Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `ag
 
 **Security policy:**
 - Public password registration is disabled by default.
+- TOTP seeds are encrypted at rest. Use `stk protect-mfa` on upgrade and preserve the MFA keyring.
 - All mutations require CSRF; Axios uses the shared layout token.
 - OAuth uses single-use state and PKCE, requires verified email, and enforces local MFA. It does not auto-link matching emails.
 - WebSockets require an allowed origin, recheck session validity, bound resources, and require an explicit broadcast recipient.

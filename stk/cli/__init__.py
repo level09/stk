@@ -20,6 +20,7 @@ from stk.cli.users import (
     cleanup_sessions,
     create,
     install,
+    protect_mfa,
     reset,
 )
 
@@ -35,6 +36,7 @@ __all__ = [
     "inspect_cmd",
     "install",
     "new_module",
+    "protect_mfa",
     "report",
     "reset",
     "run_async",
