@@ -166,7 +166,11 @@ def register_errorhandlers(app):
             logger.exception("Unhandled exception")
 
         if _is_api_request():
-            return {"message": "Internal server error"}, code
+            return {
+                "message": "Internal server error"
+                if code == 500
+                else getattr(error, "description", "Request failed")
+            }, code
         # Fall back to 500.html for codes without a dedicated template (405, 403, ...)
         return await render_template([f"{code}.html", "500.html"]), code
 

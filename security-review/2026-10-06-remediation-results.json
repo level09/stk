@@ -1,12 +1,12 @@
 {
   "version": "16.0.0",
   "unit_tests": {
-    "count": 126,
+    "count": 127,
     "passed": true,
     "skipped": 1
   },
   "security_backend_tests": {
-    "count": 25,
+    "count": 26,
     "passed": true,
     "postgresql": "17.11 temporary local",
     "redis": "temporary local real service"

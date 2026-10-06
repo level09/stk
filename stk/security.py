@@ -49,9 +49,6 @@ def register_security_controls(app):
                     "item" in body and not isinstance(body["item"], dict)
                 ):
                     abort(400, description="Expected a JSON object")
-                password = body.get("item", body).get("password")
-                if password is not None:
-                    await check_password_policy(password)
         if request.path.startswith("/api/"):
             for name, low, high in (("page", 1, 100000), ("per_page", 1, 100)):
                 if name in request.args:

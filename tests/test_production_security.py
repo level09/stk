@@ -593,3 +593,17 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
             await db.commit()
         await client.get("/_fixture/oauth?verified=true")
         self.assertNotEqual((await client.get("/dashboard/")).status_code, 200)
+
+    async def test_admin_password_policy_runs_after_authorization(self):
+        client = self.app.test_client()
+        csrf = await self.csrf(client)
+        self.app.config["SECURITY_PASSWORD_BREACH_CHECK"] = True
+        checker = AsyncMock(return_value=False)
+        with patch("stk.security.password_is_breached", new=checker):
+            response = await client.post(
+                f"/api/user/{self.user_id}",
+                json={"item": {"password": "UnbreachedLongPassword123!"}},
+                headers={"X-CSRFToken": csrf},
+            )
+        self.assertEqual(response.status_code, 401)
+        checker.assert_not_awaited()

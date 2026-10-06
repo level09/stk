@@ -15,6 +15,7 @@ from quart_security import (
 )
 from sqlalchemy import func, select
 
+from stk.security import check_password_policy
 from stk.user.models import Activity, Role, Session, User
 
 log = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ async def api_user():
 async def api_user_create():
     json_data = await request.json
     user_data = json_data.get("item", {})
+    if "password" in user_data:
+        await check_password_policy(user_data["password"])
     user = User()
     await user.from_dict(user_data)
     user.confirmed_at = datetime.datetime.now()
@@ -83,6 +86,8 @@ async def api_user_update(id):
         return {"message": "User not found"}, 404
     json_data = await request.json
     user_data = json_data.get("item", {})
+    if "password" in user_data:
+        await check_password_policy(user_data["password"])
     old_user_data = user.to_dict()
     try:
         await user.from_dict(user_data)
@@ -107,10 +112,8 @@ async def api_user_reset_password(id):
     if user is None:
         return {"message": "User not found"}, 404
     json_data = await request.json
-    password = json_data.get("password", "").strip()
-    min_len = current_app.config.get("SECURITY_PASSWORD_LENGTH_MIN", 12)
-    if not password or len(password) < min_len:
-        return {"message": f"Password must be at least {min_len} characters"}, 400
+    password = json_data.get("password", "")
+    await check_password_policy(password)
     from quart_security.password import hash_password_async
 
     try:

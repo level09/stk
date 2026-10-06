@@ -402,8 +402,8 @@ Additional gaps addressed: shared atomic SQL rate limits across auth routes, tru
 
 Verification on the final source:
 
-- 126 unit tests: pass, with the real Redis test skipped in the default suite.
-- 25 security tests against temporary PostgreSQL 17 and real Redis: pass, including concurrent shared limits. No existing services or databases used.
+- 127 unit tests: pass, with the real Redis test skipped in the default suite.
+- 26 security tests against temporary PostgreSQL 17 and real Redis: pass, including concurrent shared limits. No existing services or databases used.
 - SQLite and PostgreSQL migrations reach head without model drift. New restricted PostgreSQL app role is not a superuser and can apply all migrations.
 - 26 isolated sanity checks: pass.
 - Browser smoke: pass on home, login, authenticated dashboard, and admin users.
