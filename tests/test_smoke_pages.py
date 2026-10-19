@@ -4,7 +4,13 @@ from quart import Blueprint
 
 from stk.app import create_app
 from stk.cli.reports import build_routes_report
-from stk.cli.smoke import build_smoke_report, discover_smoke_paths, smoke_exit_code
+from stk.cli.smoke import (
+    build_smoke_report,
+    discover_smoke_paths,
+    smoke_exit_code,
+    webhook_paths,
+)
+from stk.security import csrf_exempt
 
 
 class SmokePageDiscoveryTests(unittest.TestCase):
@@ -24,14 +30,24 @@ class SmokePageDiscoveryTests(unittest.TestCase):
         async def api_staff():
             return ""
 
+        @crm.get("/smoke-demo/webhook")
+        async def webhook_verify():
+            return ""
+
+        @crm.post("/smoke-demo/webhook")
+        @csrf_exempt
+        async def webhook():
+            return ""
+
         app.register_blueprint(crm)
-        paths = discover_smoke_paths(build_routes_report(app))
+        paths = discover_smoke_paths(build_routes_report(app), webhook_paths(app))
 
         self.assertIn("/smoke-demo/staff", paths)
         self.assertIn("/roles/", paths)
         self.assertEqual(paths, sorted(paths))
         for skipped in (
             "/smoke-demo/staff/<int:id>",
+            "/smoke-demo/webhook",
             "/api/smoke-demo/staff",
             "/login",
             "/login/github",

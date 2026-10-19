@@ -78,7 +78,16 @@ FIXED_SMOKE_PATHS = ("/", "/login", "/dashboard/", "/users/")
 _SKIP_PREFIXES = ("/api/", "/static", "/_test", "/ws", "/login", "/logout")
 
 
-def discover_smoke_paths(routes):
+def webhook_paths(app):
+    """Paths with a @csrf_exempt view: machine endpoints, not pages for a browser."""
+    return {
+        rule.rule
+        for rule in app.url_map.iter_rules()
+        if getattr(app.view_functions.get(rule.endpoint), "_stk_csrf_exempt", False)
+    }
+
+
+def discover_smoke_paths(routes, skip=frozenset()):
     """Pick parameterless GET pages from build_routes_report that smoke should visit."""
     return sorted(
         route["rule"]
@@ -89,6 +98,7 @@ def discover_smoke_paths(routes):
         and route["blueprint"] != "security"
         and not route["rule"].startswith(_SKIP_PREFIXES)
         and route["rule"] not in FIXED_SMOKE_PATHS
+        and route["rule"] not in skip
     )
 
 
@@ -217,7 +227,8 @@ def _prepare_smoke(database_uri, secret_key, password_salt):
         app = create_app(SmokeConfig)
         async with app.app_context():
             token = create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
-        return token, discover_smoke_paths(build_routes_report(app))
+        paths = discover_smoke_paths(build_routes_report(app), webhook_paths(app))
+        return token, paths
 
     return run_async(_create_token())
 
