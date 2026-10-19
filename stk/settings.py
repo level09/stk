@@ -23,6 +23,10 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY environment variable is required")
+    # Product name and sign-in copy; apps set these instead of editing templates
+    APP_NAME = os.environ.get("APP_NAME", "stk")
+    APP_TAGLINE = os.environ.get("APP_TAGLINE", "Secure. Scalable. Swift.")
+    APP_DESCRIPTION = os.environ.get("APP_DESCRIPTION", "")
     APP_DIR = os.path.abspath(os.path.dirname(__file__))  # This directory
     PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
 

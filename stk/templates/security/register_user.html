@@ -44,8 +44,8 @@
                 <v-col cols="12" md="6" class="d-flex align-center justify-center">
                     <v-card width="500" elevation="0" class="mx-auto">
                         <v-card-title>
-                            <div class="d-flex align-center mb-5">
-                                <img src="/static/img/stk.svg" alt="Logo" height="40" class="mr-3">
+                            <div class="d-flex align-center ga-3 mb-5">
+                                {% include "_brand.html" %}
                                 <span class="text-headline-small font-weight-bold">Create an account</span>
                             </div>
                         </v-card-title>
@@ -188,14 +188,6 @@
                                 </v-btn>
                             </v-form>
                             
-                            <div class="text-center mt-4 mb-4">
-                                <p class="text-body-small text-medium-emphasis">
-                                    By continuing, you agree to stk's 
-                                    <a href="#" class="text-decoration-none">Terms of Service</a> and 
-                                    <a href="#" class="text-decoration-none">Privacy Policy</a>.
-                                </p>
-                            </div>
-                            
                             <div class="text-center mt-6">
                                 <span class="text-medium-emphasis">Already have an account? </span>
                                 <a href="{{ url_for_security('login') }}" class="text-decoration-none">Log in</a>
@@ -209,7 +201,8 @@
                     <v-container fluid class="auth-overlay pa-0 ma-0">
                         <v-row align="center" justify="center" style="height: 100vh;">
                             <v-col cols="12" class="text-center">
-                                <div class="text-display-large font-weight-bold text-white">Secure. Scalable. Swift.</div>
+                                <div class="text-display-large font-weight-bold text-white">{{ config.APP_TAGLINE }}</div>
+                                {% if config.APP_DESCRIPTION %}<p class="text-body-large text-white mt-4">{{ config.APP_DESCRIPTION }}</p>{% endif %}
                             </v-col>
                         </v-row>
                     </v-container>

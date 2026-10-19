@@ -29,6 +29,7 @@ mapping table is in `.stk/context/frontend.md`.
 - Relationships MUST use `lazy="selectin"` for async compatibility.
 - Vue delimiters are `${}`, NOT `{{}}` (conflicts with Jinja). Access via `config.delimiters`.
 - Vue uses **Options API** (`data()`, `methods`, `mounted()`), NOT Composition API.
+- Vue template expressions cannot see page globals. Expose shared helpers with `app.config.globalProperties.name = value` before mount; the production build fails such lookups silently, so check the rendered table.
 - No Celery. Background tasks via `stk.tasks.run_in_background()`.
 - Pagination is manual: `offset().limit()` + `select(func.count())`.
 - Icons: Tabler Icons (`ti ti-*`), NOT Material Design Icons.

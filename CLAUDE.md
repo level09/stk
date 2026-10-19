@@ -169,6 +169,7 @@ Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data
 - **Navigation:** Sidebar entries in `static/js/navigation.js` with `role: 'admin'` for access control
 - **JSON responses:** List endpoints use `orjson` via `import orjson as json` and `Response(json.dumps(data), content_type="application/json")`
 - **Request body:** Frontend sends mutations as `{item: {...}}`, extract with `json_data.get("item", {})`
+- **Template globals:** Vue template expressions cannot see page globals (a `const labels = {...}` in a script is undefined inside `${...}` and directives). Expose shared helpers with `app.config.globalProperties.labels = labels` before mount. The production Vue build fails such lookups silently (the cell renders nothing, columns shift), so `stk smoke` cannot catch it; check the rendered table.
 
 ## Key Gotchas
 
@@ -178,3 +179,5 @@ Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data
 - WebSocket connections release their DB session early to avoid pool starvation.
 - Session backend: Redis if `REDIS_URL` is set, otherwise cookie-based.
 - `DISABLE_MULTIPLE_SESSIONS` config controls single-session enforcement.
+- Renaming the product: set `APP_NAME` / `APP_TAGLINE` / `APP_DESCRIPTION` and replace `stk/templates/_brand.html` and the favicon. Never edit names across templates.
+- Tests: Config subclasses inherit everything `.env` sets (`load_dotenv` runs at import). Pin every env-driven switch a test depends on in the test config (e.g. a provider key that changes request auth), or a developer's `.env` silently changes the code path.
