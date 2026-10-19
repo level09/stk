@@ -4,7 +4,7 @@
     <v-container fluid class="fill-height">
         <v-row align="center" justify="center">
             <v-col cols="12" sm="10" md="6" lg="4" class="text-center">
-                <div class="mb-6">{% include "_brand.html" %}</div>
+                <div class="mb-6">{% with brand_size = 120 %}{% include "_brand.html" %}{% endwith %}</div>
 
                 <h1 class="text-headline-large font-weight-bold mb-3">Build faster with stk</h1>
                 <p class="text-body-large text-medium-emphasis mb-8">

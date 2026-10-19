@@ -6,6 +6,7 @@ from quart import Quart, g, render_template, request
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from werkzeug.exceptions import HTTPException
 
 import stk.cli as cli
 import stk.extensions as ext
@@ -161,7 +162,8 @@ def register_errorhandlers(app):
             finally:
                 await db_session.close()
 
-        code = getattr(error, "code", 500)
+        # Only HTTP errors carry a status; SQLAlchemy errors also have a .code ("e3q8").
+        code = error.code if isinstance(error, HTTPException) else 500
         if code == 500:
             logger.exception("Unhandled exception")
 
