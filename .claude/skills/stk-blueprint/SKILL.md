@@ -92,4 +92,5 @@ Each line is a mistake an agent made while building a real app on stk.
 - Tests: pin every `.env`-driven setting the code path depends on in the test config, and give test-only blueprints names an app cannot already use.
 - Async: never read a relationship on a row you just added; load it with `await session.get(...)` or a query (`MissingGreenlet` otherwise).
 - Migrations: check each command's exit code, never behind a pipe to `tail`. Never delete a revision file before `stk db downgrade <target>` has succeeded.
+- Tables inside Vue's in-DOM templates: never put `<tbody>`/`<tr>` inside `<v-table>` or another custom element; the browser parser moves the rows out before Vue mounts and they never render. Use `v-data-table`, a native `<table>`, or flex rows.
 - Verify UI in a browser: `uv run stk smoke`, then look at a screenshot of the page with real rows. A 200 and green tests do not prove columns, labels or buttons render.
