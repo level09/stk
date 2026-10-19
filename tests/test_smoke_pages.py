@@ -10,29 +10,29 @@ from stk.cli.smoke import build_smoke_report, discover_smoke_paths, smoke_exit_c
 class SmokePageDiscoveryTests(unittest.TestCase):
     def test_discovers_parameterless_admin_pages_only(self):
         app = create_app()
-        crm = Blueprint("crm", __name__)
+        crm = Blueprint("smoke_demo", __name__)
 
-        @crm.get("/crm/staff")
+        @crm.get("/smoke-demo/staff")
         async def staff():
             return ""
 
-        @crm.get("/crm/staff/<int:id>")
+        @crm.get("/smoke-demo/staff/<int:id>")
         async def staff_member(id):
             return ""
 
-        @crm.get("/api/crm/staff")
+        @crm.get("/api/smoke-demo/staff")
         async def api_staff():
             return ""
 
         app.register_blueprint(crm)
         paths = discover_smoke_paths(build_routes_report(app))
 
-        self.assertIn("/crm/staff", paths)
+        self.assertIn("/smoke-demo/staff", paths)
         self.assertIn("/roles/", paths)
         self.assertEqual(paths, sorted(paths))
         for skipped in (
-            "/crm/staff/<int:id>",
-            "/api/crm/staff",
+            "/smoke-demo/staff/<int:id>",
+            "/api/smoke-demo/staff",
             "/login",
             "/login/github",
             "/register",
@@ -51,8 +51,8 @@ class SmokePageErrorTests(unittest.TestCase):
         report = build_smoke_report(
             [
                 {
-                    "name": "/crm/staff",
-                    "path": "/crm/staff",
+                    "name": "/smoke-demo/staff",
+                    "path": "/smoke-demo/staff",
                     "status": 200,
                     "console": [{"type": "pageerror", "text": "TypeError: x is null"}],
                     "failed_requests": [],
