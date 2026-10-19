@@ -364,7 +364,7 @@ app.use(vuetify).mount("#app");
 Use `<script type="application/json">` tags parsed in `data()`:
 
 ```html
-<!-- In template body -->
+<!-- In {% block js %}, before the Vue script. Not in {% block content %}: Vue strips script tags inside #app. -->
 <script type="application/json" id="roles-data">
 {{ roles|tojson|safe }}
 </script>

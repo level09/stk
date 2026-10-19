@@ -70,9 +70,12 @@ if [ ! -f .env-sample ]; then
     exit 1
 fi
 
-# Ask about Docker configuration
-read -p "Would you like to configure Docker settings? (y/N) " -n 1 -r
-echo
+# Ask about Docker configuration; non-interactive runs default to no.
+REPLY=n
+if [ -t 0 ]; then
+    read -p "Would you like to configure Docker settings? (y/N) " -n 1 -r
+    echo
+fi
 DOCKER_CONFIG=false
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     DOCKER_CONFIG=true
@@ -83,9 +86,13 @@ fi
 
 # Check if .env already exists
 if [ -f .env ]; then
-    read -p "A .env file already exists. Do you want to overwrite it? (y/N) " -n 1 -r
-    echo
+    REPLY=n
+    if [ -t 0 ]; then
+        read -p "A .env file already exists. Do you want to overwrite it? (y/N) " -n 1 -r
+        echo
+    fi
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Keeping the existing .env.${NC}"
         exit 1
     fi
     # Backup existing .env

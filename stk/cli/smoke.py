@@ -72,6 +72,26 @@ _CONTRAST_TEMPLATE = """() => {
 CONTRAST_JS = _CONTRAST_TEMPLATE.replace("__MIN_RATIO__", str(MIN_CONTRAST_RATIO))
 
 
+FIXED_SMOKE_PATHS = ("/", "/login", "/dashboard/", "/users/")
+# Prefixes that are not pages, or whose GET starts an auth flow or redirect
+# (OAuth logins, agent login, websockets).
+_SKIP_PREFIXES = ("/api/", "/static", "/_test", "/ws", "/login", "/logout")
+
+
+def discover_smoke_paths(routes):
+    """Pick parameterless GET pages from build_routes_report that smoke should visit."""
+    return sorted(
+        route["rule"]
+        for route in routes
+        if "GET" in route["methods"]
+        and not route["arguments"]
+        and "<" not in route["rule"]
+        and route["blueprint"] != "security"
+        and not route["rule"].startswith(_SKIP_PREFIXES)
+        and route["rule"] not in FIXED_SMOKE_PATHS
+    )
+
+
 def build_smoke_report(pages, dashboard_screenshot):
     """Return a browser smoke report with per-page failure reasons."""
     page_reports = []
@@ -86,6 +106,8 @@ def build_smoke_report(pages, dashboard_screenshot):
         for entry in page.get("console", []):
             if entry["type"] == "error":
                 problems.append(f"console error: {entry['text']}")
+            elif entry["type"] == "pageerror":
+                problems.append(f"uncaught error: {entry['text']}")
 
         for request in page.get("failed_requests", []):
             failure = request.get("failure") or "unknown"
@@ -177,8 +199,10 @@ def _run_smoke_setup(env):
             )
 
 
-def _create_smoke_token(database_uri, secret_key, password_salt):
+def _prepare_smoke(database_uri, secret_key, password_salt):
+    """Return an agent login token and the extra page paths to visit."""
     from stk.app import create_app
+    from stk.cli.reports import build_routes_report
     from stk.settings import Config
 
     class SmokeConfig(Config):
@@ -192,7 +216,8 @@ def _create_smoke_token(database_uri, secret_key, password_salt):
     async def _create_token():
         app = create_app(SmokeConfig)
         async with app.app_context():
-            return create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
+            token = create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
+        return token, discover_smoke_paths(build_routes_report(app))
 
     return run_async(_create_token())
 
@@ -261,7 +286,11 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
             failure = failure()
         failed_requests.append({"url": request.url, "failure": failure or ""})
 
+    def _record_page_error(error):
+        console_entries.append({"type": "pageerror", "text": str(error)})
+
     page.on("console", _record_console)
+    page.on("pageerror", _record_page_error)
     page.on("requestfailed", _record_failed_request)
     response = await page.goto(f"{base_url}{path}", wait_until="networkidle")
     low_contrast = await page.evaluate(CONTRAST_JS)
@@ -279,7 +308,7 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
     }
 
 
-async def _run_playwright_smoke(base_url, token):
+async def _run_playwright_smoke(base_url, token, extra_paths):
     try:
         from playwright.async_api import Error as PlaywrightError
         from playwright.async_api import async_playwright
@@ -310,6 +339,8 @@ async def _run_playwright_smoke(base_url, token):
                 ),
                 await _visit_smoke_page(context, base_url, "admin-users", "/users/"),
             ]
+            for path in extra_paths:
+                pages.append(await _visit_smoke_page(context, base_url, path, path))
             await context.close()
             await browser.close()
     except PlaywrightError as exc:
@@ -333,7 +364,7 @@ def run_smoke():
         env = _smoke_env(database_path)
         _run_smoke_setup(env)
 
-        token = _create_smoke_token(
+        token, extra_paths = _prepare_smoke(
             env["SQLALCHEMY_DATABASE_URI"],
             env["SECRET_KEY"],
             env["SECURITY_PASSWORD_SALT"],
@@ -343,7 +374,7 @@ def run_smoke():
         server = _start_smoke_server(port, env)
         try:
             _wait_for_smoke_server(base_url, server)
-            return asyncio.run(_run_playwright_smoke(base_url, token))
+            return asyncio.run(_run_playwright_smoke(base_url, token, extra_paths))
         finally:
             _stop_smoke_server(server)
 

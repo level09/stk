@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import uuid4
 
 import click
+from email_validator import EmailNotValidError, validate_email
 from quart.cli import ScriptInfo
 from quart_security import hash_password
 from sqlalchemy import select
@@ -14,6 +15,14 @@ import stk.extensions as ext
 from stk.agent_login import create_agent_login_token
 from stk.cli.base import console, run_async
 from stk.user.models import User
+
+
+def _check_email(email):
+    """Reject addresses the login form would refuse, such as reserved domains."""
+    try:
+        validate_email(email, check_deliverability=False)
+    except EmailNotValidError as exc:
+        raise click.BadParameter(str(exc), param_hint="email") from exc
 
 
 @click.group("browser-token")
@@ -76,6 +85,7 @@ def install(email, password):
             nonlocal email, password
             if not email:
                 email = click.prompt("Admin email", default="admin@example.com")
+            _check_email(email)
 
             generated = False
             if not password:
@@ -112,6 +122,7 @@ def install(email, password):
 @click.option("-p", "--password", prompt=True, default=None)
 def create(email, password):
     """Creates a user using an email."""
+    _check_email(email)
     app = click.get_current_context().ensure_object(ScriptInfo).load_app()
 
     async def _run():

@@ -4,13 +4,24 @@ import secrets
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from quart import abort, g, request, session
+from quart import abort, current_app, g, request, session
 from quart_security import SecurityState, current_user
 from quart_security.breach import password_is_breached
 from quart_security.password import validate_password
 from sqlalchemy import delete, select
 
 from stk.user.models import Session
+
+
+def csrf_exempt(view):
+    """Skip the CSRF token check for this view, e.g. a third-party webhook.
+
+    The view must authenticate the request itself (e.g. an HMAC signature).
+    Host, API body, and pagination checks still apply. Place it below the
+    route decorator: ``@bp.post("/webhook")`` then ``@csrf_exempt``.
+    """
+    view._stk_csrf_exempt = True
+    return view
 
 
 def register_security_controls(app):
@@ -25,6 +36,9 @@ def register_security_controls(app):
             abort(400, description="Invalid host")
         g.previous_auth_token = session.get("_id")
         g.previous_second_factor = session.get("tf_user_id")
+        exempt = getattr(
+            current_app.view_functions.get(request.endpoint), "_stk_csrf_exempt", False
+        )
         if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             expected = session.get("_csrf_token")
             supplied = request.headers.get("X-CSRFToken")
@@ -33,7 +47,7 @@ def register_security_controls(app):
             if not supplied:
                 body = await request.get_json(silent=True)
                 supplied = body.get("csrf_token") if isinstance(body, dict) else None
-            if (
+            if not exempt and (
                 not isinstance(expected, str)
                 or not isinstance(supplied, str)
                 or not secrets.compare_digest(expected, supplied)

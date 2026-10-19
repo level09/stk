@@ -1,3 +1,5 @@
+import importlib
+import os
 import unittest
 from datetime import datetime
 from unittest.mock import patch
@@ -5,6 +7,7 @@ from unittest.mock import patch
 from quart_security import hash_password
 
 import stk.extensions as ext
+import stk.settings
 from stk.agent_login import create_agent_login_token, read_agent_login_token
 from stk.app import create_app
 from stk.cli.reports import (
@@ -175,7 +178,16 @@ class AgentOperabilityTests(unittest.TestCase):
 
 class AgentLoginConfigTests(unittest.TestCase):
     def test_agent_login_is_disabled_by_default(self):
-        app = create_app()
+        # Check the shipped defaults, not whatever a developer's .env sets.
+        with (
+            patch.dict(os.environ),
+            patch("dotenv.load_dotenv"),
+        ):
+            os.environ.pop("STK_ENV", None)
+            os.environ.pop("STK_ENABLE_AGENT_LOGIN", None)
+            defaults = importlib.reload(stk.settings).Config
+        importlib.reload(stk.settings)
+        app = create_app(defaults)
 
         self.assertFalse(app.config["STK_ENABLE_AGENT_LOGIN"])
         self.assertEqual(app.config["STK_ENV"], "production")

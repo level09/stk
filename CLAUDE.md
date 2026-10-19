@@ -96,7 +96,7 @@ async with ext.async_session_factory() as session:
     ...
 ```
 
-All relationships must use `lazy="selectin"` for async compatibility.
+All relationships must use `lazy="selectin"` for async compatibility. Selectin loads only on query: reading a relationship on a row you just `add()`ed (or got back from the identity map without it loaded) raises `MissingGreenlet`. Load it with `await session.get(...)` or a query instead.
 
 ### CLI Commands
 
@@ -116,7 +116,7 @@ Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `ag
 **Security policy:**
 - Public password registration is disabled by default.
 - TOTP seeds are encrypted at rest. Use `stk protect-mfa` on upgrade and preserve the MFA keyring.
-- All mutations require CSRF; Axios uses the shared layout token.
+- All mutations require CSRF; Axios uses the shared layout token. Third-party webhooks without a session opt out per view with `@csrf_exempt` (`stk.security`) placed under the route decorator, and must authenticate the caller themselves (e.g. HMAC signature).
 - OAuth uses single-use state and PKCE, requires verified email, and enforces local MFA. It does not auto-link matching emails.
 - WebSockets require an allowed origin, recheck session validity, bound resources, and require an explicit broadcast recipient.
 - See `SECURITY.md` for production settings and upgrade requirements.
@@ -165,7 +165,7 @@ Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data
 - **Component registration:** Call `registerStkComponents(app)` before `.mount('#app')`
 - **Vuetify init:** `createVuetify(config.vuetifyConfig)` (config is in `static/js/config.js`)
 - **Icons:** Tabler Icons (`ti ti-pencil`, `ti ti-plus`, etc.), NOT Material Design Icons
-- **Server data:** Pass via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
+- **Server data:** Pass via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>` placed in `{% block js %}`, never in `{% block content %}`: Vue strips `<script>` tags inside the `#app` mount element, so `getElementById(...)` returns null.
 - **Navigation:** Sidebar entries in `static/js/navigation.js` with `role: 'admin'` for access control
 - **JSON responses:** List endpoints use `orjson` via `import orjson as json` and `Response(json.dumps(data), content_type="application/json")`
 - **Request body:** Frontend sends mutations as `{item: {...}}`, extract with `json_data.get("item", {})`

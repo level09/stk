@@ -68,7 +68,7 @@ After scaffolding, the generated files follow these conventions. Only touch thes
 - Call `registerStkComponents(app)` before `app.use(vuetify).mount("#app")`
 - Use `v-data-table-server` for lists
 - Icons: Tabler Icons (`ti ti-*`), e.g. `ti ti-plus`, `ti ti-pencil`, `ti ti-trash`, `ti ti-x`
-- Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>`
+- Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>` inside `{% block js %}`. Inside `{% block content %}` it sits in Vue's `#app` mount element, which strips script tags, so `data()` reads null and the page crashes. A 200 response does not catch this; `stk smoke` does.
 - Use `toRaw()` from Vue when editing items: `const {createApp, toRaw} = Vue`
 
 ## Do NOT:

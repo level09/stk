@@ -67,7 +67,10 @@ def _create_app(**_kwargs):
 def _print_version(ctx, _param, value):
     if not value or ctx.resilient_parsing:
         return
-    click.echo(f"stk {version('stk')} (quart {version('quart')})")
+    # Apps rename the distribution, so report the framework package's own version.
+    import stk
+
+    click.echo(f"stk {stk.__version__} (quart {version('quart')})")
     ctx.exit()
 
 
