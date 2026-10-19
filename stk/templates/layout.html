@@ -215,7 +215,7 @@
     const layoutMixin = {
         data() {
             return {
-                drawer: true,
+                drawer: window.innerWidth >= 960,  // phones start with the menu closed
                 isNavCollapsed: false,
                 isMobile: window.innerWidth < 960,
                 navItems: typeof stkNavigation !== 'undefined' ? stkNavigation : [],
