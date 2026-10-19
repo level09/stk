@@ -75,6 +75,11 @@ uv run stk db check                           # Fail if models drifted from migr
 
 Migration config lives in `stk/migrations.py`. Alembic env in `alembic/env.py`. Revisions in `alembic/versions/`. SQLite uses batch mode automatically for ALTER TABLE support.
 
+SQLite migration traps, each hit while building an app on stk:
+- DDL is not transactional there: a failed upgrade leaves the tables it already created. Fix the revision, drop only those new empty tables, then upgrade again.
+- A new NOT NULL column on a table with rows needs `server_default` in the migration and the model, or the upgrade fails.
+- Constraints are named by the convention on `Base.metadata` (`stk/extensions.py`); keep it, because batch mode cannot add an unnamed foreign key.
+
 ## Architecture
 
 ### Async SQLAlchemy (not flask-sqlalchemy)
