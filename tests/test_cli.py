@@ -1,6 +1,7 @@
 """The `stk` command must expose the whole framework without QUART_APP set."""
 
 import unittest
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -52,3 +53,11 @@ class StkCommandTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DowngradeArgumentTest(unittest.TestCase):
+    def test_relative_revision_is_accepted(self):
+        with patch("stk.cli.database.run_alembic") as run:
+            result = CliRunner().invoke(main, ["db", "downgrade", "-1"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual(run.call_args.args[-1], "-1")

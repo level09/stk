@@ -82,3 +82,14 @@ After scaffolding, the generated files follow these conventions. Only touch thes
 - Use Material Design Icons -- use Tabler Icons (`ti ti-*`)
 - Send raw data in POST -- wrap in `{item: {...}}`
 - Forget `mixins: [layoutMixin]` or `registerStkComponents(app)` in templates
+
+## Before you report done
+
+Each line is a mistake an agent made while building a real app on stk.
+
+- Lint and format only the files you changed (`uv run ruff format path/a.py path/b.py`), never a whole package another person owns.
+- Shared helpers a template uses (label maps, formatters) must be exposed with `app.config.globalProperties.name = value` before mount. Page globals are invisible to template expressions, and the production Vue build fails silently: the cell renders nothing and the table columns shift.
+- Tests: pin every `.env`-driven setting the code path depends on in the test config, and give test-only blueprints names an app cannot already use.
+- Async: never read a relationship on a row you just added; load it with `await session.get(...)` or a query (`MissingGreenlet` otherwise).
+- Migrations: check each command's exit code, never behind a pipe to `tail`. Never delete a revision file before `stk db downgrade <target>` has succeeded.
+- Verify UI in a browser: `uv run stk smoke`, then look at a screenshot of the page with real rows. A 200 and green tests do not prove columns, labels or buttons render.

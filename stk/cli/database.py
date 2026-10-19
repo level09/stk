@@ -96,7 +96,8 @@ def db_upgrade(revision):
     run_alembic(command.upgrade, build_alembic_config(), revision)
 
 
-@db.command("downgrade")
+# Relative targets like "-1" look like options to click; accept them as the argument.
+@db.command("downgrade", context_settings={"ignore_unknown_options": True})
 @click.argument("revision")
 def db_downgrade(revision):
     """Downgrade the database to a target revision."""
