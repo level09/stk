@@ -1,5 +1,19 @@
 # Changelog
 
+## v16.1.0 (2026-10-19)
+
+No migration required. Existing databases keep their constraint names and show no drift.
+
+- `APP_NAME`, `APP_TAGLINE` and `APP_DESCRIPTION` settings brand titles and auth pages. The logo lives in one partial, `stk/templates/_brand.html`. The placeholder Terms of Service and Privacy Policy line is removed from login and registration.
+- `stk.security.csrf_exempt` lets a signed third-party webhook skip the CSRF token check. Host, API body and pagination checks still apply, and the view must authenticate the caller itself.
+- `stk smoke` also visits every parameterless GET page, skipping auth flows, APIs and webhooks, and fails on uncaught page errors.
+- Unhandled database errors return 500 and are logged instead of using the SQLAlchemy error code as the status.
+- `stk db downgrade -1` accepts relative targets.
+- `stk install` and `stk create` reject email addresses the login form would refuse.
+- New constraints are named by a convention on `Base.metadata`, so SQLite batch migrations can add foreign keys.
+- The navigation drawer starts closed on phones.
+- `stk --version` reports the framework version when an app renames its package, and `setup.sh` runs without a terminal.
+
 ## v16.0.0 (2026-10-06)
 
 Requires quart-security 2.0.1. Run `uv run stk db upgrade` and `uv run stk protect-mfa` before upgrading an existing deployment. Preserve the MFA encryption keys.
