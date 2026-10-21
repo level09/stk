@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightLlmsTxt from 'starlight-llms-txt';
 
 export default defineConfig({
 	site: 'https://docs.stk.dev',
@@ -9,6 +10,7 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'stk',
+			plugins: [starlightLlmsTxt()],
 			description: 'An async Quart framework for developers who ship. No build tools. No configuration maze.',
 			logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg' },
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/level09/stk' }],

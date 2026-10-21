@@ -15,7 +15,7 @@ What it produces:
 - App at `/home/<user>/<domain>` owned by a dedicated user (`<user>` = domain's first label), deps installed with `uv sync --frozen --no-dev --python 3.13` (uv downloads its own CPython; no system Python or PPAs).
 - systemd unit `<domain>.service` running `.venv/bin/uvicorn run:app --host 127.0.0.1 --port <PYTHON_PORT>`, `Restart=always`.
 - Caddy vhost with auto-SSL (or `:80` when `SKIP_SSL=true`), security headers, static served from `<app>/stk/static`, JSON logs at `/var/log/caddy/<domain>.log`.
-- `.env` with generated `SECRET_KEY`, `SECURITY_PASSWORD_SALT`, `SECURITY_TOTP_SECRETS`; `SESSION_COOKIE_SECURE` is `True` only when SSL is on (setting it under plain HTTP breaks login).
+- `.env` with generated `SECRET_KEY` and `SECURITY_PASSWORD_SALT` (the MFA key derives from `SECRET_KEY` unless `SECURITY_TOTP_ENCRYPTION_KEYS` is set); `SESSION_COOKIE_SECURE` is `True` only when SSL is on (setting it under plain HTTP breaks login).
 - Admin credentials at `/home/<user>/.credentials` (chmod 600).
 - Hardening: UFW (22/80/443), fail2ban, key-only SSH, sudoers scoped to the one app service.
 

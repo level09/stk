@@ -325,6 +325,79 @@ def check_cli_commands(app):
         assert cmd in commands, f"Missing CLI command: {cmd}"
 
 
+@check("Docs name only real commands, flags, and settings")
+def check_docs_match_code(app):
+    # Docs, skills, and agent context drift silently: a renamed flag or an invented
+    # setting reads fine until someone runs it. Every `stk ...` line inside code
+    # and every SECURITY_*/STK_* key must resolve against the code.
+    import re
+    import shlex
+    from pathlib import Path
+
+    import click
+    import quart_security
+
+    from stk.cli.main import main
+
+    root = Path(__file__).parent
+    pages = [
+        root / "README.md",
+        root / "CLAUDE.md",
+        root / "SECURITY.md",
+        *root.glob(".stk/context/*.md"),
+        *root.glob(".claude/skills/**/*.md"),
+        *root.glob("docs/src/content/docs/*.mdx"),
+    ]
+    sources = [
+        *root.glob("stk/**/*.py"),
+        root / "docker-compose.yml",
+        root / ".env-sample",
+        *Path(quart_security.__file__).parent.glob("*.py"),
+    ]
+    known_settings = "\n".join(p.read_text() for p in sources)
+    commands = {**main.commands, **app.cli.commands}
+    help_opts = {"-h", "--help"}
+
+    def resolve(tokens):
+        command = None
+        for token in tokens:
+            if token.startswith("-") and not token[1:].isdigit():
+                params = command.params if command else main.params
+                opts = {o for p in params for o in p.opts + p.secondary_opts}
+                if token.split("=")[0] not in opts | help_opts:
+                    return f"unknown option {token}"
+            elif command is None or isinstance(command, click.Group):
+                children = commands if command is None else command.commands
+                if token not in children:
+                    return f"unknown command {token}"
+                command = children[token]
+        return None
+
+    code = re.compile(r"```[^\n]*\n(.*?)```|`([^`\n]+)`", re.S)
+    invocation = re.compile(r"^(?:\$\s*)?(?:uv run\s+)?stk\s+(.+)$")
+    problems = []
+    for page in pages:
+        text = page.read_text()
+        name = page.relative_to(root)
+        for block in code.finditer(text):
+            for line in (block.group(1) or block.group(2)).splitlines():
+                for segment in re.split(r"&&|\|\||[|;]", line.split(" #")[0]):
+                    match = invocation.match(segment.strip())
+                    if not match:
+                        continue
+                    try:
+                        tokens = shlex.split(match.group(1))
+                    except ValueError:
+                        tokens = match.group(1).split()
+                    if error := resolve(tokens):
+                        problems.append(f"{name}: `stk {match.group(1)}` {error}")
+        for key in sorted(set(re.findall(r"\b(?:SECURITY|STK)_[A-Z0-9_]+\b", text))):
+            if key not in known_settings:
+                problems.append(f"{name}: setting {key} is not read anywhere")
+
+    assert not problems, "Docs drifted from code:\n    " + "\n    ".join(problems)
+
+
 # =============================================================================
 # RUNNER
 # =============================================================================
