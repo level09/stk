@@ -117,7 +117,7 @@ not see.
 ### Removed
 - 5.1MB of unused Material Design Icons (referenced nowhere).
 - `register_shellcontext`, replaced by `stk shell`.
-- Empty `stk/core/` and `stk/qarina/` packages left over from a killed branch.
+- Empty `stk/core/` and app packages left over from a killed branch.
 
 ## v11.3.0 (2025-12-02)
 

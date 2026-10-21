@@ -398,6 +398,44 @@ def check_docs_match_code(app):
     assert not problems, "Docs drifted from code:\n    " + "\n    ".join(problems)
 
 
+@check("Repository publishes nothing private")
+def check_repo_is_publishable(app):
+    # The repo is public and cloned as a template: a committed security review,
+    # database, or machine path leaks the moment it is pushed, and history keeps it.
+    import re
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).parent
+    if not (root / ".git").exists():
+        return
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True, text=True
+    ).stdout.split("\0")
+    private_path = re.compile(
+        r"(^|/)(security-review[^/]*|\.env|instance/.*|.*\.sqlite3?|.*\.db|.*\.pem|.*\.key)$"
+    )
+    private_text = re.compile(
+        r"/(?:Users|home)/[a-z][\w.-]*/|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    )
+    problems = [
+        f"{path}: private file" for path in tracked if private_path.search(path)
+    ]
+    for path in tracked:
+        file = root / path
+        if not path or not file.is_file() or file.is_symlink():
+            continue
+        try:
+            text = file.read_text()
+        except UnicodeDecodeError:
+            continue
+        if match := private_text.search(text):
+            line = text.count("\n", 0, match.start()) + 1
+            problems.append(f"{path}:{line}: {match.group(0)}")
+
+    assert not problems, "Private content is tracked:\n    " + "\n    ".join(problems)
+
+
 # =============================================================================
 # RUNNER
 # =============================================================================

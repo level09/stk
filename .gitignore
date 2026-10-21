@@ -23,7 +23,8 @@ __pycache__/
 *.skill
 .quartenv
 
-# Private planning docs (never publish)
+# Private planning docs and security reviews (never publish; checks.py fails if tracked)
+security-review*
 docs/plans/
 docs/stk-report.html
 docs/superpowers/
