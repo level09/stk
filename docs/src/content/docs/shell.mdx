@@ -1,7 +1,8 @@
 ---
 title: "The Shell"
 description: "An async REPL with your app, your database, and your models already loaded"
-sidebarTitle: "Shell"
+sidebar:
+  label: "Shell"
 ---
 
 ```bash
@@ -11,7 +12,7 @@ uv run stk shell
 ```
 stk shell python 3.12.12
 db: sqlite+aiosqlite:////path/to/instance/stk.db
-models: Activity, OAuth, Role, Session, User, WebAuthn
+models: Activity, OAuth, RateLimitWindow, Role, Session, User, WebAuthn
   find(Model, **kw)      list rows matching equality filters
   first(Model, **kw)     first row matching equality filters
   count(Model, **kw)     row count
@@ -21,8 +22,9 @@ models: Activity, OAuth, Role, Session, User, WebAuthn
 top-level await works. tab completes, F2 opens the menu, ctrl-d exits.
 ```
 
-Every model is already in scope by class name, along with `select`, `func`, `text`,
-`delete`, `update`, `datetime`, and `timedelta`. `await` works at the prompt, so code
+Every model is already in scope by class name, along with `app`, `ext`, `select`,
+`func`, `text`, `delete`, `update`, `datetime`, `timedelta`, and `execute(statement)`.
+`sql()` returns rows for a query and the affected row count otherwise. `await` works at the prompt, so code
 copied out of a view runs unchanged.
 
 ## Examples
@@ -38,12 +40,12 @@ copied out of a view runs unchanged.
 >>> [r.name for r in await find(Role)]
 ['admin']
 
->>> await sql("select count(*) from session where active = 1")
-[(3,)]
+>>> await sql("select count(*) from user_sessions where is_active = 1")
+[(2,)]
 
->>> routes("wan")            # which passkey routes exist, and are they guarded?
-GET,POST  /wan-register      auth   security.wan_register
-GET,POST  /wan-verify        auth   security.wan_verify
+>>> routes("wan-register")   # which passkey routes exist, and are they guarded?
+GET,POST      /wan-register                                auth  security.wan_register
+POST          /wan-register-response                       auth  security.wan_register_response
 ```
 
 Writing works too, through the same session your views use:
@@ -53,13 +55,15 @@ Writing works too, through the same session your views use:
 >>> await db.commit()
 ```
 
-A failed write cannot wedge the session: the helpers roll back and retry once, so the
-next query works instead of raising `PendingRollbackError` forever.
+A failed write cannot wedge the session. When a helper (`find`, `first`, `count`,
+`sql`, `execute`) hits a session left in a failed state, it rolls back and retries once,
+so the next query works instead of raising `PendingRollbackError` forever. A helper
+query that itself fails is rolled back and the error is raised.
 
 ## One-shot mode
 
-Skip the prompt entirely. The last expression is printed, which makes it useful in
-scripts and for agents:
+Skip the prompt entirely. The last expression is printed unless it is `None`, which
+makes it useful in scripts and for agents:
 
 ```bash
 uv run stk shell -c "await count(User)"

@@ -1,0 +1,80 @@
+---
+title: "Quick Start"
+description: "Get up and running with stk"
+sidebar:
+  label: "Quick Start"
+---
+
+## Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (fast Python package manager)
+
+Optional: Redis (session store) and PostgreSQL (SQLite works by default). Both drivers come with `uv sync --extra full`.
+
+## Local Setup
+
+```bash
+# Install uv
+pip install uv  # or: curl -sSf https://astral.sh/uv/install.sh | bash
+
+# Clone and setup
+git clone git@github.com:level09/stk.git
+cd stk
+./setup.sh                # Installs deps + generates secure .env
+uv run stk create-db      # Apply all migrations
+uv run stk install        # Create admin user
+uv run stk run            # Start server (--port 5001 if macOS holds 5000)
+```
+
+Visit `http://localhost:5000` to see your application.
+
+To drop the `uv run` prefix, activate the venv once per shell with `source .venv/bin/activate`, then run `stk run`, `stk shell`, `stk verify`. `uv run stk --help` lists every command, grouped by purpose.
+
+Anything unclear about the state of your checkout? One command answers it:
+
+```bash
+uv run stk doctor       # env file, secrets, database, migrations, admin, assets, browser
+```
+
+`stk smoke` needs a browser for Playwright. If doctor flags it, run `uv run playwright install chromium`.
+
+Then read [The Build Loop](/build-loop) for the scaffold, watch, and verify cycle.
+
+## Docker Setup
+
+Full production stack with one command:
+
+```bash
+docker compose up --build
+```
+
+Includes Redis, PostgreSQL, and Nginx. Answer yes to the Docker question in `./setup.sh` to generate the Redis and database passwords. The stack refuses to start until `.env` sets `STK_HOST`, `TLS_CERTIFICATE`, and `TLS_PRIVATE_KEY` (see the Docker block in `.env-sample` and [Deployment](/deployment)).
+
+## Environment Configuration
+
+`./setup.sh` copies `.env-sample` to `.env` and fills in `SECRET_KEY` and `SECURITY_PASSWORD_SALT`. Key variables:
+
+```bash
+SECRET_KEY=your_secret_key
+SECURITY_PASSWORD_SALT=your_salt
+QUART_DEBUG=1                    # 0 in production
+STK_ENV=development              # defaults to production when unset
+SECURITY_REGISTERABLE=False      # public password registration is off by default
+
+# PostgreSQL (optional, SQLite at instance/stk.db by default)
+# SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
+
+# Redis session store (optional)
+# REDIS_URL=redis://localhost:6379/1
+```
+
+`QUART_APP` is only needed for the bare `quart` command; `stk` already knows the app factory.
+
+## Next Steps
+
+- [Build Loop](/build-loop): doctor, scaffold, watch, smoke
+- [Shell](/shell): async REPL with your models loaded
+- [Authentication](/authentication): user management and OAuth setup
+- [Development](/development): guidelines and best practices
+- [Deployment](/deployment): production deployment

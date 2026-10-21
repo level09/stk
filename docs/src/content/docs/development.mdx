@@ -1,0 +1,262 @@
+---
+title: "Development"
+description: "Development guidelines and best practices for stk"
+sidebar:
+  label: "Development"
+---
+
+## Project Structure
+
+```
+stk/
+├── stk/                  # Main application package
+│   ├── app.py            # Application factory, blueprint registration
+│   ├── settings.py       # Configuration
+│   ├── extensions.py     # Async SQLAlchemy engine, session factory, Base
+│   ├── migrations.py     # Alembic config behind `stk db`
+│   ├── security.py       # csrf_exempt for webhooks
+│   ├── cli/              # CLI commands (agent, database, users, doctor, smoke, reports)
+│   ├── scaffold/         # Templates behind `stk new`
+│   ├── shell.py          # Async REPL behind `stk shell`
+│   ├── tasks/            # Async background tasks
+│   ├── websocket.py      # WebSocket blueprint
+│   ├── portal/           # Blueprint: protected dashboard
+│   ├── public/           # Blueprint: public routes, OAuth callbacks
+│   ├── user/             # Blueprint: admin user/role/activity management, models
+│   ├── utils/            # Email, rate limiting
+│   ├── static/           # Vue, Vuetify, Axios, Tabler Icons, app JS and CSS
+│   └── templates/        # Jinja2 templates
+├── alembic/              # Migration env and versions/
+├── tests/                # unittest suite
+├── checks.py             # Sanity checks run by `stk verify`
+├── docs/                 # This documentation site
+├── instance/             # SQLite database
+├── .stk/context/         # Structured agent context
+├── .claude/skills/       # Agent skills (also at .agents/skills)
+├── CLAUDE.md             # Agent instructions (AGENTS.md links here)
+├── pyproject.toml        # Dependencies and project config
+├── setup.sh              # Setup script
+├── run.py                # ASGI entry point
+└── docker-compose.yml    # Docker configuration
+```
+
+## Blueprints
+
+`register_blueprints()` in `stk/app.py` registers four blueprints: `users`, `public`, `portal`, and the `ws` WebSocket blueprint. Login, registration, 2FA, and passkey pages come from quart-security itself.
+
+### Portal (`portal/`)
+
+The protected dashboard. A blueprint-level `before_request` requires a session for every route:
+
+```python
+from quart import Blueprint, render_template
+from quart_security import auth_required
+
+portal = Blueprint("portal", __name__, static_folder="../static")
+
+@portal.before_request
+@auth_required("session")
+async def before_request():
+    pass
+
+@portal.route("/dashboard/")
+async def dashboard():
+    return await render_template("dashboard.html")
+```
+
+### User (`user/`)
+
+Admin pages and JSON APIs for users, roles, and activity (`/users/`, `/roles/`, `/activities/`). The whole blueprint requires an admin:
+
+```python
+bp_user = Blueprint("users", __name__, static_folder="../static")
+
+@bp_user.before_request
+@auth_required("session")
+@roles_required("admin")
+async def before_request():
+    pass
+```
+
+It also holds the models (`stk/user/models.py`) and the auth signal handlers that track sessions and log password and 2FA changes.
+
+### Public (`public/`)
+
+Unauthenticated routes: the landing page, `/health`, `robots.txt`, and the Google and GitHub OAuth callbacks.
+
+```python
+public = Blueprint("public", __name__, static_folder="../static")
+
+@public.route("/")
+async def index():
+    return await render_template("index.html")
+```
+
+To add a module of your own, run `uv run stk new <module>`. It scaffolds the blueprint, model, templates, and migration, and ends at a URL you can open.
+
+## Database Operations
+
+stk uses async SQLAlchemy with `g.db_session`, created per request in `before_request` and closed in `after_request`. CLI code and background tasks open their own session from `stk.extensions.async_session_factory`.
+
+### Model Definition
+
+```python
+from datetime import datetime
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+from stk.extensions import Base
+
+class Post(Base):
+    __tablename__ = "post"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String(80), nullable=False)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.now)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    user = relationship("User", lazy="selectin")
+```
+
+Every relationship must use `lazy="selectin"`. Selectin loads only on query, so reading `post.user` on a row you just `add()`ed raises `MissingGreenlet`. Load it with `await g.db_session.get(Post, post.id)` or a query first.
+
+### Queries
+
+```python
+from quart import g
+from sqlalchemy import select
+
+# Create
+post = Post(title="New Post", content="Content here")
+g.db_session.add(post)
+await g.db_session.commit()
+
+# Query
+result = await g.db_session.execute(select(Post))
+posts = result.scalars().all()
+
+# Get by ID
+post = await g.db_session.get(Post, 1)
+
+# Filtered query
+result = await g.db_session.execute(
+    select(Post).where(Post.title.like("%python%"))
+)
+posts = result.scalars().all()
+
+# Update
+post.title = "Updated Title"
+await g.db_session.commit()
+
+# Delete
+await g.db_session.delete(post)
+await g.db_session.commit()
+```
+
+## Migrations
+
+Schema changes go through Alembic. After changing a model:
+
+```bash
+uv run stk db revision -m "add post"   # Autogenerate a revision
+uv run stk db upgrade                  # Apply it
+uv run stk db check                    # Fail if models drifted from migrations
+uv run stk db downgrade -1             # Roll back one step
+```
+
+SQLite runs migrations in batch mode automatically (`alembic/env.py`). Three SQLite traps are worth knowing. DDL is not transactional, so a failed upgrade leaves the tables it already created: fix the revision, drop only those new empty tables, and upgrade again. A new NOT NULL column on a table with rows needs a `server_default` in both the migration and the model. Constraints are named by the convention on `Base.metadata` in `stk/extensions.py`; keep it, because batch mode cannot add an unnamed foreign key.
+
+## Background Tasks
+
+Use `run_in_background()` for fire-and-forget async tasks. There is no Celery and no Redis requirement; the task runs on the current event loop and exceptions are logged.
+
+```python
+from stk.tasks import run_in_background
+
+async def send_email(user_id):
+    ...
+
+await run_in_background(send_email(user.id))
+```
+
+For tasks that need their own DB session, `run_with_session` opens one, commits on success, and rolls back on error:
+
+```python
+from stk.tasks import run_with_session
+
+async def cleanup_old_records(session):
+    await session.execute(...)
+
+await run_with_session(cleanup_old_records)
+```
+
+## API Development
+
+List endpoints paginate manually and serialize with `orjson`. Mutations arrive as `{item: {...}}` from the frontend.
+
+```python
+import orjson as json
+from quart import Response, g, request
+from sqlalchemy import func, select
+
+@bp.route("/api/posts")
+async def api_posts():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 25, type=int)
+    total = (await g.db_session.execute(select(func.count()).select_from(Post))).scalar()
+    result = await g.db_session.execute(
+        select(Post).offset((page - 1) * per_page).limit(per_page)
+    )
+    items = [p.to_dict() for p in result.scalars().all()]
+    data = {"items": items, "total": total, "perPage": per_page}
+    return Response(json.dumps(data), content_type="application/json")
+
+@bp.post("/api/post/")
+async def api_post_create():
+    json_data = await request.json
+    item = json_data.get("item", {})
+    ...
+```
+
+Every mutation requires a CSRF token, which Axios sends from the shared layout token. A third-party webhook without a session opts out with `@csrf_exempt` from `stk.security`, placed under the route decorator, and must authenticate the caller itself. See [Authentication](/authentication).
+
+## Frontend
+
+Pages are Vue 3 (Options API) plus Vuetify, loaded from static files with no build step. Each page script uses `mixins: [layoutMixin]` for the drawer, navigation, WebSocket, and notifications, sets `delimiters: config.delimiters` so Vue uses `${}` instead of Jinja's `{{}}`, and calls `registerStkComponents(app)` before mounting. Icons are Tabler (`ti ti-pencil`), not Material Design Icons. Sidebar entries live in `stk/static/js/navigation.js`; add `role: 'admin'` to restrict one.
+
+Pass server data with `<script type="application/json" id="...">{{ data|tojson|safe }}</script>` inside `{% block js %}`. Vue strips `<script>` tags inside the `#app` mount element, so the same tag in `{% block content %}` comes back as null.
+
+Vue template expressions cannot see page globals. Expose shared helpers with `app.config.globalProperties.labels = labels` before mount. The production Vue build fails such lookups silently, so check the rendered page rather than relying on `stk smoke`.
+
+Pinned versions and the full component reference live in `.stk/context/frontend.md`.
+
+## Development Server
+
+```bash
+uv run stk run                              # Start server at localhost:5000
+uv run ruff check --fix . && uv run ruff format .   # Lint and format
+uv run python -m unittest discover -s tests # Tests
+```
+
+## Agent Operability
+
+stk exposes machine-readable project state so agents and tooling can verify instead of guess:
+
+```bash
+uv run stk inspect routes --json    # Route map with auth and source info
+uv run stk inspect context --json   # Routes and models in one contract
+uv run stk verify --json            # Lint, sanity, and migration checks
+uv run stk smoke --json             # Real-browser smoke check (Playwright)
+uv run stk report                   # Static project review artifact
+uv run stk new <module>             # Scaffold + migrate, ends at a URL
+uv run stk doctor --json            # Checkout state, each problem with its fix
+uv run stk verify --watch           # Re-run affected checks on every save
+uv run stk shell -c "await count(User)"   # One-shot query against the real app
+```
+
+Every failing check reports the command that fixes it, in the text output and in the
+JSON, so an agent reads the remedy rather than guessing one. See
+[The Build Loop](/build-loop) and [The Shell](/shell).
+
+The smoke command boots a temporary app with its own SQLite database, logs in through a test-only agent route, visits the dashboard and admin pages, captures console errors and failed requests, and writes a screenshot to `.stk/smoke/`. The test login route is not registered by default and refuses to start outside development or testing.
+
+To see SQL as it runs, raise the engine logger: `logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)`.
