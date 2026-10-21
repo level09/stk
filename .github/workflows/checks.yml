@@ -14,8 +14,7 @@ env:
 
 jobs:
   checks:
-    # ponytail: Playwright 1.60 had no Chromium for ubuntu-latest (26.04); move back when it does
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
