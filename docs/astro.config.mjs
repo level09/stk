@@ -4,6 +4,8 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
 	site: 'https://docs.stk.dev',
+	// old Mintlify URLs
+	redirects: { '/introduction': '/', '/cursor-rules': '/ai-coding' },
 	integrations: [
 		starlight({
 			title: 'stk',
