@@ -1,5 +1,6 @@
 {
 	"name": "stk-docs",
 	"compatibility_date": "2026-10-01",
+	"routes": [{ "pattern": "docs.stk.dev", "custom_domain": true }],
 	"assets": { "directory": "./dist", "not_found_handling": "404-page" }
 }
