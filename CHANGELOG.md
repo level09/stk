@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v16.2.0 (2026-10-23)
 
 No migration required.
 
