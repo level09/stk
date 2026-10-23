@@ -448,7 +448,63 @@ def check_docs_single_source(app):
                 f"configuration.md does not list {name}, read in stk/settings.py"
             )
 
+    # Agents load these whole on every task; an index past ~8KB stops being read
+    # as an index. Move detail into a docs page instead of raising the budget.
+    budgets = {root / "CLAUDE.md": 8192}
+    budgets |= dict.fromkeys(root.glob(".claude/skills/*/SKILL.md"), 4096)
+    for page, ceiling in budgets.items():
+        if (size := len(page.read_bytes())) > ceiling:
+            problems.append(
+                f"{page.relative_to(root)} is {size} bytes, over its {ceiling} budget"
+                " → move detail into a docs page and link it"
+            )
+
     assert not problems, "Docs are out of sync:\n    " + "\n    ".join(problems)
+
+
+@check("Migrations do not destroy data")
+def check_migrations_are_additive(app):
+    # Autogenerate turns a renamed field into drop + add, and SQLite batch mode
+    # rebuilds the table, so a lost column reads like a normal diff in review.
+    # Mark a deliberate one with a `# destructive: <reason>` comment in upgrade().
+    import ast
+    from pathlib import Path
+
+    destructive = {"drop_table", "drop_column", "rename_table"}
+    problems = []
+    for path in sorted((Path(__file__).parent / "alembic/versions").glob("*.py")):
+        source = path.read_text()
+        for func in ast.parse(source).body:
+            if not (isinstance(func, ast.FunctionDef) and func.name == "upgrade"):
+                continue
+            if "# destructive:" in ast.get_source_segment(source, func):
+                continue
+            for node in ast.walk(func):
+                if not (
+                    isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                ):
+                    continue
+                op, kwargs = node.func.attr, {k.arg for k in node.keywords}
+                where = f"{path.name}:{node.lineno}"
+                if op in destructive:
+                    problems.append(f"{where} {op}")
+                elif op == "alter_column" and kwargs & {"new_column_name", "type_"}:
+                    problems.append(f"{where} alter_column renames or retypes")
+                elif op == "add_column":
+                    column = next(
+                        (a for a in node.args if isinstance(a, ast.Call)), None
+                    )
+                    flags = {k.arg: k.value for k in column.keywords} if column else {}
+                    not_null = getattr(flags.get("nullable"), "value", True) is False
+                    if not_null and "server_default" not in flags:
+                        problems.append(
+                            f"{where} add_column NOT NULL without server_default"
+                        )
+
+    assert not problems, (
+        "Destructive migration steps (add `# destructive: <reason>` to upgrade()"
+        " if intended):\n    " + "\n    ".join(problems)
+    )
 
 
 @check("Repository publishes nothing private")

@@ -107,7 +107,7 @@ uv run stk db check                    # Fail if models drifted from migrations
 uv run stk db downgrade -1             # Roll back one step
 ```
 
-`stk verify` runs the drift check too, so a model change without a migration fails the gate. Config lives in `stk/migrations.py`, the Alembic env in `alembic/env.py`, and revisions in `alembic/versions/`.
+`stk verify` runs the drift check too, so a model change without a migration fails the gate. It also fails on a revision whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Autogenerate writes a renamed field as a drop plus an add, which loses the data. When a destructive step is intended, say so with a `# destructive: <reason>` comment inside `upgrade()`. Config lives in `stk/migrations.py`, the Alembic env in `alembic/env.py`, and revisions in `alembic/versions/`.
 
 ## SQLite traps
 

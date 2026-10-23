@@ -30,7 +30,10 @@ Models with tables:
    - Foreign keys reference correct tables and use correct column types
    - Indexes are created where needed (especially on foreign keys and unique constraints)
    - `downgrade()` correctly reverses `upgrade()`
-   - No destructive changes that would lose data (if so, warn the user)
+   - No destructive changes that would lose data. `stk verify` fails on drops, renames,
+     retypes, and NOT NULL adds without a default; a renamed field usually shows up as
+     drop + add, so rewrite it as `alter_column(..., new_column_name=...)` with a
+     `# destructive: <reason>` comment, and tell the user
    - Column types match the model definitions (String lengths, nullable flags, defaults)
 
 3. **For SQLite compatibility**, verify batch mode is used. The `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
