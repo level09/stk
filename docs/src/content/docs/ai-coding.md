@@ -1,8 +1,6 @@
 ---
 title: "Working with Agents"
 description: "How coding agents find the truth in an stk project, and how it stays true"
-sidebar:
-  label: "Agents"
 ---
 
 stk is built to be operated by coding agents. Every fact an agent needs has exactly one home, and every surface an agent reads points at it instead of copying it. Copies drift; pointers do not.

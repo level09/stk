@@ -1,0 +1,77 @@
+/* Match the stk app: monochrome, Plus Jakarta Sans headings, Inter text. */
+:root {
+	--sl-font: 'Inter', system-ui, sans-serif;
+	--sl-font-heading: 'Plus Jakarta Sans', var(--sl-font);
+	--sl-color-accent-low: #262626;
+	--sl-color-accent: #d4d4d4;
+	--sl-color-accent-high: #fafafa;
+	--sl-color-white: #fafafa;
+	--sl-color-gray-1: #e5e5e5;
+	--sl-color-gray-2: #c4c4c4;
+	--sl-color-gray-3: #a3a3a3;
+	--sl-color-gray-4: #6b6b6b;
+	--sl-color-gray-5: #3a3a3a;
+	--sl-color-gray-6: #1f1f1f;
+	--sl-color-black: #121212;
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent-low: #e5e5e5;
+	--sl-color-accent: #1a1a1a;
+	--sl-color-accent-high: #0a0a0a;
+	--sl-color-white: #0a0a0a;
+	--sl-color-gray-1: #1f1f1f;
+	--sl-color-gray-2: #3a3a3a;
+	--sl-color-gray-3: #555555;
+	--sl-color-gray-4: #8a8a8a;
+	--sl-color-gray-5: #c4c4c4;
+	--sl-color-gray-6: #ececec;
+	--sl-color-gray-7: #f6f6f6;
+	--sl-color-black: #ffffff;
+}
+
+h1,
+h2,
+h3,
+.hero h1,
+.site-title {
+	font-family: var(--sl-font-heading);
+	letter-spacing: -0.02em;
+}
+
+.hero h1 {
+	font-weight: 800;
+}
+
+.hero img {
+	max-width: 30rem;
+}
+
+.page-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	margin-top: 0.5rem;
+	font-size: var(--sl-text-sm);
+}
+
+.page-actions button,
+.page-actions a {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--sl-color-gray-3);
+	font: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.page-actions button:hover,
+.page-actions a:hover {
+	color: var(--sl-color-white);
+}
+
+.card {
+	--sl-card-border: var(--sl-color-gray-5);
+	--sl-card-bg: var(--sl-color-gray-6);
+}

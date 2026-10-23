@@ -1,0 +1,30 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+// Every page also exists as raw Markdown at /<page>.md for agents and copy-paste.
+const { id } = Astro.locals.starlightRoute.entry;
+const markdown = `/${id}.md`;
+const prompt = `Read ${new URL(markdown, Astro.site)} and help me with stk.`;
+---
+
+<Default />
+{
+	!['index', '404'].includes(id) && (
+		<div class="page-actions">
+			<button type="button" data-markdown={markdown}>Copy as Markdown</button>
+			<a href={markdown}>View Markdown</a>
+			<a href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`}>Open in Claude</a>
+		</div>
+	)
+}
+
+<script>
+	document.querySelectorAll<HTMLButtonElement>('[data-markdown]').forEach((button) => {
+		button.addEventListener('click', async () => {
+			const response = await fetch(button.dataset.markdown!);
+			await navigator.clipboard.writeText(await response.text());
+			button.textContent = 'Copied';
+			setTimeout(() => (button.textContent = 'Copy as Markdown'), 1500);
+		});
+	});
+</script>
