@@ -75,6 +75,8 @@ SECURITY_REGISTERABLE=False      # public password registration is off by defaul
 
 - [Build Loop](/build-loop): doctor, scaffold, watch, smoke
 - [Shell](/shell): async REPL with your models loaded
+- [Architecture](/architecture): project layout and blueprints
+- [Models and Migrations](/models): async SQLAlchemy and Alembic
+- [Frontend](/frontend): Vue and Vuetify with no build step
 - [Authentication](/authentication): user management and OAuth setup
-- [Development](/development): guidelines and best practices
 - [Deployment](/deployment): production deployment

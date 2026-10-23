@@ -346,7 +346,7 @@ def check_docs_match_code(app):
         root / "SECURITY.md",
         *root.glob(".stk/context/*.md"),
         *root.glob(".claude/skills/**/*.md"),
-        *root.glob("docs/src/content/docs/*.mdx"),
+        *root.glob("docs/src/content/docs/*.md*"),
     ]
     sources = [
         *root.glob("stk/**/*.py"),
