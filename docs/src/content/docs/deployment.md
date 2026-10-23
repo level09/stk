@@ -63,7 +63,17 @@ wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/dep
 | `SKIP_SSL` | `false` | `true` serves plain HTTP, for IP-only testing |
 | `PYTHON_PORT` | `5000` | Internal uvicorn port |
 
-Update a deployed app with `git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service`, adding `--extra full` to the sync on a PostgreSQL install and running `protect-mfa` as above.
+`deploy.sh` is install-only. It deletes and re-clones the app directory, and with SQLite the database lives inside it at `instance/stk.db`, so running it again on a live server destroys production data. It also clones over plain HTTPS, so a private repository fails at the clone step: make it public, or clone it yourself with a read-only deploy key first.
+
+Update a deployed app as the app user, in the app directory:
+
+```bash
+git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service
+```
+
+Add `--extra full` to the sync on a PostgreSQL install, and run `protect-mfa` as above. The app user's sudoers entry allows managing only its own service.
+
+Check a deploy with `curl -sI https://<domain>/` (expect 200 or a redirect to login) and `systemctl is-active <domain>.service`, then sign in with the saved credentials, create a record, restart the service, and confirm the record is still there.
 
 ## Docker Compose
 

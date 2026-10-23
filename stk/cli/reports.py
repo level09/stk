@@ -139,6 +139,76 @@ def build_context_report(app):
     }
 
 
+def build_commands_report(root):
+    """Return every stk command, walked from the live click tree under `root`."""
+    import click
+
+    from stk.cli.main import SECTIONS
+
+    section_of = {name: title for title, names in SECTIONS for name in names}
+    commands = []
+
+    def walk(ctx, path):
+        command = ctx.command
+        if isinstance(command, click.Group):
+            for name in command.list_commands(ctx):
+                child = command.get_command(ctx, name)
+                if child is not None and not child.hidden:
+                    walk(
+                        click.Context(child, info_name=name, parent=ctx), [*path, name]
+                    )
+            return
+        help_text = pyinspect.cleandoc(command.help or "").split("\n\n")[0]
+        commands.append(
+            {
+                "command": " ".join(["stk", *path]),
+                "section": section_of.get(path[0], "Other"),
+                "usage": " ".join(["stk", *path, *command.collect_usage_pieces(ctx)]),
+                "help": " ".join(help_text.split()),
+                "options": [
+                    {
+                        "flags": ", ".join(param.opts + param.secondary_opts),
+                        "help": " ".join((param.help or "").split()),
+                    }
+                    for param in command.params
+                    if isinstance(param, click.Option)
+                ],
+            }
+        )
+
+    walk(root, [])
+    order = [title for title, _ in SECTIONS] + ["Other"]
+    return sorted(commands, key=lambda c: (order.index(c["section"]), c["command"]))
+
+
+def render_commands_markdown(commands):
+    """Render the commands report as the docs CLI reference page."""
+    lines = [
+        "---",
+        'title: "CLI Reference"',
+        'description: "Every stk command and option, generated from the code"',
+        "---",
+        "",
+        "Generated from the live command tree by `uv run stk inspect commands --markdown`.",
+        "Do not edit it by hand: `stk verify` fails when this page and the code disagree.",
+        "Agents can read the same data as JSON with `uv run stk inspect commands --json`.",
+    ]
+    section = None
+    for command in commands:
+        if command["section"] != section:
+            section = command["section"]
+            lines += ["", f"## {section}"]
+        lines += ["", f"### `{command['command']}`", "", f"`{command['usage']}`"]
+        if command["help"]:
+            lines += ["", command["help"]]
+        if command["options"]:
+            lines += ["", "| Option | Description |", "|---|---|"]
+            for option in command["options"]:
+                description = option["help"].replace("|", r"\|")
+                lines.append(f"| `{option['flags']}` | {description} |")
+    return "\n".join(lines) + "\n"
+
+
 def build_verify_report(commands=None, runner=_command_runner):
     """Run verification commands and return a compact report."""
     checks = []

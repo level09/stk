@@ -26,9 +26,7 @@ wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/dep
 sudo DOMAIN=example.com REPO=<github-user>/<repo> bash /tmp/deploy.sh
 ```
 
-Env vars: `DOMAIN` (required), `REPO` (default `level09/stk`), `BRANCH`
-(default `master`), `DB=sqlite|postgres`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
-`PYTHON_PORT` (default 5000), `SKIP_SSL=true` (HTTP only, no TLS).
+Every variable and what the script installs: `docs/src/content/docs/deployment.md`.
 
 Ends at a live `https://<domain>` with an admin login. Credentials are saved
 on the server at `/home/<app-user>/.credentials`.

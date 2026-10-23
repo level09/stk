@@ -26,39 +26,27 @@ Existing API routes:
    - `POST /api/<singular>/<id>` — Update (POST, not PUT — stk convention)
    - `DELETE /api/<singular>/<id>` — Delete
 
-3. **Every endpoint must:**
-   - Be `async def`
-   - Use blueprint-level auth OR per-route `@auth_required("session")` + `@roles_required("admin")`
-   - Access DB via `await g.db_session.execute(...)` or `await g.db_session.get(...)`
-   - Use `select()` and `.where()` from sqlalchemy (NOT `.filter()` for new code, though existing code may use it)
-   - Log mutations via `await Activity.register(current_user.id, "Action", data)`
-   - Wrap mutations in try/except with `await g.db_session.rollback()` on error, `log.exception()` for logging
-   - Return `{"message": "..."}` for success/error responses
+3. **Follow the conventions** in `docs/src/content/docs/api.md`: blueprint-level auth, `{item: {...}}`
+   payloads, `{items, total, perPage}` list responses via `orjson`, `Activity.register` on
+   every mutation, rollback plus `log.exception` on failure, and `{"message": ...}` with
+   400/404/412. The reference implementation is what `uv run stk new` writes
+   (`render_views` in `stk/scaffold/templates.py`); match it.
 
-4. **List endpoint must include:**
-   - `PER_PAGE = 25` constant at module level
-   - `page` and `per_page` query params
-   - Optional `search` param with `ilike` on text fields
-   - Total count via `await g.db_session.execute(select(func.count()).select_from(Model))` then `.scalar()`
-   - Use `import orjson as json` and return `Response(json.dumps(response_data), content_type="application/json")`
-   - Response shape: `{"items": [...], "total": N, "perPage": N}`
+4. **List endpoint:** `PER_PAGE = 25`, `page`/`per_page` params, an optional `search` param
+   with `ilike` on the text fields, and the total counted from `query.subquery()` so filters
+   apply to it.
 
-5. **Create/Update endpoints must:**
-   - Extract data from `{item: {...}}` wrapper: `json_data.get("item", {})`
-   - For create: instantiate model, call `await instance.from_dict(data)`, add to session
-   - For update: get existing, store old data, call `await instance.from_dict(data)`
-   - Use `await g.db_session.flush()` before activity logging on create (to get the ID)
-   - Return 412 on error (matching existing convention)
+5. **Create/Update:** create calls `await Model().from_dict(data)` and `flush()`es before the
+   audit entry so the ID exists; update stores `to_dict()` before changing the row and logs
+   old and new.
 
-6. **Error responses:** Return `{"message": "..."}` with status codes: 400 (validation), 404 (not found), 412 (server error).
-
-7. **If a page route doesn't exist yet**, add one:
+6. **If a page route doesn't exist yet**, add one:
    ```python
    @bp.get("/<plural>/")
    async def <plural>_page():
        return await render_template("cms/<plural>.html")
    ```
 
-8. **Verify:**
+7. **Verify:**
    - Run `uv run ruff check --fix . && uv run ruff format .`
    - Run `uv run stk verify`

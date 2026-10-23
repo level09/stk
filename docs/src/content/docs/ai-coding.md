@@ -1,47 +1,56 @@
 ---
-title: "AI-Assisted Development"
-description: "Build faster with AI coding assistants"
+title: "Working with Agents"
+description: "How coding agents find the truth in an stk project, and how it stays true"
 sidebar:
-  label: "AI Coding"
+  label: "Agents"
 ---
 
-## Overview
+stk is built to be operated by coding agents. Every fact an agent needs has exactly one home, and every surface an agent reads points at it instead of copying it. Copies drift; pointers do not.
 
-stk is built to be operated by coding agents. The repository ships four layers of agent context, from broad to specific:
+## Three layers
 
-| Path | What it holds |
-|---|---|
-| `CLAUDE.md` | Commands, architecture, auth policy, frontend conventions, gotchas |
-| `AGENTS.md` | A symlink to `CLAUDE.md`, for agents that read that name |
-| `.stk/context/` | Focused references: architecture, commands, verification, frontend, security, deployment |
-| `.claude/skills/` | Task skills, mirrored at `.agents/skills/` |
-
-Because `AGENTS.md` points at `CLAUDE.md`, there is one file to maintain. Claude Code reads `CLAUDE.md` and loads the skills automatically; other agents that read `AGENTS.md` get the same content.
-
-## Skills
-
-Each skill is a `SKILL.md` an agent loads when the task matches:
-
-- `stk-dev`: background conventions for models, views, templates, queries, auth, and the Vue frontend, so the agent writes async Quart instead of Flask patterns.
-- `stk-blueprint`: scaffold a feature module with models, views, templates, and a migration.
-- `stk-api`: async CRUD endpoints for an existing model.
-- `stk-migrate`: generate and review an Alembic migration.
-- `stk-deploy`: take an app live on a fresh VPS with HTTPS, systemd, and a hardened OS.
-
-## Verify, Don't Guess
-
-The instructions steer agents to the CLI over reading files, because the running app is the canonical source:
+**1. The running code answers questions about the code.** Routes, auth guards, models, commands, and environment state are read from the live app, never from prose:
 
 ```bash
-uv run stk inspect context --json   # Routes and models in one contract
-uv run stk doctor                   # Environment state, each line with its fix
-uv run stk verify --json            # Lint, sanity, and migration checks
-uv run stk smoke --json             # Real-browser behavioral check
+uv run stk inspect context --json    # Routes with auth and source, models with columns
+uv run stk inspect commands --json   # Every command and option
+uv run stk doctor --json             # Checkout state, each problem with its fix
+uv run stk new invoice               # The canonical CRUD module, as code
 ```
 
-See [The Build Loop](/build-loop) for how these fit together.
+**2. These docs explain everything else**, and they ship inside the repo at `docs/src/content/docs/`. An agent reads the version that matches the code it is editing, straight from disk. The same files build this site, `/llms.txt`, and a Markdown copy of every page (`/frontend.md`), so a human, a browser agent, and a coding agent all read one source.
 
-## Example Prompts
+**3. `AGENTS.md` is the index.** It is short on purpose: what stk is, the rules that fail silently, and a table mapping each task to its docs page. It is always in the agent's context, so the agent knows which page to open without having to remember to look. `CLAUDE.md` is the same file, for agents that read that name.
+
+Skills hold procedures, not facts. Each `SKILL.md` in `.claude/skills/` (mirrored at `.agents/skills/`) is a step-by-step workflow an agent loads when the task matches, and links to the docs for the why:
+
+- `stk-blueprint`: scaffold a feature module, customize it, and prove it in a browser.
+- `stk-api`: add CRUD endpoints to an existing model.
+- `stk-migrate`: generate, review, and round-trip an Alembic migration.
+- `stk-deploy`: take an app live on a fresh VPS with HTTPS, systemd, and a hardened OS.
+
+## The gate keeps it honest
+
+Documentation that nothing checks is a guess with a date on it. `stk verify` fails when:
+
+- a docs page, skill, `AGENTS.md`, `README.md`, or `SECURITY.md` names a `stk` command or flag that does not exist, or a `SECURITY_*`/`STK_*` setting the code never reads
+- one of them points at a repo file that does not exist
+- the [CLI reference](/cli) differs from the live command tree
+- `stk/settings.py` reads an environment variable [Configuration](/configuration) does not list
+- `AGENTS.md` does not index every docs page
+
+Every failure names the fix. Change behavior and its docs page in the same commit, and the gate tells you which one you forgot.
+
+## Verify, don't guess
+
+```bash
+uv run stk verify --watch    # instant feedback while editing
+uv run stk smoke --json      # real browser: status codes, console errors, contrast
+```
+
+See [The Build Loop](/build-loop) for the whole cycle, including test-only browser login for agents.
+
+## Example prompts
 
 ```bash
 claude
@@ -51,15 +60,6 @@ claude
 > "Add the posts page to the sidebar for admins only"
 ```
 
-## Customizing for Your Project
+## Customizing for your project
 
-Add project-specific patterns to `CLAUDE.md`, or a new skill under `.claude/skills/` for a repeatable task:
-
-```markdown
-## Order Processing
-1. Create order via POST /api/orders
-2. Process payment via Stripe
-3. Update status to 'paid'
-```
-
-Agents pick up the change on their next session.
+An app built on stk keeps this structure. Add project rules to `CLAUDE.md`, a page under `docs/src/content/docs/` for anything longer than a rule (and a row for it in the index), and a skill for a repeatable workflow. The gate covers your additions the same way.

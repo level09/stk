@@ -111,6 +111,36 @@ CI runs both `stk verify --json` and `stk smoke --json` (after the unit tests), 
 pair above is the same gate locally. `stk report --json` prints the routes and verify
 results instead of writing HTML, and `-o` picks another output path.
 
+## Which checks a change needs
+
+`stk verify` and `stk smoke` are the gate for everything. Some changes need one more look:
+
+| You changed | Also run |
+|---|---|
+| Templates, JS, or CSS | `uv run stk smoke`, then look at the screenshot with real rows |
+| Models | `uv run stk db check` and `uv run stk db current` |
+| Routes or auth | `uv run stk inspect routes --json`, then `uv run stk report` |
+| Anything with logic | `uv run python -m unittest discover -s tests` |
+
+A 200 response and green tests do not prove that columns, labels, or buttons render. Look at the page.
+
+## Signing in as a test user
+
+Agents and scripts that drive a browser can skip the login form with a short-lived token:
+
+```bash
+STK_ENV=development STK_ENABLE_AGENT_LOGIN=1 uv run stk browser-token create --user admin@example.com --ttl 60 --next /dashboard/
+```
+
+Open the printed `/_test/login?token=...` path: it creates a normal session and redirects to `--next`. The route exists only when all of these hold, and startup fails if it is enabled anywhere else:
+
+1. `STK_ENABLE_AGENT_LOGIN=1`
+2. `STK_ENV=development`, or the app is in testing mode
+3. the token is signed and younger than `STK_AGENT_LOGIN_MAX_TTL_SECONDS`
+4. the user's email ends in `@example.com`
+
+`stk smoke` uses the same route with a throwaway `smoke@example.com` admin.
+
 ## The whole loop
 
 ```bash

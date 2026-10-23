@@ -52,14 +52,12 @@ Models with tables:
    uv run stk verify
    ```
 
-## Model conventions to verify against
+## Before you trust it
 
-Models use `@dataclasses.dataclass` and inherit from `Base` (stk.extensions). Key patterns:
-- `id = Column(Integer, primary_key=True)`
-- `created_at = Column(DateTime, default=datetime.now, nullable=False)`
-- Foreign keys: `Column(Integer, ForeignKey("table.id"))` or `Column(String(64), ForeignKey("table.field", ondelete="CASCADE"))`
-- JSON fields: `Column(JSON, nullable=True)`
-- Unique constraints: either `unique=True` on column or `UniqueConstraint(...)` in `__table_args__`
+Model conventions and the three SQLite traps (non-transactional DDL, NOT NULL needs
+`server_default`, named constraints) are in `docs/src/content/docs/models.md`. Check each exit code;
+never pipe a migration command to `tail`, and never delete a revision file before
+`uv run stk db downgrade <target>` has succeeded.
 
 ## Common patterns
 

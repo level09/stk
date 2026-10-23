@@ -1,188 +1,92 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository. `AGENTS.md` is a symlink to this file.
 
 ## What is stk
 
-Async Quart web framework with Vue 3 + Vuetify frontend (no build step). Full auth stack via quart-security (session auth, 2FA/TOTP, WebAuthn, OAuth). SQLite default, PostgreSQL optional. Alembic for migrations.
+Async Quart web framework with a Vue 3 + Vuetify frontend and no build step. Full auth stack via quart-security (session auth, 2FA/TOTP, WebAuthn, OAuth). SQLite by default, PostgreSQL optional, Alembic for migrations.
 
-## Vision
-
-stk is a lean agent-operable SaaS framework.
-
-The goal is not to add AI features. The goal is to make the path from idea to secure working app cheaper, clearer, and more verifiable.
-
-AI changed the cost curve: exploration, scaffolding, refactoring, and documentation are cheaper. Verification, security, judgment, and product taste are now the bottleneck. stk should optimize for that new center of gravity.
-
-Core loop:
+stk is a lean agent-operable SaaS framework. The goal is not to add AI features; it is to make the path from idea to secure working app cheaper, clearer, and more verifiable. Exploration and scaffolding are cheap now. Verification, security, judgment, and product taste are the bottleneck, and stk optimizes for them:
 
 ```text
 idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> ship
 ```
 
+## Where truth lives
+
+1. **The running code.** Ask it before reading files: `uv run stk inspect context --json` (routes with auth, models), `uv run stk inspect commands --json` (every command and option), `uv run stk doctor` (checkout state, each problem with its fix). `uv run stk new <module>` writes the canonical CRUD module; copy its patterns.
+2. **The docs**, in `docs/src/content/docs/`, published at https://docs.stk.dev (with `/llms.txt`). Read the page for your task before writing code:
+
+| Task | Page |
+|---|---|
+| Setup, `.env`, first run | `docs/src/content/docs/getting-started.md` |
+| doctor, scaffold, watch, smoke, which checks a change needs, test login | `docs/src/content/docs/build-loop.md` |
+| Async REPL against the real app | `docs/src/content/docs/shell.md` |
+| Layout, blueprints, request lifecycle | `docs/src/content/docs/architecture.md` |
+| Models, queries, migrations, SQLite traps | `docs/src/content/docs/models.md` |
+| JSON endpoints, error conventions, webhooks | `docs/src/content/docs/api.md` |
+| Vue/Vuetify pages, components, navigation | `docs/src/content/docs/frontend.md` |
+| Background tasks, WebSocket push | `docs/src/content/docs/background-work.md` |
+| Auth, 2FA, passkeys, OAuth, CSRF, rate limits | `docs/src/content/docs/authentication.md` |
+| Renaming the product | `docs/src/content/docs/branding.md` |
+| How agents work in stk | `docs/src/content/docs/ai-coding.md` |
+| Every environment variable and config key | `docs/src/content/docs/configuration.md` |
+| Every command and option (generated) | `docs/src/content/docs/cli.md` |
+| Production, Docker, upgrades | `docs/src/content/docs/deployment.md` |
+| Production security contract | `SECURITY.md` |
+
+3. **Skills** in `.claude/skills/` (mirrored at `.agents/skills/`) hold procedures: `stk-blueprint`, `stk-api`, `stk-migrate`, `stk-deploy`.
+
+When you change behavior, update its docs page in the same commit. `cli.md` is generated: rerun `uv run stk inspect commands --markdown > docs/src/content/docs/cli.md`. `stk verify` fails when docs name commands, flags, settings, or files the code lacks, or when this index misses a page.
+
 ## Commands
 
-Everything runs through one command, `stk`, grouped by purpose in `stk --help`.
-It bakes in the app factory, so `QUART_APP` is never needed. `quart <command>`
-still works for anything registered on `app.cli`.
+Everything runs through `stk` (`uv run stk --help` for the grouped map). The app factory is baked in, so `QUART_APP` is never needed.
 
 ```bash
-./setup.sh                        # First-time setup (venv, deps, .env)
-uv sync --extra dev               # Install with dev tools
-uv run stk --help                 # Command map, grouped by purpose
-uv run stk run                    # Dev server at localhost:5000
-uv run stk run --port 5001        # Alt port (macOS 5000 conflict)
-uv run stk create-db              # Apply all migrations (upgrade to head)
-uv run stk install                # Create admin user
-uv run ruff check --fix . && uv run ruff format .  # Lint + format
-uv run python checks.py           # Sanity checks (not pytest)
-docker compose up --build         # Full stack (Redis, PostgreSQL, Nginx)
-```
-
-Drop the `uv run` prefix by activating the venv once per shell:
-`source .venv/bin/activate`, then `stk run`, `stk shell`, `stk verify`.
-
-### Agent Operability
-
-Prefer these over guessing from files. Structured agent context lives in `.stk/context/` (architecture, commands, verification, frontend).
-
-```bash
-uv run stk inspect routes --json   # Route map with auth and source info
-uv run stk inspect context --json  # Routes + models in one contract
-uv run stk doctor                  # Environment/app state, each line with its fix
-uv run stk verify --watch          # Re-run affected checks on every save
-uv run stk verify --json           # Lint, sanity, migration checks (exit 0/1)
-uv run stk smoke --json            # Real-browser behavioral check (Playwright)
-uv run stk report                 # Static project review artifact
-uv run stk shell                  # Async REPL: app, live db session, models, top-level await (ptpython)
-uv run stk shell -c "await count(User)"  # One-shot query, prints last expression
-uv run stk new <module>            # Scaffold + migrate, ends at a URL you can open
+./setup.sh                          # First-time setup (venv, deps, .env)
+uv sync --extra dev                 # Dev tools, Playwright, ptpython
+uv run stk run                      # Dev server at localhost:5000 (--port 5001 on macOS)
+uv run stk create-db                # Apply all migrations
+uv run stk install                  # Create admin user
+uv run stk doctor                   # What is wrong, and the command that fixes it
+uv run stk new <module>             # Scaffold + migrate, ends at a URL
+uv run stk verify --watch           # Re-run affected checks on every save
+uv run stk verify --json            # Lint, sanity, migration drift (exit 0/1)
+uv run stk smoke --json             # Real-browser behavioral check
+uv run stk shell -c "await count(User)"   # One-shot query against the real app
+uv run stk db revision -m "desc"    # Autogenerate a migration, then: uv run stk db upgrade
+uv run ruff check --fix . && uv run ruff format .
 uv run python -m unittest discover -s tests
 ```
 
-### Database Migrations (Alembic)
+## Rules that fail silently
 
-```bash
-uv run stk db upgrade [revision]              # Apply migrations (default: head)
-uv run stk db downgrade <revision>            # Rollback (e.g. -1 for one step)
-uv run stk db revision -m "description"       # Autogenerate new revision
-uv run stk db revision -m "desc" --empty      # Empty revision for manual SQL
-uv run stk db current                         # Show current revision
-uv run stk db history                         # Show migration history
-uv run stk db stamp head                      # Adopt Alembic on existing DB
-uv run stk db check                           # Fail if models drifted from migrations
-```
+Backend:
+- Async SQLAlchemy, no `db` object. Models inherit `Base` from `stk/extensions.py`. Requests use `g.db_session`; CLI code and tasks use `ext.async_session_factory()`.
+- Every handler is `async def`; every DB call is awaited. Import from `quart` and `quart_security`, never `flask*`.
+- Every relationship uses `lazy="selectin"`. Never read a relationship on a row you just `add()`ed: load it with `await session.get(...)` or a query, or you get `MissingGreenlet`.
+- `User.from_dict()`, `Activity.register()`, `Session.create_session()` and the auth signal handlers are async.
+- Pagination is manual: `offset().limit()` plus `select(func.count())`. List endpoints return `orjson` via `Response(json.dumps(data), content_type="application/json")`.
+- Mutations arrive as `{item: {...}}`: read `json_data.get("item", {})`.
+- `Activity.register()` stores audit events and does not broadcast. `broadcast()` needs an explicit recipient and reaches only sockets on the same worker.
+- SQLite migrations: DDL is not transactional; a new NOT NULL column needs `server_default` in migration and model; keep the constraint naming convention on `Base.metadata`.
+- Tests: config subclasses inherit everything `.env` sets. Pin every env-driven switch a test depends on.
 
-Migration config lives in `stk/migrations.py`. Alembic env in `alembic/env.py`. Revisions in `alembic/versions/`. SQLite uses batch mode automatically for ALTER TABLE support.
+Frontend:
+- Vue Options API (`data()`, `methods`, `mounted()`), never Composition API. Delimiters are `${}`. Every page uses `mixins: [layoutMixin]` and calls `registerStkComponents(app)` before mount.
+- Server data JSON `<script>` tags go in `{% block js %}`, never `{% block content %}`: Vue strips scripts inside `#app`.
+- Template expressions cannot see page globals: `app.config.globalProperties.name = value` before mount. The production build fails silently, so look at the rendered page.
+- Vuetify 4 uses MD3 type classes (`text-title-large`, not `text-h6`); MD2 classes do nothing. Icons are Tabler (`ti ti-*`), never MDI.
+- Logout is POST-only (`layoutMixin.logout()`).
 
-SQLite migration traps, each hit while building an app on stk:
-- DDL is not transactional there: a failed upgrade leaves the tables it already created. Fix the revision, drop only those new empty tables, then upgrade again.
-- A new NOT NULL column on a table with rows needs `server_default` in the migration and the model, or the upgrade fails.
-- Constraints are named by the convention on `Base.metadata` (`stk/extensions.py`); keep it, because batch mode cannot add an unnamed foreign key.
+Security:
+- stk owns authentication in-process. Do not swap in a third-party auth service unless that is the task.
+- All mutations require CSRF. A sessionless webhook opts out with `@csrf_exempt` from `stk.security` under the route decorator and must authenticate the caller itself (e.g. HMAC).
+- Public password registration stays off by default. OAuth never auto-links emails and still enforces local MFA.
+- Agent browser login (`STK_ENABLE_AGENT_LOGIN`) is development/testing only; startup fails elsewhere.
+- Never commit secrets, databases, reviews, or machine paths: `stk verify` fails on them.
 
-## Architecture
-
-### Async SQLAlchemy (not flask-sqlalchemy)
-
-Engine and session factory live in `stk/extensions.py` as module-level globals (`ext.engine`, `ext.async_session_factory`). No `db` object. Models inherit from `Base` (plain `DeclarativeBase`), not `db.Model`.
-
-Request-scoped sessions via `g.db_session`, created in `before_request`, closed in `after_request` (see `stk/app.py`).
-
-```python
-# In request handlers: use g.db_session
-from quart import g
-from sqlalchemy import select
-result = await g.db_session.execute(select(User).where(User.active == True))
-users = result.scalars().all()
-
-# In CLI commands: use ext.async_session_factory directly
-import stk.extensions as ext
-async with ext.async_session_factory() as session:
-    ...
-```
-
-All relationships must use `lazy="selectin"` for async compatibility. Selectin loads only on query: reading a relationship on a row you just `add()`ed (or got back from the identity map without it loaded) raises `MissingGreenlet`. Load it with `await session.get(...)` or a query instead.
-
-### CLI Commands
-
-Sync click commands wrapping `asyncio.run()` live in the `stk/cli/` package: `agent.py` (inspect, verify, smoke, report, shell, new), `database.py` (create-db, db group, migration drift), `users.py` (install, create, add-role, reset, sessions, browser-token), plus `reports.py` and `smoke.py` for the machine-readable builders behind them. Quart CLI doesn't support async click commands. All commands re-exported from `stk/cli/__init__.py` are auto-registered via `register_commands()` in `app.py`.
-
-### Blueprints
-
-- `stk/public/` - unauthenticated routes, OAuth callbacks (Google, GitHub)
-- `stk/user/` - auth, login, registration, OAuth, WebAuthn, 2FA, session management
-- `stk/portal/` - protected dashboard (blueprint-level `@auth_required`)
-- `stk/websocket.py` - WebSocket blueprint (releases DB session early for long-lived connections)
-
-### Auth (quart-security)
-
-`SQLAlchemyUserDatastore` with session factory callable (`lambda: g.db_session`). Key decorators: `@auth_required("session")`, `@roles_required('admin')`.
-
-**Security policy:**
-- Public password registration is disabled by default.
-- TOTP seeds are encrypted at rest. Use `stk protect-mfa` on upgrade and preserve the MFA keyring.
-- All mutations require CSRF; Axios uses the shared layout token. Third-party webhooks without a session opt out per view with `@csrf_exempt` (`stk.security`) placed under the route decorator, and must authenticate the caller themselves (e.g. HMAC signature).
-- OAuth uses single-use state and PKCE, requires verified email, and enforces local MFA. It does not auto-link matching emails.
-- WebSockets require an allowed origin, recheck session validity, bound resources, and require an explicit broadcast recipient.
-- See `SECURITY.md` for production settings and upgrade requirements.
-
-**Features enabled:**
-- Session auth with tracking (IP, device, browser via `Session` model)
-- 2FA via TOTP authenticator (`SECURITY_TWO_FACTOR = True`)
-- WebAuthn as first or multi-factor (`SECURITY_WEBAUTHN = True`)
-- OAuth (Google, GitHub) via AuthLib `AsyncOAuth2Client`
-- Password hashing: Argon2id, min 12 chars; legacy hashes upgrade on login
-- Account lockout: `failed_login_count` + `locked_until` on User model
-- Recovery codes (3 codes, hashed at rest, displayed only once at generation)
-- Session freshness: 60-minute window, enforced on 2FA/recovery/passkey management routes (stale session gets 401)
-- Logout is POST-only (`layoutMixin.logout()` submits the form; plain links 405)
-
-**Signal handlers** (all async, in `stk/user/views.py`):
-- `@user_authenticated.connect` - creates session record, tracks IP changes
-- `@user_logged_out.connect` - deactivates session
-- `@password_changed.connect` - logs change, marks password as user-set
-- `@tf_profile_changed.connect` - logs 2FA modifications
-
-**Rate limiting**: atomic SQL windows in `stk/utils/ratelimit.py`, shared across workers and auth endpoints. Defaults are 10 attempts and 120 auth requests per IP per minute. OAuth requests are included; logout remains available.
-
-### Models (`stk/user/models.py`)
-
-- **User** - UserMixin. Auth fields, login tracking, lockout, 2FA, WebAuthn handle. Methods: `from_dict()`, `to_dict()`, `random_password()`, `logout_other_sessions()`, `get_active_sessions()`.
-- **Role** - RoleMixin. Many-to-many with User via `roles_users`.
-- **WebAuthn** - credential storage, FK to User via `fs_webauthn_user_handle`.
-- **OAuth** - provider accounts linked to users. Unique on `(provider, provider_user_id)`.
-- **Activity** - audit log. `register()` stores events without broadcasting.
-- **Session** - tracks active sessions with IP, device meta, expiry.
-
-### Background Tasks
-
-No Celery. `stk/tasks.py` provides:
-- `run_in_background(coro)` - fire-and-forget with exception logging
-- `run_with_session(coro_factory)` - provides fresh DB session to coroutine
-- `cleanup_expired_sessions()` - deactivates expired, deletes 30+ day old records
-
-### Frontend
-
-Vue 3 + Vuetify loaded from static files (no build step). **Options API** (`data()`, `methods`, `mounted()`), NOT Composition API. Versions are pinned in `stk/static/VERSIONS.txt` and refreshed with `./vendor.sh`; see `.stk/context/frontend.md` before bumping Vuetify.
-
-- **Delimiters:** `${}` via `config.delimiters` (avoids Jinja `{{}}` conflicts)
-- **Layout mixin:** Every app uses `mixins: [layoutMixin]` for drawer, nav, WebSocket, notifications
-- **Component registration:** Call `registerStkComponents(app)` before `.mount('#app')`
-- **Vuetify init:** `createVuetify(config.vuetifyConfig)` (config is in `static/js/config.js`)
-- **Icons:** Tabler Icons (`ti ti-pencil`, `ti ti-plus`, etc.), NOT Material Design Icons
-- **Server data:** Pass via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>` placed in `{% block js %}`, never in `{% block content %}`: Vue strips `<script>` tags inside the `#app` mount element, so `getElementById(...)` returns null.
-- **Navigation:** Sidebar entries in `static/js/navigation.js` with `role: 'admin'` for access control
-- **JSON responses:** List endpoints use `orjson` via `import orjson as json` and `Response(json.dumps(data), content_type="application/json")`
-- **Request body:** Frontend sends mutations as `{item: {...}}`, extract with `json_data.get("item", {})`
-- **Template globals:** Vue template expressions cannot see page globals (a `const labels = {...}` in a script is undefined inside `${...}` and directives). Expose shared helpers with `app.config.globalProperties.labels = labels` before mount. The production Vue build fails such lookups silently (the cell renders nothing, columns shift), so `stk smoke` cannot catch it; check the rendered table.
-
-## Key Gotchas
-
-- `User.from_dict()`, `Activity.register()`, `Session.create_session()` are all async.
-- Signal handlers (`@user_authenticated.connect` etc.) are async.
-- Pagination is manual: `offset().limit()` + `select(func.count())`.
-- WebSocket connections release their DB session early to avoid pool starvation.
-- Session backend: Redis if `REDIS_URL` is set, otherwise cookie-based.
-- `DISABLE_MULTIPLE_SESSIONS` config controls single-session enforcement.
-- Renaming the product: set `APP_NAME` / `APP_TAGLINE` / `APP_DESCRIPTION` and replace `stk/templates/_brand.html` and the favicon. Never edit names across templates.
-- Tests: Config subclasses inherit everything `.env` sets (`load_dotenv` runs at import). Pin every env-driven switch a test depends on in the test config (e.g. a provider key that changes request auth), or a developer's `.env` silently changes the code path.
+Product:
+- Rename an app with `APP_NAME` / `APP_TAGLINE` / `APP_DESCRIPTION` and by replacing `stk/templates/_brand.html` and the favicon. Never edit names across templates.
+- Before reporting UI work done, run `uv run stk smoke` and look at a screenshot with real rows. A 200 and green tests do not prove a page renders.

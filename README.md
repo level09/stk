@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="stk" width="480">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/src/assets/logo-dark.webp">
+    <img src="docs/src/assets/logo-light.webp" alt="stk" width="360">
+  </picture>
 </p>
 
 <h1 align="center">stk</h1>
@@ -18,6 +21,7 @@
 
 <p align="center">
   <a href="https://docs.stk.dev">Docs</a> &middot;
+  <a href="https://docs.stk.dev/llms.txt">llms.txt</a> &middot;
   <a href="https://github.com/level09/stk/wiki">Tutorials</a>
 </p>
 
@@ -25,7 +29,7 @@
 
 ```bash
 git clone git@github.com:level09/stk.git && cd stk
-./setup.sh                    # deps + secure .env
+./setup.sh                  # deps + secure .env
 uv run stk create-db        # database via Alembic
 uv run stk install          # admin user
 uv run stk run              # localhost:5000
@@ -37,7 +41,7 @@ Most frameworks give you routing and leave the rest as homework. Auth alone eats
 
 stk ships what actually matters:
 
-**You own your auth.** Registration, login, password recovery, session management, TOTP 2FA (Google Authenticator, Authy, 1Password), WebAuthn passkeys (Touch ID, YubiKey), recovery codes, OAuth (Google, GitHub). Production code, not a tutorial. Your users' data stays on your server.
+**You own your auth.** Login, session management, TOTP 2FA (Google Authenticator, Authy, 1Password), WebAuthn passkeys (Touch ID, YubiKey), recovery codes, OAuth (Google, GitHub). Production code, not a tutorial. Your users' data stays on your server.
 
 **Async all the way down.** Quart + async SQLAlchemy + aiosmtplib + native WebSockets. Not async bolted onto a sync framework. Real concurrency without threads, workers, or callback hell.
 
@@ -47,60 +51,18 @@ stk ships what actually matters:
 
 **No Celery, no Redis (unless you want them).** Background tasks run on asyncio. Session store works with cookies or Redis. Complexity is opt-in.
 
+**Built to be operated by agents.** `stk inspect` reports routes, auth guards, models, and commands as JSON. `stk verify` and `stk smoke` are a real gate: lint, migration drift, and a real browser that fails on console errors and invisible text. The docs ship in the repo and the gate fails when they drift from the code.
+
 > **Want payments?** [ReadyKit](https://readykit.dev) adds Stripe, multi-tenancy, and teams on top of stk.
 
 ## What's included
 
-### Auth & Security
-- Login, registration, password recovery, password change
-- TOTP 2FA with QR code setup (authenticator apps)
-- WebAuthn/passkeys as first factor or second factor
-- Multi-factor recovery codes
-- Google and GitHub OAuth with account linking
-- Server-side session tracking (IP, browser, device, expiration)
-- Account lockout after failed attempts
-- Single-session mode (optional)
-- Rate limiting on auth endpoints (sliding window, no Redis)
-- Argon2id password hashing, 12 char minimum; legacy hashes upgrade on login
-
-### Real-time
-- Authenticated WebSocket endpoint with per-user message queues
-- Broadcast to one user or all connected users
-- Activity events pushed live to the dashboard
-- Auto-reconnect on the frontend
-
-### Admin Dashboard
-- User management (CRUD, role assignment, activation)
-- Role management with RBAC
-- Activity audit log (every admin action, login from new IP, 2FA changes)
-- Server-side paginated data tables
-- JSON API endpoints for all admin operations
-
-### Frontend
-- Vue 3 + Vuetify 4 (zero build step, versions pinned in `stk/static/VERSIONS.txt`)
-- Dark/light theme with system preference detection
-- Collapsible sidebar navigation
-- Notification dropdown
-- Tabler Icons (5000+)
-- Custom `${ }` delimiters (no Jinja conflicts)
-
-### Infrastructure
-- Async email (aiosmtplib) with HTML + text templates
-- Fire-and-forget background tasks (no Celery)
-- One CLI: `stk` (run, shell, new, db, verify, smoke, report, inspect, install, users), grouped in `stk --help`
-- Docker Compose: PostgreSQL, Redis, Nginx (one command)
-- VPS deploy script with auto-SSL via Caddy
-- Pre-commit hooks, ruff linting
-- Health endpoint (`/health`) for uptime monitoring
-
-### AI-native
-- Ships with Claude Code instructions (`CLAUDE.md`) and agent primitives
-- AI-assisted scaffolding skills for blueprints, APIs, and migrations
-- Structured agent context in `.stk/context/`
-- Route inspection, verification, and review artifacts via `stk inspect`, `stk verify`, and `stk report`
-- Behavioral gate: `stk verify` (lint, sanity, migration drift) and `stk smoke` (real browser, console errors, invisible text)
-- `stk shell`: async REPL with the app, a live DB session, every model, and top-level `await`
-- Your AI already knows the codebase conventions
+- **Auth and security:** Argon2id passwords (12 char minimum), TOTP 2FA, passkeys as first or second factor, recovery codes, Google and GitHub OAuth with PKCE and verified emails, session tracking by IP and device, account lockout, per-IP rate limits shared across workers, CSRF on every mutation. Public sign-up is off by default.
+- **Admin dashboard:** users, roles, and an activity audit log, with server-paginated tables and JSON APIs.
+- **Real-time:** authenticated, origin-checked WebSockets that push to a named user and close when the session ends.
+- **Frontend:** Vue 3 and Vuetify 4 with no build step, dark mode, collapsible sidebar, notifications, Tabler Icons.
+- **Tooling:** one CLI, `stk`: run, shell, new, db, doctor, verify, smoke, inspect, report, and user management.
+- **Deploy:** a one-command VPS script (Caddy, systemd, hardened OS) or Docker Compose with PostgreSQL, Redis, and Nginx.
 
 ## Stack
 
@@ -113,114 +75,12 @@ stk ships what actually matters:
 | Migrations | Alembic |
 | Auth | [quart-security](https://quart-security.readthedocs.io/) (2FA, WebAuthn, OAuth) |
 | Frontend | Vue 3, Vuetify 4, Axios |
-| WebSockets | Native Quart WebSocket support |
-| Email | aiosmtplib |
-| Server | Uvicorn (ASGI) |
-| Proxy | Nginx or Caddy |
+| Server | Uvicorn (ASGI) behind Caddy or Nginx |
 
-## quart-security 2 upgrade
+## Documentation
 
-stk 15 requires quart-security 2.0.0 or later in the 2.x series.
-
-Before starting an existing app, run `uv run stk db upgrade` on its database.
-The migration adds `quart_security_state`, which all workers must share. Existing
-login cookies become invalid. Protect the database and its backups because pending
-authenticator secrets are stored in this table.
-
-Cookies default to HTTPS only. Set `SESSION_COOKIE_SECURE=False` for local HTTP
-development and `True` in production. Password resets and single-session mode
-now revoke authentication state, including copied cookies.
-
-## Configuration
-
-Environment variables (`.env`):
-
-```bash
-SECRET_KEY=your_secret_key
-QUART_APP=run.py
-QUART_DEBUG=1                    # 0 in production
-
-# PostgreSQL (optional, SQLite is default)
-# SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
-
-# Redis sessions (optional, cookies are default)
-# REDIS_URL=redis://localhost:6379/1
-
-# OAuth (optional)
-# GOOGLE_AUTH_ENABLED=true
-# GOOGLE_OAUTH_CLIENT_ID=...
-# GOOGLE_OAUTH_CLIENT_SECRET=...
-# GITHUB_AUTH_ENABLED=true
-# GITHUB_OAUTH_CLIENT_ID=...
-# GITHUB_OAUTH_CLIENT_SECRET=...
-
-# Email (optional)
-# MAIL_SERVER=smtp.example.com
-# MAIL_USERNAME=...
-# MAIL_PASSWORD=...
-# SECURITY_EMAIL_SENDER=noreply@example.com
-```
-
-Database migrations:
-
-```bash
-uv run stk create-db                        # upgrade to head
-uv run stk db revision -m "add billing"    # generate a new revision
-uv run stk db upgrade                       # apply migrations
-uv run stk db downgrade -1                  # rollback one revision
-uv run stk db stamp head                    # adopt Alembic for an existing DB
-```
-
-## Docker
-
-```bash
-docker compose up --build   # Redis, PostgreSQL, Nginx
-```
-
-## Production Deploy
-
-One command on a fresh Ubuntu 22.04/24.04 VPS:
-
-```bash
-wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com bash /tmp/deploy.sh
-```
-
-Installs Caddy (auto SSL), uv-managed Python 3.13, the app as a systemd service behind uvicorn, a scoped app user, UFW, fail2ban, and SSH hardening. SQLite by default; `DB=postgres` adds PostgreSQL, Redis, and the `full` extra. Admin credentials land in `/home/<user>/.credentials`.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DOMAIN` | (required) | Domain name, or server IP with `SKIP_SSL=true` |
-| `REPO` | `level09/stk` | GitHub repository to deploy |
-| `BRANCH` | `master` | Branch to deploy |
-| `DB` | `sqlite` | `sqlite` or `postgres` (postgres adds Redis + `full` extra) |
-| `ADMIN_EMAIL` | `admin@$DOMAIN` | Admin login email |
-| `ADMIN_PASSWORD` | (generated) | Admin password |
-| `SKIP_SSL` | `false` | `true` serves plain HTTP (IP-only testing) |
-| `PYTHON_PORT` | `5000` | Internal uvicorn port |
-
-Update a deployed app: `git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service`
-
-## CLI Reference
-
-```bash
-uv run stk create-db              # Apply all migrations
-uv run stk install                # Create admin user
-uv run stk create                 # Create user by email/password
-uv run stk add-role               # Assign role to user
-uv run stk reset                  # Reset user password
-uv run stk cleanup-sessions       # Deactivate expired sessions
-uv run stk db upgrade [rev]       # Run migrations forward
-uv run stk db downgrade <rev>     # Roll back migrations
-uv run stk db revision -m "msg"   # Generate new migration
-uv run stk db current             # Show current revision
-uv run stk db history             # Show migration history
-uv run stk inspect routes --json  # Machine-readable route map
-uv run stk inspect context --json # Routes and models in one contract
-uv run stk verify                 # Lint, sanity, and migration checks
-uv run stk report                 # Static project review artifact
-uv run ruff check --fix . && uv run ruff format .  # Lint + format
-uv run python checks.py             # Sanity checks
-```
+Everything else lives at [docs.stk.dev](https://docs.stk.dev), and in this repo at `docs/src/content/docs/`:
+[quick start](https://docs.stk.dev/getting-started/), [build loop](https://docs.stk.dev/build-loop/), [models](https://docs.stk.dev/models/), [frontend](https://docs.stk.dev/frontend/), [authentication](https://docs.stk.dev/authentication/), [configuration](https://docs.stk.dev/configuration/), [CLI reference](https://docs.stk.dev/cli/), [deployment](https://docs.stk.dev/deployment/), and [working with agents](https://docs.stk.dev/ai-coding/). Upgrade notes are in `CHANGELOG.md`; the production security contract is `SECURITY.md`.
 
 ## License
 

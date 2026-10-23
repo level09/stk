@@ -27,11 +27,10 @@ stk/
 ├── alembic/              # Migration env and versions/
 ├── tests/                # unittest suite
 ├── checks.py             # Sanity checks run by `stk verify`
-├── docs/                 # This documentation site
+├── docs/                 # This site; pages in docs/src/content/docs/
 ├── instance/             # SQLite database
-├── .stk/context/         # Structured agent context
-├── .claude/skills/       # Agent skills (also at .agents/skills)
-├── CLAUDE.md             # Agent instructions (AGENTS.md links here)
+├── .claude/skills/       # Agent procedures (also at .agents/skills)
+├── CLAUDE.md             # Agent index and rules (AGENTS.md links here)
 ├── pyproject.toml        # Dependencies and project config
 ├── setup.sh              # Setup script
 ├── run.py                # ASGI entry point

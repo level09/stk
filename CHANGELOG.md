@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+No migration required.
+
+- The docs in `docs/src/content/docs/` are the single source for humans and agents. `.stk/context/` and the `stk-dev` skill are removed; their content moved into the Frontend, Models, JSON APIs, Background Work, Build Loop, and Deployment pages. `AGENTS.md` is now an index of those pages plus the rules that fail silently. Apps that referenced `.stk/context/*.md` should point at the docs pages instead.
+- `stk inspect commands` reports every command and option, as text, `--json`, or `--markdown`. The docs CLI reference is generated from it.
+- `stk verify` fails when the CLI reference is stale, when `stk/settings.py` reads an environment variable the Configuration page does not list, when `AGENTS.md` misses a docs page, or when docs, skills, or the README point at a file that does not exist.
+- New docs pages: Configuration, CLI Reference, Renaming Your App, and WebSockets in Background Work. The docs site uses the stk logo.
+
 ## v16.1.0 (2026-10-19)
 
 No migration required. Existing databases keep their constraint names and show no drift.

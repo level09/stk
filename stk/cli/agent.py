@@ -8,10 +8,12 @@ import click
 
 from stk.cli.base import console
 from stk.cli.reports import (
+    build_commands_report,
     build_context_report,
     build_project_report_html,
     build_routes_report,
     build_verify_report,
+    render_commands_markdown,
 )
 from stk.cli.smoke import print_smoke_report, run_smoke, smoke_exit_code
 
@@ -51,6 +53,21 @@ def inspect_context(as_json):
     click.echo(
         f"Context: {len(report['routes'])} routes, {len(report['models'])} models"
     )
+
+
+@inspect_cmd.command("commands")
+@click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
+@click.option("--markdown", is_flag=True, help="Emit the docs CLI reference page.")
+def inspect_commands(as_json, markdown):
+    """Inspect every stk command and its options."""
+    report = build_commands_report(click.get_current_context().find_root())
+    if as_json:
+        click.echo(json.dumps(report, indent=2))
+    elif markdown:
+        click.echo(render_commands_markdown(report), nl=False)
+    else:
+        for command in report:
+            click.echo(f"{command['usage']:48} {command['help']}")
 
 
 @click.command()

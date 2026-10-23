@@ -344,7 +344,6 @@ def check_docs_match_code(app):
         root / "README.md",
         root / "CLAUDE.md",
         root / "SECURITY.md",
-        *root.glob(".stk/context/*.md"),
         *root.glob(".claude/skills/**/*.md"),
         *root.glob("docs/src/content/docs/*.md*"),
     ]
@@ -396,6 +395,60 @@ def check_docs_match_code(app):
                 problems.append(f"{name}: setting {key} is not read anywhere")
 
     assert not problems, "Docs drifted from code:\n    " + "\n    ".join(problems)
+
+
+@check("Docs are one source: indexed, generated, and pointing at real files")
+def check_docs_single_source(app):
+    # Agents read AGENTS.md first and follow its pointers into docs/, so a page the
+    # index misses is invisible, and a pointer to a moved file sends them nowhere.
+    import re
+    from pathlib import Path
+
+    from click.testing import CliRunner
+
+    from stk.cli.main import main
+
+    root = Path(__file__).parent
+    docs = root / "docs/src/content/docs"
+    index = (root / "CLAUDE.md").read_text()
+    problems = [
+        f"CLAUDE.md does not index {page.relative_to(root)}"
+        for page in sorted(docs.glob("*.md"))
+        if str(page.relative_to(root)) not in index
+    ]
+
+    readers = [
+        root / "CLAUDE.md",
+        root / "README.md",
+        *root.glob(".claude/skills/**/*.md"),
+    ]
+    readers += [*docs.glob("*.md*")]
+    path_like = re.compile(
+        r"`([\w.-]+(?:/[\w.-]+)+\.(?:md|mdx|py|js|html|css|txt|sh|webp))`"
+    )
+    for page in readers:
+        for path in path_like.findall(page.read_text()):
+            if not (root / path).exists():
+                problems.append(f"{page.relative_to(root)} points at missing {path}")
+
+    reference = docs / "cli.md"
+    generated = CliRunner().invoke(main, ["inspect", "commands", "--markdown"])
+    assert generated.exit_code == 0, generated.output
+    if reference.read_text() != generated.output:
+        problems.append(
+            f"{reference.relative_to(root)} is stale"
+            " → uv run stk inspect commands --markdown > docs/src/content/docs/cli.md"
+        )
+
+    settings = (root / "stk/settings.py").read_text()
+    configuration = (docs / "configuration.md").read_text()
+    for name in sorted(set(re.findall(r'environ\.get\(\s*"([A-Z0-9_]+)"', settings))):
+        if f"`{name}`" not in configuration:
+            problems.append(
+                f"configuration.md does not list {name}, read in stk/settings.py"
+            )
+
+    assert not problems, "Docs are out of sync:\n    " + "\n    ".join(problems)
 
 
 @check("Repository publishes nothing private")

@@ -32,65 +32,18 @@ Then:
    (only needed for post-scaffold model edits; the initial migration is already applied. With `--no-migrate`, the first revision is manual)
 3. Verify: `uv run stk verify && uv run stk smoke`
 
-## Customization reference
+## Conventions
 
-After scaffolding, the generated files follow these conventions. Only touch these when you need to go beyond the defaults.
-
-### Models (`stk/<name>/models.py`)
-
-- `import dataclasses` and use `@dataclasses.dataclass` decorator
-- Import `Base` from `stk.extensions`, NOT `db`
-- Use `Column(Type)` from sqlalchemy directly
-- All relationships use `lazy="selectin"`
-- Include `to_dict()` instance method
-- Include `async from_dict(self, data)` as **instance method** that mutates self (NOT a classmethod)
-- Include `created_at = Column(DateTime, default=datetime.now, nullable=False)`
-
-### Views (`stk/<name>/views.py`)
-
-- ALL handlers are `async def`
-- Use `import orjson as json` and return `Response(json.dumps(data), content_type="application/json")` for list endpoints
-- Blueprint-level auth via `@bp.before_request` with `@auth_required("session")` + `@roles_required("admin")`
-- DB access via `await g.db_session.execute(...)` or `await g.db_session.get(...)`
-- Frontend sends `{item: {...}}`, extract with `json_data.get("item", {})`
-- Wrap mutations in try/except with `await g.db_session.rollback()` on error
-- Log mutations: `await Activity.register(current_user.id, "Action", data)`
-- Return `{"message": "..."}` for create/update/delete responses
-- Use `PER_PAGE = 25` constant
-- Use `log = logging.getLogger(__name__)` for error logging
-
-### Template (`stk/templates/cms/<name>.html`)
-
-- Extend `layout.html`
-- Vue 3 Options API: `data()`, `methods`, `mounted()`, NOT `setup()`
-- Must include `mixins: [layoutMixin]` and `delimiters: config.delimiters`
-- Use `const vuetify = createVuetify(config.vuetifyConfig)`
-- Call `registerStkComponents(app)` before `app.use(vuetify).mount("#app")`
-- Use `v-data-table-server` for lists
-- Icons: Tabler Icons (`ti ti-*`), e.g. `ti ti-plus`, `ti ti-pencil`, `ti ti-trash`, `ti ti-x`
-- Pass server data via `<script type="application/json" id="...">{{ data|tojson|safe }}</script>` inside `{% block js %}`. Inside `{% block content %}` it sits in Vue's `#app` mount element, which strips script tags, so `data()` reads null and the page crashes. A 200 response does not catch this; `stk smoke` does.
-- Use `toRaw()` from Vue when editing items: `const {createApp, toRaw} = Vue`
-
-## Do NOT:
-- Use `db.Model`, `db.Column`, `db.select()`, or any Flask-SQLAlchemy patterns
-- Use `from flask import ...` or `from flask_security import ...`
-- Use sync handlers (every route must be `async def`)
-- Use `jsonify()` (return dicts or Response objects)
-- Use `lazy="dynamic"` on relationships (breaks async)
-- Forget `await` on DB operations
-- Use Vue Composition API (`setup()`, `ref()`, `reactive()`) -- use Options API
-- Use Material Design Icons -- use Tabler Icons (`ti ti-*`)
-- Send raw data in POST -- wrap in `{item: {...}}`
-- Forget `mixins: [layoutMixin]` or `registerStkComponents(app)` in templates
+The generated files already follow every stk convention. When you change them, the rules
+are in `CLAUDE.md` and the details in `docs/src/content/docs/models.md`, `docs/src/content/docs/api.md`, and
+`docs/src/content/docs/frontend.md`. Read the page before editing that layer.
 
 ## Before you report done
 
 Each line is a mistake an agent made while building a real app on stk.
 
 - Lint and format only the files you changed (`uv run ruff format path/a.py path/b.py`), never a whole package another person owns.
-- Shared helpers a template uses (label maps, formatters) must be exposed with `app.config.globalProperties.name = value` before mount. Page globals are invisible to template expressions, and the production Vue build fails silently: the cell renders nothing and the table columns shift.
-- Tests: pin every `.env`-driven setting the code path depends on in the test config, and give test-only blueprints names an app cannot already use.
-- Async: never read a relationship on a row you just added; load it with `await session.get(...)` or a query (`MissingGreenlet` otherwise).
+- Tests: give test-only blueprints names an app cannot already use.
 - Migrations: check each command's exit code, never behind a pipe to `tail`. Never delete a revision file before `stk db downgrade <target>` has succeeded.
 - Tables inside Vue's in-DOM templates: never put `<tbody>`/`<tr>` inside `<v-table>` or another custom element; the browser parser moves the rows out before Vue mounts and they never render. Use `v-data-table`, a native `<table>`, or flex rows.
 - Verify UI in a browser: `uv run stk smoke`, then look at a screenshot of the page with real rows. A 200 and green tests do not prove columns, labels or buttons render.

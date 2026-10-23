@@ -7,22 +7,36 @@ stk uses async SQLAlchemy 2. There is no `db` object: models inherit from `Base`
 
 ## Defining a model
 
+This is the shape `stk new` generates:
+
 ```python
+import dataclasses
 from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from stk.extensions import Base
 
+@dataclasses.dataclass
 class Post(Base):
     __tablename__ = "post"
 
     id = Column(Integer, primary_key=True)
     title = Column(String(80), nullable=False)
     content = Column(Text)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
     user_id = Column(Integer, ForeignKey("user.id"))
     user = relationship("User", lazy="selectin")
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "title": self.title, "content": self.content}
+
+    async def from_dict(self, data: dict) -> "Post":
+        self.title = data.get("title", self.title)
+        self.content = data.get("content", self.content)
+        return self
 ```
+
+`to_dict()` is what list endpoints serialize. `from_dict()` is an async instance method that updates the row in place, so create and update share it.
 
 Every relationship must use `lazy="selectin"`. Selectin loads only on query, so reading `post.user` on a row you just `add()`ed raises `MissingGreenlet`. Load it with `await g.db_session.get(Post, post.id)` or a query first.
 
@@ -57,6 +71,18 @@ await g.db_session.commit()
 # Delete
 await g.db_session.delete(post)
 await g.db_session.commit()
+```
+
+To read two tables without a relationship, select both and join:
+
+```python
+result = await g.db_session.execute(
+    select(Activity, User)
+    .outerjoin(User, Activity.user_id == User.id)
+    .order_by(Activity.created_at.desc())
+)
+for activity, user in result.all():
+    ...
 ```
 
 Outside a request, open a session yourself:
