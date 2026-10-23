@@ -1,5 +1,12 @@
 # Changelog
 
+## v16.2.1 (2026-10-23)
+
+No migration required.
+
+- `stk verify` fails on a migration whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Mark a deliberate step with a `# destructive: <reason>` comment inside `upgrade()`.
+- `stk verify` fails when `CLAUDE.md` grows past 8KB or a skill past 4KB, so the agent index stays an index.
+
 ## v16.2.0 (2026-10-23)
 
 No migration required.
