@@ -43,7 +43,8 @@ The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. 
 
 ## Rules that fail silently
 
-- **Delimiters are `${expr}`**, never `{{expr}}`, which Jinja renders first.
+- **Delimiters are `${expr}`**, never `{{expr}}`, which Jinja renders first. The delimiter ends at the first `}`, so an object literal inside it (`${ (x || {}).y }`) breaks the render function and the page stays blank. Move it into a method; `stk verify` fails on `{` inside `${ }`.
+- **Reference static JS and CSS with `url_for('static', filename=...)`.** It adds a content hash (`?v=...`) that the app and the shipped proxies cache forever. A literal `/static/...` path revalidates on every load, which is correct but slower.
 - **Server data goes in `{% block js %}`.** Vue strips `<script>` tags inside the `#app` mount element, so the same JSON tag in `{% block content %}` reads back as null and the page crashes. A 200 response does not catch this; `stk smoke` does.
 - **Template expressions cannot see page globals.** A `const labels = {...}` in the page script is undefined inside `${...}` and directives. Expose shared helpers with `app.config.globalProperties.labels = labels` before mount. The production Vue build fails such lookups silently (the cell renders nothing, columns shift), so look at the rendered table.
 - **Vuetify 4 type classes are MD3.** The old MD2 classes apply no styling and log nothing:

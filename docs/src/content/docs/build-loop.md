@@ -124,6 +124,10 @@ results instead of writing HTML, and `-o` picks another output path.
 
 A 200 response and green tests do not prove that columns, labels, or buttons render. Look at the page.
 
+Test configs subclass `TestingConfig` from `stk/settings.py`, not `Config`: `.env` loads at import, and `TestingConfig` pins the database, sessions, mail, OAuth, rate limits, and agent login so a developer's settings never reach a test. Pin anything else your test depends on. Never name a test method `run`: on `IsolatedAsyncioTestCase` it replaces `TestCase.run` and the class silently runs nothing. Run a new test once by its full name and see it reported.
+
+To stop a dev server, stop the process on its port (`lsof -tiTCP:5000 -sTCP:LISTEN | xargs kill`), not a process name pattern that can match another checkout's server.
+
 ## Signing in as a test user
 
 Agents and scripts that drive a browser can skip the login form with a short-lived token:

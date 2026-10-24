@@ -211,6 +211,26 @@ def check_templates(app):
         assert os.path.exists(path), f"Missing template: {tpl}"
 
 
+@check("Vue interpolations contain no braces")
+def check_vue_delimiters(app):
+    # The `${ }` delimiter ends at the first `}`, so `${ (x || {}).y }` compiles to
+    # a broken render function and the page stays blank with one console error.
+    import re
+    from pathlib import Path
+
+    hazard = re.compile(r"\$\{[^}]*\{")
+    problems = []
+    for path in sorted(Path(app.root_path).rglob("*.html")):
+        text = path.read_text()
+        for match in hazard.finditer(text):
+            line = text.count("\n", 0, match.start()) + 1
+            problems.append(f"{path.relative_to(app.root_path)}:{line}")
+
+    assert not problems, (
+        "`{` inside `${ }` (move it into a method):\n    " + "\n    ".join(problems)
+    )
+
+
 @check("Static assets exist")
 def check_static_assets(app):
     import os

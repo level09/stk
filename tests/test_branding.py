@@ -2,14 +2,10 @@ import pathlib
 import unittest
 
 from stk.app import create_app
-from stk.settings import Config
+from stk.settings import TestingConfig
 
 
-class AcmeConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite+aiosqlite:///:memory:"
-    SESSION_TYPE = None
-    QUART_RATE_LIMITER_ENABLED = False
+class AcmeConfig(TestingConfig):
     APP_NAME = "Acme"
 
 

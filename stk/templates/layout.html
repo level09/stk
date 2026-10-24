@@ -10,10 +10,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
 
-    <link rel="stylesheet" href="/static/css/vuetify.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vuetify.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='icons/tabler-icons.min.css') }}">
-    <link rel="stylesheet" href="/static/css/layout.css">
-    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>[v-cloak] { display: none !important; }</style>
@@ -188,23 +188,23 @@
 {% endif %}
 
 <!-- Core Scripts -->
-<script src="/static/js/vue.min.js"></script>
-<script src="/static/js/config.js"></script>
-<script src="/static/js/vuetify.min.js"></script>
-<script src="/static/js/axios.min.js"></script>
+<script src="{{ url_for('static', filename='js/vue.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/config.js') }}"></script>
+<script src="{{ url_for('static', filename='js/vuetify.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
 <script>axios.defaults.headers.common["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;</script>
 
 <!-- Navigation Data -->
-<script src="/static/js/navigation.js"></script>
+<script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
 
 <!-- stk Components -->
-<script src="/static/js/components/TransitionExpand.js"></script>
-<script src="/static/js/components/VerticalNavLink.js"></script>
-<script src="/static/js/components/VerticalNavGroup.js"></script>
-<script src="/static/js/components/VerticalNavSectionTitle.js"></script>
-<script src="/static/js/components/NotificationDropdown.js"></script>
-<script src="/static/js/components/ThemeSwitcher.js"></script>
-<script src="/static/js/components/index.js"></script>
+<script src="{{ url_for('static', filename='js/components/TransitionExpand.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/VerticalNavLink.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/VerticalNavGroup.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/VerticalNavSectionTitle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/NotificationDropdown.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/ThemeSwitcher.js') }}"></script>
+<script src="{{ url_for('static', filename='js/components/index.js') }}"></script>
 
 <!-- Layout Base Script -->
 <script>

@@ -16,19 +16,14 @@ from sqlalchemy import select
 import stk.extensions as ext
 from stk.app import create_app
 from stk.public.views import handle_oauth_callback
-from stk.settings import Config
+from stk.settings import TestingConfig
 from stk.user.models import Base, OAuth, Role, User
 
 
-class TestConfig(Config):
-    TESTING = True
+class TestConfig(TestingConfig):
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "STK_TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:"
     )
-    SESSION_TYPE = None
-    SECURITY_COOKIE_SECURE = False
-    SECURITY_PASSWORD_BREACH_CHECK = False
-    QUART_RATE_LIMITER_ENABLED = False
     GOOGLE_AUTH_ENABLED = True
     GITHUB_AUTH_ENABLED = True
 

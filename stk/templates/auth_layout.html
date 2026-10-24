@@ -8,19 +8,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="/static/img/favicon.ico" type="image/x-icon">
 
-    <link rel="stylesheet" href="/static/css/vuetify.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vuetify.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='icons/tabler-icons.min.css') }}">
-    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 
     {% block css %}{% endblock %}
 </head>
 <body>
     {% block content %}{% endblock %}
     
-    <script src="/static/js/vue.min.js"></script>
-    <script src="/static/js/vuetify.min.js"></script>
-    <script src="/static/js/axios.min.js"></script>
-    <script src="/static/js/config.js"></script>
+    <script src="{{ url_for('static', filename='js/vue.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/vuetify.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
     {% block js %}{% endblock %}
 </body>
 </html> 

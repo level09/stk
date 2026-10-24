@@ -304,7 +304,10 @@ ${site} {
     handle_path /static/* {
         root * ${APP_DIR}/stk/static
         file_server
-        header Cache-Control "public, max-age=31536000, immutable"
+        # Versioned URLs (?v=<hash>) never change content; the rest revalidate.
+        @versioned query v=*
+        header @versioned Cache-Control "public, max-age=31536000, immutable"
+        header ?Cache-Control "no-cache"
     }
 
     # App

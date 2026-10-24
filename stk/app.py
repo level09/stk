@@ -1,5 +1,8 @@
 import asyncio
+import functools
+import hashlib
 import inspect
+from pathlib import Path
 
 import click
 from quart import Quart, g, render_template, request
@@ -29,6 +32,7 @@ def create_app(config_object=Config):
     register_extensions(app)
     register_errorhandlers(app)
     register_commands(app, cli)
+    register_static_versioning(app)
     return app
 
 
@@ -133,6 +137,36 @@ def register_blueprints(app):
     if agent_login_enabled(app):
         app.register_blueprint(bp_agent_login)
     return None
+
+
+@functools.cache
+def _static_digest(path, _mtime_ns):
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def register_static_versioning(app):
+    """Version `url_for('static', ...)` by content so a deploy never serves stale JS.
+
+    Unversioned files carry no cache lifetime, so browsers keep them heuristically
+    and an old component can blank every page until a hard reload.
+    """
+    static = Path(app.static_folder)
+
+    @app.url_defaults
+    def _version_static(endpoint, values):
+        if endpoint == "static" and "filename" in values:
+            path = static / values["filename"]
+            values["v"] = _static_digest(path, path.stat().st_mtime_ns)
+
+    @app.after_request
+    async def _cache_static(response):
+        if request.path.startswith(f"{app.static_url_path}/"):
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable"
+                if request.args.get("v")
+                else "no-cache"
+            )
+        return response
 
 
 def register_errorhandlers(app):

@@ -35,9 +35,14 @@ Documentation that nothing checks is a guess with a date on it. `stk verify` fai
 - one of them points at a repo file that does not exist
 - the [CLI reference](/cli) differs from the live command tree
 - `stk/settings.py` reads an environment variable [Configuration](/configuration) does not list
+- a Vue `${ }` interpolation in a template contains `{`, which blanks the page
 - `AGENTS.md` does not index every docs page, or grows past 8KB (skills past 4KB): detail belongs in a docs page
 
 Every failure names the fix. Change behavior and its docs page in the same commit, and the gate tells you which one you forgot.
+
+## Several agents in one repository
+
+Give each agent its own git worktree and let one owner merge; agents sharing a working tree sweep each other's staged files into their commits. A worktree lacks ignored files, so link the main `.env` into it. Rebase a finished branch onto current `master` and run the gate on the combined result before merging.
 
 ## Verify, don't guess
 

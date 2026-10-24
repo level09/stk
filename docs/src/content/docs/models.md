@@ -40,6 +40,8 @@ class Post(Base):
 
 Every relationship must use `lazy="selectin"`. Selectin loads only on query, so reading `post.user` on a row you just `add()`ed raises `MissingGreenlet`. Load it with `await g.db_session.get(Post, post.id)` or a query first.
 
+`Base` sets `eager_defaults`, so columns filled by a `server_default` or a SQL `onupdate` (`func.now()`) are fetched during the flush. A model that sets its own `__mapper_args__` replaces that; keep `"eager_defaults": True` in it, or reading such a column after a flush raises `MissingGreenlet`.
+
 ## Queries
 
 ```python
@@ -115,4 +117,4 @@ SQLite runs migrations in batch mode automatically, which makes `ALTER TABLE` wo
 
 - DDL is not transactional. A failed upgrade leaves the tables it already created: fix the revision, drop only those new empty tables, and upgrade again.
 - A new NOT NULL column on a table with rows needs a `server_default` in both the migration and the model, or the upgrade fails.
-- Constraints are named by the convention on `Base.metadata` in `stk/extensions.py`. Keep it: batch mode cannot add an unnamed foreign key.
+- Constraints are named by the convention on `Base.metadata` in `stk/extensions.py`. Keep it: batch mode cannot add an unnamed foreign key. The convention also applies to names you pass to `op` calls, so `op.create_check_constraint("ck_post_title", ...)` becomes `ck_post_ck_post_title`; wrap a full name in `op.f("ck_post_title")`.

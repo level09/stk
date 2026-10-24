@@ -9,17 +9,12 @@ from sqlalchemy import select
 
 import stk.extensions as ext
 from stk.app import create_app
-from stk.settings import Config
+from stk.settings import TestingConfig
 from stk.user.models import Base, SecurityState, Session, User
 
 
-class SecurityConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite+aiosqlite:///:memory:"
-    SESSION_TYPE = None
-    SECURITY_COOKIE_SECURE = False
+class SecurityConfig(TestingConfig):
     SECURITY_PASSWORD_SALT = "test-salt"
-    QUART_RATE_LIMITER_ENABLED = False
 
 
 class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):

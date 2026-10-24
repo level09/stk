@@ -134,3 +134,22 @@ class Config:
     )
     GITHUB_OAUTH_CLIENT_ID = os.environ.get("GITHUB_OAUTH_CLIENT_ID")
     GITHUB_OAUTH_CLIENT_SECRET = os.environ.get("GITHUB_OAUTH_CLIENT_SECRET")
+
+
+class TestingConfig(Config):
+    """Base for test configs. `.env` loads at import, so without these pins a
+    developer's Redis, mail, OAuth, or agent login settings reach every test."""
+
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite+aiosqlite:///:memory:"
+    SESSION_TYPE = None
+    SESSION_URI = None
+    SECURITY_COOKIE_SECURE = False
+    SECURITY_PASSWORD_BREACH_CHECK = False
+    SECURITY_REGISTERABLE = False
+    QUART_RATE_LIMITER_ENABLED = False
+    DISABLE_MULTIPLE_SESSIONS = False
+    STK_ENABLE_AGENT_LOGIN = False
+    MAIL_SERVER = None
+    GOOGLE_AUTH_ENABLED = False
+    GITHUB_AUTH_ENABLED = False

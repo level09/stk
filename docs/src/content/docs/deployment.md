@@ -133,8 +133,15 @@ WantedBy=multi-user.target
 The proxy must pass `Host` and `X-Forwarded-Proto`, upgrade WebSocket connections, and can serve `stk/static` directly. With Nginx:
 
 ```nginx
+# Versioned static URLs (?v=<hash>) never change content; the rest revalidate.
+map $arg_v $static_expires {
+    '' epoch;
+    default max;
+}
+
 location /static/ {
     alias /path/to/stk/stk/static/;
+    expires $static_expires;
 }
 
 location / {

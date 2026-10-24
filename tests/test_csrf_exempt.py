@@ -7,16 +7,11 @@ from quart import Blueprint
 import stk.extensions as ext
 from stk.app import create_app
 from stk.security import csrf_exempt
-from stk.settings import Config
+from stk.settings import TestingConfig
 
 
-class CsrfConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite+aiosqlite:///:memory:"
-    SESSION_TYPE = None
-    SECURITY_COOKIE_SECURE = False
+class CsrfConfig(TestingConfig):
     SECURITY_PASSWORD_SALT = "test-salt"
-    QUART_RATE_LIMITER_ENABLED = False
 
 
 def make_app(config=CsrfConfig):
