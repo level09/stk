@@ -1,5 +1,15 @@
 # Changelog
 
+## v16.3.0 (2026-10-25)
+
+No migration required.
+
+- Static JS and CSS in the layouts load through `url_for('static', ...)`, which adds a content hash (`?v=...`). The app, `nginx/stk.conf`, and the Caddy config from `deploy.sh` cache versioned files forever and revalidate the rest. Servers set up by an earlier `deploy.sh` cached every static file for a year: re-run it or apply the new `handle_path /static/*` block to the Caddyfile.
+- `alembic.ini` no longer names a database, so `uv run alembic` targets the app's database like `stk db` does.
+- `Base` sets `eager_defaults`, so `server_default` and SQL `onupdate` columns are readable after a flush instead of raising `MissingGreenlet`.
+- `TestingConfig` in `stk/settings.py` pins the database, sessions, mail, OAuth, rate limits, breach check, and agent login. Subclass it in tests instead of `Config` so `.env` never reaches them.
+- `stk verify` fails on `{` inside a Vue `${ }` interpolation, which blanks the page.
+
 ## v16.2.1 (2026-10-23)
 
 No migration required.
