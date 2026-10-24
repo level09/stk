@@ -66,3 +66,7 @@ claude
 ## Customizing for your project
 
 An app built on stk keeps this structure. Add project rules to `CLAUDE.md`, a page under `docs/src/content/docs/` for anything longer than a rule (and a row for it in the index), and a skill for a repeatable workflow. The gate covers your additions the same way.
+
+## Lessons
+
+When a failure the docs did not warn about costs an agent time, the `stk-lessons` skill has it log one line in `.stk/lessons.md` and carry on. Ask an agent to triage the file now and then: it drops what is covered or happened once, confirms the rest in code, and proposes each one at the strongest home that holds, in this order: a code default that makes the mistake impossible, a `stk verify` check, a `stk doctor` hint, a docs line, a skill step. Nothing changes until you approve the diff, and the size budgets keep `CLAUDE.md` and skills from growing into a pile of rules. Lessons about stk itself come out in generic terms you can send upstream.

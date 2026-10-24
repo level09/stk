@@ -35,7 +35,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 | Production, Docker, upgrades | `docs/src/content/docs/deployment.md` |
 | Production security contract | `SECURITY.md` |
 
-3. **Skills** in `.claude/skills/` (mirrored at `.agents/skills/`) hold procedures: `stk-blueprint`, `stk-api`, `stk-migrate`, `stk-deploy`.
+3. **Skills** in `.claude/skills/` (mirrored at `.agents/skills/`) hold procedures: `stk-blueprint`, `stk-api`, `stk-migrate`, `stk-deploy`, and `stk-lessons` (when a gotcha the docs missed costs you time, log one line in `.stk/lessons.md`).
 
 When you change behavior, update its docs page in the same commit. `cli.md` is generated: rerun `uv run stk inspect commands --markdown > docs/src/content/docs/cli.md`. `stk verify` fails when docs name commands, flags, settings, or files the code lacks, or when this index misses a page.
 
