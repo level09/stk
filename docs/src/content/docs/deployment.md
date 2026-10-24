@@ -42,6 +42,34 @@ uv run stk protect-mfa
 
 `protect-mfa` encrypts legacy TOTP seeds and rotates existing ones to the current key in one transaction. Version 16 needs the `rate_limit_window` table and version 15 the `quart_security_state` table; `db upgrade` creates both.
 
+## Upgrading an app built on stk
+
+An app is a git fork of stk and takes framework releases with an ordinary merge: your changes and stk's combine, and only real overlaps conflict. Once per clone:
+
+```bash
+git remote add stk https://github.com/level09/stk.git
+git config merge.ours.driver true    # honours merge=ours in .gitattributes
+```
+
+For each release, on a branch:
+
+```bash
+git fetch stk --tags
+git merge <tag>
+uv lock && uv sync && uv run stk db upgrade
+uv run stk verify && uv run stk smoke
+```
+
+`.gitattributes` keeps the app's README, CHANGELOG, lockfile, and brand files. Resolve other conflicts by keeping both the app's behavior and the framework's fix, then read stk's release notes (`git show <tag>:CHANGELOG.md`) for steps a merge cannot do, such as server config. Upgrades conflict less when app code lives in its own files instead of edits to framework ones.
+
+An app copied without stk's history first records the stk commit the copy came from:
+
+```bash
+git merge -s ours --allow-unrelated-histories <commit>
+```
+
+Choose it with care: a merge skips every change up to that commit, so a later guess silently drops fixes. Compare candidates with `git diff --shortstat <commit> HEAD -- stk` and take the closest; between near-ties, prefer the older one, which costs a conflict instead of a lost fix.
+
 ## VPS deploy script
 
 On a fresh Ubuntu 22.04 or 24.04 server:
