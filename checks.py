@@ -219,9 +219,15 @@ def check_vue_delimiters(app):
     from pathlib import Path
 
     hazard = re.compile(r"\$\{[^}]*\{")
+    # Script bodies hold JS template literals, where `${ {...} }` is valid; blank them
+    # but keep their newlines so reported line numbers still match the file.
+    script = re.compile(r"(<script\b[^>]*>)(.*?)(</script>)", re.S | re.I)
     problems = []
     for path in sorted(Path(app.root_path).rglob("*.html")):
-        text = path.read_text()
+        text = script.sub(
+            lambda m: m.group(1) + "\n" * m.group(2).count("\n") + m.group(3),
+            path.read_text(),
+        )
         for match in hazard.finditer(text):
             line = text.count("\n", 0, match.start()) + 1
             problems.append(f"{path.relative_to(app.root_path)}:{line}")
