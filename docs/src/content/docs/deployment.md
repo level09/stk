@@ -60,7 +60,7 @@ uv lock && uv sync && uv run stk db upgrade
 uv run stk verify && uv run stk smoke
 ```
 
-`.gitattributes` keeps the app's README, CHANGELOG, lockfile, and brand files. Resolve other conflicts by keeping both the app's behavior and the framework's fix, then read stk's release notes (`git show <tag>:CHANGELOG.md`) for steps a merge cannot do, such as server config. Upgrades conflict less when app code lives in its own files instead of edits to framework ones.
+`.gitattributes` keeps the app's README, CHANGELOG, lockfile, and brand files. Resolve other conflicts by keeping both the app's behavior and the framework's fix, then read stk's release notes (`git show <tag>:CHANGELOG.md`) for steps a merge cannot do, such as server config. Upgrades conflict less when app code lives in its own files instead of edits to framework ones. When both the app and the release add migrations, Alembic reports two heads; join them with one empty merge revision (`uv run alembic merge -m "merge stk <tag>" heads`) before `db upgrade`.
 
 An app copied without stk's history first records the stk commit the copy came from:
 
