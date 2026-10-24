@@ -7,8 +7,8 @@ from stk.cli.reports import build_routes_report
 from stk.cli.smoke import (
     build_smoke_report,
     discover_smoke_paths,
+    machine_paths,
     smoke_exit_code,
-    webhook_paths,
 )
 from stk.security import csrf_exempt
 
@@ -39,8 +39,12 @@ class SmokePageDiscoveryTests(unittest.TestCase):
         async def webhook():
             return ""
 
+        @crm.websocket("/smoke-demo/live")
+        async def live():
+            return None
+
         app.register_blueprint(crm)
-        paths = discover_smoke_paths(build_routes_report(app), webhook_paths(app))
+        paths = discover_smoke_paths(build_routes_report(app), machine_paths(app))
 
         self.assertIn("/smoke-demo/staff", paths)
         self.assertIn("/roles/", paths)
@@ -48,6 +52,7 @@ class SmokePageDiscoveryTests(unittest.TestCase):
         for skipped in (
             "/smoke-demo/staff/<int:id>",
             "/smoke-demo/webhook",
+            "/smoke-demo/live",
             "/api/smoke-demo/staff",
             "/login",
             "/login/github",

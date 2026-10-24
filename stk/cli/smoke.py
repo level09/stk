@@ -74,16 +74,17 @@ CONTRAST_JS = _CONTRAST_TEMPLATE.replace("__MIN_RATIO__", str(MIN_CONTRAST_RATIO
 
 FIXED_SMOKE_PATHS = ("/", "/login", "/dashboard/", "/users/")
 # Prefixes that are not pages, or whose GET starts an auth flow or redirect
-# (OAuth logins, agent login, websockets).
-_SKIP_PREFIXES = ("/api/", "/static", "/_test", "/ws", "/login", "/logout")
+# (OAuth logins, agent login).
+_SKIP_PREFIXES = ("/api/", "/static", "/_test", "/login", "/logout")
 
 
-def webhook_paths(app):
-    """Paths with a @csrf_exempt view: machine endpoints, not pages for a browser."""
+def machine_paths(app):
+    """Paths a browser never opens as a page: WebSockets and @csrf_exempt webhooks."""
     return {
         rule.rule
         for rule in app.url_map.iter_rules()
-        if getattr(app.view_functions.get(rule.endpoint), "_stk_csrf_exempt", False)
+        if rule.websocket
+        or getattr(app.view_functions.get(rule.endpoint), "_stk_csrf_exempt", False)
     }
 
 
@@ -227,7 +228,8 @@ def _prepare_smoke(database_uri, secret_key, password_salt):
         app = create_app(SmokeConfig)
         async with app.app_context():
             token = create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
-        paths = discover_smoke_paths(build_routes_report(app), webhook_paths(app))
+        skip = machine_paths(app) | set(app.config.get("STK_SMOKE_SKIP", ()))
+        paths = discover_smoke_paths(build_routes_report(app), skip)
         return token, paths
 
     return run_async(_create_token())
