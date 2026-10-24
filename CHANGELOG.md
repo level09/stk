@@ -1,5 +1,11 @@
 # Changelog
 
+## v16.4.0 (2026-10-25)
+
+No migration required.
+
+- New `stk-lessons` skill. When a failure the docs did not warn about costs an agent time, it logs one line in `.stk/lessons.md` and continues. On request, it triages the log: drops covered or one-off lessons, confirms the rest in code, and proposes each at the strongest home that holds (code default, `stk verify` check, `stk doctor` hint, docs line, skill step). Nothing applies without approval. Apps built on stk get framework lessons in generic terms to send upstream.
+
 ## v16.3.0 (2026-10-25)
 
 No migration required.
