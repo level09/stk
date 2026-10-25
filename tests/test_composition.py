@@ -1,6 +1,9 @@
 """An app composes stk: its files win over its extensions', which win over stk's."""
 
+import hashlib
 import importlib
+import json
+import re
 import sys
 import tempfile
 import textwrap
@@ -21,6 +24,8 @@ FILES = {
         """
     ),
     "tapp/static/css/app.css": "/* the app's */",
+    "tapp/static/js/page.js": 'import "./shared.js";',
+    "tapp/static/js/shared.js": "// the app's, shadowing the extension's",
     "tapp/first/__init__.py": textwrap.dedent(
         """\
         from tapp.first import models
@@ -36,6 +41,8 @@ FILES = {
     "tapp/first/templates/index.html": "the extension's, shadowed by the app's",
     "tapp/first/static/css/app.css": "/* the first extension's */",
     "tapp/first/static/css/ext.css": "/* first */",
+    "tapp/first/static/js/shared.js": "// the first extension's",
+    "tapp/first/static/js/lib/util.mjs": "export const x = 1;",
     "tapp/second/__init__.py": textwrap.dedent(
         """\
         def init_app(app):
@@ -106,6 +113,25 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             titles[:5], ["Main", "Dashboard", "First", "Second", "Account"]
         )
+
+    def test_app_navigation_is_the_apps_entries_alone(self):
+        titles = [i["title"] for i in self.app.jinja_env.globals["app_navigation"]()]
+        self.assertEqual(titles, ["First", "Second"])
+
+    async def test_import_map_versions_every_module_as_it_will_be_served(self):
+        page = await (await self.app.test_client().get("/")).get_data(as_text=True)
+        tag = re.search(r'<script type="importmap">(.*?)</script>', page)
+        imports = json.loads(tag.group(1))["imports"]
+        for name in ("js/page.js", "js/shared.js", "js/lib/util.mjs", "js/config.js"):
+            self.assertRegex(imports[f"/static/{name}"], r"\?v=[0-9a-f]{12}$")
+        async with self.app.test_request_context("/"):
+            from quart import url_for
+
+            shared = url_for("static", filename="js/shared.js")
+        self.assertEqual(imports["/static/js/shared.js"], shared)
+        app_digest = hashlib.sha256(b"// the app's, shadowing the extension's")
+        self.assertTrue(shared.endswith(app_digest.hexdigest()[:12]))
+        self.assertNotIn("/static/css/app.css", imports)
 
     def test_extension_models_load_before_init_app(self):
         self.assertTrue(self.app.config["SEEN_MODELS_FIRST"])

@@ -44,7 +44,7 @@ The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. 
 ## Rules that fail silently
 
 - **Delimiters are `${expr}`**, never `{{expr}}`, which Jinja renders first. The delimiter ends at the first `}`, so an object literal inside it (`${ (x || {}).y }`) breaks the render function and the page stays blank. Move it into a method; `stk verify` fails on `{` inside `${ }`.
-- **Reference static JS and CSS with `url_for('static', filename=...)`.** It adds a content hash (`?v=...`) that the app and the shipped proxies cache forever. A literal `/static/...` path revalidates on every load, which is correct but slower.
+- **Reference static JS and CSS with `url_for('static', filename=...)`.** It adds a content hash (`?v=...`) that the app and the shipped proxies cache forever. A literal `/static/...` path revalidates on every load, which is correct but slower. ES modules can import each other by plain path (`import "./chart.js"`): the layout's import map, `{{ import_map() }}`, maps every `.js` and `.mjs` file in the app's, extensions' and stk's static folders to its versioned URL, so nested imports are fresh after a deploy too. A layout that does not extend `stk/layout.html` calls `{{ import_map() }}` in its `<head>`, before any module script.
 - **Server data goes in `{% block js %}`.** Vue strips `<script>` tags inside the `#app` mount element, so the same JSON tag in `{% block content %}` reads back as null and the page crashes. A 200 response does not catch this; `stk smoke` does.
 - **Template expressions cannot see page globals.** A `const labels = {...}` in the page script is undefined inside `${...}` and directives. Expose shared helpers with `app.config.globalProperties.labels = labels` before mount. The production Vue build fails such lookups silently (the cell renders nothing, columns shift), so look at the rendered table.
 - **Vuetify 4 type classes are MD3.** The old MD2 classes apply no styling and log nothing:
@@ -96,7 +96,13 @@ def init_app(app):
     )
 ```
 
-Entries appear in extension order. A group takes `children` instead of `to`, a section title is `{"heading": "..."}`. `role` is a single string, not an array. Optional link fields: `target`, `badge`, `badgeClass`. Hiding an entry is cosmetic; the view itself must check the role. To replace the whole sidebar, override `layout.html`, extend `stk/layout.html`, and fill `{% block navigation %}` with your own `stkNavigation` array.
+Entries appear in extension order. A group takes `children` instead of `to`, a section title is `{"heading": "..."}`. `role` is a single string, not an array. Optional link fields: `target`, `badge`, `badgeClass`. Hiding an entry is cosmetic; the view itself must check the role. To replace the whole sidebar, override `layout.html`, extend `stk/layout.html`, and fill `{% block navigation %}` with your own `stkNavigation` array. To show only the app's entries, without stk's Dashboard, Account and Administration sections, use `app_navigation()`, which returns `app.navigation`:
+
+```html
+{% block navigation %}
+<script>const stkNavigation = {{ app_navigation() | tojson }};</script>
+{% endblock %}
+```
 
 ## Overriding templates and static files
 

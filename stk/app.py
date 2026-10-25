@@ -4,11 +4,20 @@ import hashlib
 import importlib
 import importlib.util
 import inspect
+import json
 import os
 from pathlib import Path
 
 from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
-from quart import Quart, g, render_template, request, send_from_directory
+from markupsafe import Markup
+from quart import (
+    Quart,
+    g,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -232,6 +241,26 @@ def register_static_versioning(app):
             )
         return response
 
+    def import_map():
+        """Map each module's plain URL to its versioned one, so a module imported by
+        another module (`import "./x.js"`) is fresh after a deploy too."""
+        names = sorted(
+            {
+                path.relative_to(folder).as_posix()
+                for folder in app.static_folders
+                for path in folder.rglob("*")
+                if path.suffix in (".js", ".mjs")
+            }
+        )
+        imports = {
+            f"{app.static_url_path}/{name}": url_for("static", filename=name)
+            for name in names
+        }
+        body = json.dumps({"imports": imports}).replace("</", "<\\/")
+        return Markup(f'<script type="importmap">{body}</script>')
+
+    app.jinja_env.globals["import_map"] = import_map
+
 
 CORE_NAVIGATION_START = [
     {"heading": "Main"},
@@ -267,6 +296,8 @@ def register_navigation(app):
         *app.navigation,
         *CORE_NAVIGATION_END,
     ]
+    # The app's entries alone, for a layout that draws its own sidebar.
+    app.jinja_env.globals["app_navigation"] = lambda: app.navigation
 
 
 def register_errorhandlers(app):
