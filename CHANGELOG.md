@@ -1,6 +1,6 @@
 # Changelog
 
-## v17.0.0 (unreleased)
+## v17.0.0 (2026-10-25)
 
 stk becomes an installed, versioned package. An app is a separate, thin package that composes it and never edits a framework file, so upgrading stk is a version bump plus whatever its release note says.
 
