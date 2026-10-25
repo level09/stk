@@ -58,7 +58,7 @@ Models with tables:
 ## Before you trust it
 
 Model conventions and the three SQLite traps (non-transactional DDL, NOT NULL needs
-`server_default`, named constraints) are in https://docs.stk.dev/models/. Check each exit code;
+`server_default`, named constraints) are in https://docs.stkit.dev/models/. Check each exit code;
 never pipe a migration command to `tail`, and never delete a revision file before
 `uv run stk db downgrade <target>` has succeeded.
 

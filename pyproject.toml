@@ -39,6 +39,11 @@ dependencies = [
 ]
 
 
+[project.urls]
+Documentation = "https://docs.stkit.dev"
+Source = "https://github.com/level09/stk"
+Changelog = "https://github.com/level09/stk/blob/master/CHANGELOG.md"
+
 [project.scripts]
 stk = "stk.cli.main:main"
 

@@ -26,7 +26,7 @@ Existing API routes:
    - `POST /api/<singular>/<id>` — Update (POST, not PUT — stk convention)
    - `DELETE /api/<singular>/<id>` — Delete
 
-3. **Follow the conventions** in https://docs.stk.dev/api/: blueprint-level auth, `{item: {...}}`
+3. **Follow the conventions** in https://docs.stkit.dev/api/: blueprint-level auth, `{item: {...}}`
    payloads, `{items, total, perPage}` list responses via `orjson`, `Activity.register` on
    every mutation, rollback plus `log.exception` on failure, and `{"message": ...}` with
    400/404/412. The reference implementation is what `uv run stk new` writes

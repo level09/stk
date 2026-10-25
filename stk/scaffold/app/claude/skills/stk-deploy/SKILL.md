@@ -26,7 +26,7 @@ wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/dep
 sudo DOMAIN=example.com REPO=<github-user>/<repo> bash /tmp/deploy.sh
 ```
 
-Every variable and what the script installs: https://docs.stk.dev/deployment/.
+Every variable and what the script installs: https://docs.stkit.dev/deployment/.
 
 Ends at a live `https://<domain>` with an admin login. Credentials are saved
 on the server at `/home/<app-user>/.credentials`.

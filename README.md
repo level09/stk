@@ -20,8 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://docs.stk.dev">Docs</a> &middot;
-  <a href="https://docs.stk.dev/llms.txt">llms.txt</a> &middot;
+  <a href="https://docs.stkit.dev">Docs</a> &middot;
+  <a href="https://docs.stkit.dev/llms.txt">llms.txt</a> &middot;
   <a href="https://github.com/level09/stk/wiki">Tutorials</a>
 </p>
 
@@ -80,8 +80,8 @@ stk ships what actually matters:
 
 ## Documentation
 
-Everything else lives at [docs.stk.dev](https://docs.stk.dev), and in this repo at `docs/src/content/docs/`:
-[quick start](https://docs.stk.dev/getting-started/), [build loop](https://docs.stk.dev/build-loop/), [models](https://docs.stk.dev/models/), [frontend](https://docs.stk.dev/frontend/), [authentication](https://docs.stk.dev/authentication/), [configuration](https://docs.stk.dev/configuration/), [CLI reference](https://docs.stk.dev/cli/), [deployment](https://docs.stk.dev/deployment/), and [working with agents](https://docs.stk.dev/ai-coding/). Upgrade notes are in `CHANGELOG.md`; the production security contract is `SECURITY.md`.
+Everything else lives at [docs.stkit.dev](https://docs.stkit.dev), and in this repo at `docs/src/content/docs/`:
+[quick start](https://docs.stkit.dev/getting-started/), [build loop](https://docs.stkit.dev/build-loop/), [models](https://docs.stkit.dev/models/), [frontend](https://docs.stkit.dev/frontend/), [authentication](https://docs.stkit.dev/authentication/), [configuration](https://docs.stkit.dev/configuration/), [CLI reference](https://docs.stkit.dev/cli/), [deployment](https://docs.stkit.dev/deployment/), and [working with agents](https://docs.stkit.dev/ai-coding/). Upgrade notes are in `CHANGELOG.md`; the production security contract is `SECURITY.md`.
 
 ## License
 

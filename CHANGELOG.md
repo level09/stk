@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The docs move to https://docs.stkit.dev, matching the PyPI name. An app made by an earlier `stk init` points its `CLAUDE.md` and `.claude/skills/` at docs.stk.dev: replace it with docs.stkit.dev.
+- stkit's PyPI page links to the docs, source and changelog.
+
 ## v17.1.0 (2026-10-25)
 
 No migration required.

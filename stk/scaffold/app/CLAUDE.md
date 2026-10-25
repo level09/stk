@@ -11,7 +11,7 @@ same path in `__app__/templates/` or `__app__/static/`; `stk/<name>` is the orig
 ## Where truth lives
 
 1. **The running app.** Ask it before reading files: `uv run stk inspect context --json` (routes with auth, models), `uv run stk inspect commands --json` (every command and option), `uv run stk doctor` (app state, each problem with its fix). `uv run stk new <module>` writes the canonical CRUD extension; copy its patterns.
-2. **stk's docs** at https://docs.stk.dev, indexed for agents at https://docs.stk.dev/llms.txt. Read the page for your task before writing code.
+2. **stk's docs** at https://docs.stkit.dev, indexed for agents at https://docs.stkit.dev/llms.txt. Read the page for your task before writing code.
 3. **Skills** in `.claude/skills/` (mirrored at `.agents/skills/`): `stk-blueprint`, `stk-api`, `stk-migrate`, `stk-deploy`, and `stk-lessons` (when a gotcha the docs missed costs you time, log one line in `.stk/lessons.md`).
 
 ## Commands

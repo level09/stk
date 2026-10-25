@@ -17,7 +17,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 ## Where truth lives
 
 1. **The running code.** Ask it before reading files: `uv run stk inspect context --json` (routes with auth, models), `uv run stk inspect commands --json` (every command and option), `uv run stk doctor` (app state, each problem with its fix). `uv run stk new <module>` writes the canonical CRUD extension into the app; copy its patterns.
-2. **The docs**, in `docs/src/content/docs/`, published at https://docs.stk.dev (with `/llms.txt`). Read the page for your task before writing code:
+2. **The docs**, in `docs/src/content/docs/`, published at https://docs.stkit.dev (with `/llms.txt`). Read the page for your task before writing code:
 
 | Task | Page |
 |---|---|

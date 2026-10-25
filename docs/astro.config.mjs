@@ -11,11 +11,11 @@ const pages = readdirSync(docs)
 	.map((file) => {
 		const text = readFileSync(new URL(file, docs), 'utf8');
 		const field = (/** @type {string} */ name) => text.match(new RegExp(`^${name}: "(.*)"$`, 'm'))?.[1];
-		return `- [${field('title')}](https://docs.stk.dev/${file}): ${field('description')}`;
+		return `- [${field('title')}](https://docs.stkit.dev/${file}): ${field('description')}`;
 	});
 
 export default defineConfig({
-	site: 'https://docs.stk.dev',
+	site: 'https://docs.stkit.dev',
 	redirects: {
 		// old Mintlify URLs
 		'/introduction': '/',

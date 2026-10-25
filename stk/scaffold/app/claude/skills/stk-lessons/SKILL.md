@@ -27,7 +27,7 @@ most three per run. Append and continue the task; never stop it to log.
 
 Input: `.stk/lessons.md`, or the path the user gives.
 
-1. **Drop what is covered.** Search the docs (https://docs.stk.dev), `CLAUDE.md`, the skills, and
+1. **Drop what is covered.** Search the docs (https://docs.stkit.dev), `CLAUDE.md`, the skills, and
    `stk/checks.py`. A lesson that recurs despite an existing rule means the rule sits too low:
    move it up the ladder below instead of repeating it.
 2. **Drop one-offs**: a single occurrence with no general cause.

@@ -34,8 +34,8 @@ It never edits a stk file. Then:
 ## Conventions
 
 The generated files already follow every stk convention. When you change them, the rules
-are in `CLAUDE.md` and the details in https://docs.stk.dev/models/, https://docs.stk.dev/api/, and
-https://docs.stk.dev/frontend/. Read the page before editing that layer.
+are in `CLAUDE.md` and the details in https://docs.stkit.dev/models/, https://docs.stkit.dev/api/, and
+https://docs.stkit.dev/frontend/. Read the page before editing that layer.
 
 ## Before you report done
 

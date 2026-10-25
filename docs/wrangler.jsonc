@@ -1,6 +1,10 @@
 {
 	"name": "stk-docs",
 	"compatibility_date": "2026-10-01",
-	"routes": [{ "pattern": "docs.stk.dev", "custom_domain": true }],
+	// docs.stk.dev serves until the domain lapses on 2026-12-22; pages declare docs.stkit.dev canonical.
+	"routes": [
+		{ "pattern": "docs.stkit.dev", "custom_domain": true },
+		{ "pattern": "docs.stk.dev", "custom_domain": true }
+	],
 	"assets": { "directory": "./dist", "not_found_handling": "404-page" }
 }
