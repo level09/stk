@@ -147,7 +147,10 @@ def _watch_and_verify(interval=0.5):
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def smoke(as_json):
     """Run a real-browser smoke check against a temporary development app."""
-    report = run_smoke()
+    try:
+        report = run_smoke()
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     if as_json:
         click.echo(json.dumps(report, indent=2))
     else:
