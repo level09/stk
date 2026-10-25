@@ -47,7 +47,8 @@ uv run stk protect-mfa
 An app depends on stk like any package, so an upgrade touches no app file except the version. Read the release note first: its "Breaking" and "Upgrade considerations" sections list anything a version bump cannot do, such as a server config change. Then, on a branch:
 
 ```bash
-# in pyproject.toml: bump the tag in [tool.uv.sources] and the range in dependencies
+# for a new major version, first raise the stkit range in pyproject.toml dependencies
+uv lock --upgrade-package stkit
 uv sync
 uv run stk db upgrade     # stk's new migrations, then the app's, in one command
 uv run stk verify

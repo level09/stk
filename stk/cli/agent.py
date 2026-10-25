@@ -227,11 +227,13 @@ def _run_stk(args):
 def new_module(name, migrate, port):
     """Scaffold a new extension module in the app, ending at a page you can open.
 
-    NAME must be a lowercase snake_case identifier (e.g. blog_post).
+    NAME is a singular lowercase snake_case identifier (e.g. blog_post); the
+    page and API use its plural (/blog_posts/).
     Writes the module package and adds it to the app's extension list.
     """
     from stk.migrations import app_label
     from stk.scaffold.generator import generate_module
+    from stk.scaffold.templates import plural
 
     app = cli_app()
     try:
@@ -251,7 +253,7 @@ def new_module(name, migrate, port):
         _run_stk(["db", "upgrade"])
         console.print(f"  [blue]+[/] migration generated and applied for {name}")
 
-    url = f"http://localhost:{port}/{name}s/"
+    url = f"http://localhost:{port}/{plural(name)}/"
     console.print(f"\n[green]Open:[/] [bold]{url}[/]  [dim](start it with: stk run)[/]")
     console.print(
         f"""[dim]Then:[/]

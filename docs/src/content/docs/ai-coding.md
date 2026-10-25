@@ -65,7 +65,7 @@ claude
 
 ## Customizing for your project
 
-An app built on stk keeps this structure. Add project rules to `CLAUDE.md`, a page under `docs/src/content/docs/` for anything longer than a rule (and a row for it in the index), and a skill for a repeatable workflow. The gate covers your additions the same way.
+An app gets the same structure from `stk init`: its own `CLAUDE.md` (with `AGENTS.md` linked to it) carrying stk's rules and pointing at these docs, and the stk skills in `.claude/skills/`. Both belong to the app: add project rules to its `CLAUDE.md` and a skill for each repeatable workflow. `stk verify` checks an app's code, templates, and migrations; the docs drift checks guard stk's own repository.
 
 ## Lessons
 

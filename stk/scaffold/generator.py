@@ -26,6 +26,8 @@ DOTFILES = {
     "gitignore": ".gitignore",
     "dockerignore": ".dockerignore",
     "env-sample": ".env-sample",
+    "claude": ".claude",
+    "github": ".github",
 }
 
 # Names that conflict with existing blueprints, SQLAlchemy reserved words, or
@@ -85,13 +87,13 @@ def validate_name(name: str) -> None:
 
 
 def _local_source(target: Path, source: str) -> str:
-    """The `[tool.uv.sources]` entry that installs stk from a local path."""
+    """A `[tool.uv.sources]` table that installs stkit from a local path."""
     path = Path(source).resolve()
     if not path.exists():
         raise ValueError(f"--source {source} does not exist")
     relative = Path(os.path.relpath(path, target)).as_posix()
     editable = ", editable = true" if path.is_dir() else ""
-    return f'stk = {{ path = "{relative}"{editable} }}'
+    return f'\n[tool.uv.sources]\nstkit = {{ path = "{relative}"{editable} }}\n'
 
 
 def _env(sample: str) -> str:
@@ -132,14 +134,16 @@ def generate_app(name: str, target: Path, source: str | None = None) -> list[str
         for token, value in tokens.items():
             text = text.replace(token, value)
         if source is not None and parts == ["pyproject.toml"]:
-            text = re.sub(
-                r"^stk = \{ git = .*$", _local_source(target, source), text, flags=re.M
-            )
+            text += _local_source(target, source)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         shutil.copymode(template, path)
         actions.append(f"created {path.relative_to(target.parent)}")
 
+    # Claude Code reads CLAUDE.md and .claude/skills; Codex and others read these.
+    (target / "AGENTS.md").symlink_to("CLAUDE.md")
+    (target / ".agents").mkdir()
+    (target / ".agents" / "skills").symlink_to("../.claude/skills")
     (target / ".env").write_text(_env((target / ".env-sample").read_text()))
     actions.append(
         f"created {(target / '.env').relative_to(target.parent)} (fresh secrets)"

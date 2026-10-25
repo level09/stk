@@ -11,6 +11,6 @@ uv run stk new <module>   # an extension: blueprint, model, page, migration
 uv run stk verify && uv run stk smoke
 ```
 
-Upgrade stk by bumping the tag in `[tool.uv.sources]` and the range in
-`dependencies`, then `uv sync`, `uv run stk db upgrade`, `uv run stk verify`,
-`uv run stk smoke`, and read the release note.
+Upgrade stk by reading its release note, raising the `stkit` range in
+`dependencies` if the major version changed, then `uv lock --upgrade-package stkit`,
+`uv sync`, `uv run stk db upgrade`, `uv run stk verify`, and `uv run stk smoke`.

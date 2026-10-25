@@ -28,7 +28,7 @@
 ---
 
 ```bash
-uvx --from git+https://github.com/level09/stk stk init myapp && cd myapp
+uvx --from stkit stk init myapp && cd myapp
 uv run stk db upgrade       # database via Alembic
 uv run stk install          # admin user
 uv run stk run              # localhost:5000

@@ -17,7 +17,7 @@ Start a new app package NAME in ./NAME, depending on this stk version.
 
 | Option | Description |
 |---|---|
-| `--source` | Install stk from this checkout or wheel instead of its release tag. |
+| `--source` | Install stk from this checkout or wheel instead of the stkit package. |
 
 ### `stk new`
 

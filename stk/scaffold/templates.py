@@ -15,8 +15,16 @@ def _cls(name: str) -> str:
     return "".join(w.capitalize() for w in name.split("_"))
 
 
+def plural(name: str) -> str:
+    """English plural of a singular snake_case name: invoice_line -> invoice_lines."""
+    if name.endswith(("s", "x", "z", "ch", "sh")):
+        return name + "es"
+    if name.endswith("y") and name[-2:-1] not in "aeiou":
+        return name[:-1] + "ies"
+    return name + "s"
+
+
 def render_init(name: str, package: str) -> str:
-    title = name.replace("_", " ").title()
     return _t(
         '''\
 """$title: blueprint, model, page, and sidebar entry."""
@@ -28,16 +36,18 @@ def init_app(app):
     app.register_blueprint(bp_$name)
     app.navigation.append(
         {
-            "title": "${title}s",
+            "title": "$plural_title",
             "icon": "ti ti-table",
-            "to": "/${name}s/",
+            "to": "/$plural/",
             "role": "admin",
         }
     )
 ''',
         name=name,
         package=package,
-        title=title,
+        title=name.replace("_", " ").title(),
+        plural=plural(name),
+        plural_title=plural(name).replace("_", " ").title(),
     )
 
 
@@ -88,10 +98,10 @@ class $cls(Base):
 
 def render_views(name: str, package: str) -> str:
     cls = _cls(name)
-    plural = name + "s"
+    plural_name = plural(name)
     # Pre-compute all function names to avoid string.Template misparses
-    fn_page = f"{plural}_page"
-    fn_list = f"api_{plural}_list"
+    fn_page = f"{plural_name}_page"
+    fn_list = f"api_{plural_name}_list"
     fn_create = f"api_{name}_create"
     fn_update = f"api_{name}_update"
     fn_delete = f"api_{name}_delete"
@@ -214,7 +224,7 @@ async def $fn_delete(id):
         name=name,
         package=package,
         cls=cls,
-        plural=plural,
+        plural=plural_name,
         fn_page=fn_page,
         fn_list=fn_list,
         fn_create=fn_create,
@@ -226,14 +236,13 @@ async def $fn_delete(id):
 def render_template_html(name: str) -> str:
     cls = _cls(name)
     title = name.replace("_", " ").title()
-    plural = name + "s"
-    plural_title = title + "s"
+    plural_name = plural(name)
+    plural_title = plural_name.replace("_", " ").title()
     # JS template literals use ${...} -- we need literal dollar-signs for those.
     # string.Template uses $$ for a literal $, so $${ becomes ${.
     return _t(
         """\
-{% extends 'layout.html' %} {% block css %} {% endblock %} {% block sidebar %}
-{% endblock %} {% block layout_classes %} align-center {% endblock %}
+{% extends 'layout.html' %} {% block css %} {% endblock %}
 {% block content %}
 
     <v-card class="ma-2 mt-12 w-100 h-100">
@@ -423,6 +432,6 @@ def render_template_html(name: str) -> str:
         name=name,
         cls=cls,
         title=title,
-        plural=plural,
+        plural=plural_name,
         plural_title=plural_title,
     )

@@ -17,7 +17,7 @@ Optional: Redis (session store) and PostgreSQL (SQLite works by default). Both d
 stk is a package; your app is a separate, thin package that composes it. `stk init` writes one, with a `.env` of fresh secrets:
 
 ```bash
-uvx --from git+https://github.com/level09/stk stk init myapp
+uvx --from stkit stk init myapp
 cd myapp
 uv run stk db upgrade     # stk's migrations, then the app's
 uv run stk install        # Create admin user
@@ -26,7 +26,7 @@ uv run stk run            # Start server (--port 5001 if macOS holds 5000)
 
 Visit `http://localhost:5000` to see your application: sign-in, two-factor, passkeys, user and role admin, and a dashboard, before you write a line.
 
-The app depends on stk through `[tool.uv.sources]`, pinned to a release tag. `stk init --source <path>` installs stk from a local checkout or wheel instead, for working on stk itself.
+stk is published on PyPI as `stkit`; you still `import stk` and run `stk`. The app depends on `stkit>=17,<18`. `stk init --source <path>` installs stk from a local checkout or wheel instead, for working on stk itself.
 
 To drop the `uv run` prefix, activate the venv once per shell with `source .venv/bin/activate`, then run `stk run`, `stk shell`, `stk verify`. `uv run stk --help` lists every command, grouped by purpose. Every command finds the app from `[tool.stk] app` in the nearest `pyproject.toml` (override with `STK_APP=package.app:app`).
 

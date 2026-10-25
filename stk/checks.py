@@ -499,9 +499,17 @@ def check_docs_single_source(app):
                 f"configuration.md does not list {name}, read in stk/settings.py"
             )
 
+    # Apps get their own CLAUDE.md from the template; its rules must be stk's.
+    rules = index[index.index("## Rules that fail silently") :]
+    if rules not in (root / "stk/scaffold/app/CLAUDE.md").read_text():
+        problems.append(
+            "stk/scaffold/app/CLAUDE.md does not carry CLAUDE.md's rules section"
+            " → copy it from '## Rules that fail silently' to the end"
+        )
+
     # Agents load these whole on every task; an index past ~8KB stops being read
     # as an index. Move detail into a docs page instead of raising the budget.
-    budgets = {root / "CLAUDE.md": 8192}
+    budgets = {root / "CLAUDE.md": 8192, root / "stk/scaffold/app/CLAUDE.md": 8192}
     budgets |= dict.fromkeys(root.glob(".claude/skills/*/SKILL.md"), 4096)
     for page, ceiling in budgets.items():
         if (size := len(page.read_bytes())) > ceiling:

@@ -116,12 +116,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v9.0.0
-      # The stack an app gets from `stk init`, installing stk from this commit
-      # the way a deployed app installs it from a release tag.
+      # The stack an app gets from `stk init`, with stkit installed from this
+      # commit instead of PyPI.
       - name: App from the scaffold
         run: |
           uv run --no-dev stk init ciapp
-          sed -i "s|^stk = .*|stk = { git = \"https://github.com/${GITHUB_REPOSITORY}\", rev = \"${GITHUB_SHA}\" }|" ciapp/pyproject.toml
+          printf '\n[tool.uv.sources]\nstkit = { git = "https://github.com/%s", rev = "%s" }\n' "$GITHUB_REPOSITORY" "$GITHUB_SHA" >> ciapp/pyproject.toml
           (cd ciapp && uv lock)
       - name: Isolated TLS and application settings
         working-directory: ciapp

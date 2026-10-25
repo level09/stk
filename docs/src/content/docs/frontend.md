@@ -39,7 +39,7 @@ app.use(vuetify).mount("#app");
 {% endblock %}
 ```
 
-The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. Page templates fill `{% block content %}` and never redefine it. Full-width pages suppress the sidebar with `{% block sidebar %}{% endblock %}` and `{% block layout_classes %} align-center {% endblock %}`.
+The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. Page templates fill `{% block content %}` and never redefine it.
 
 ## Rules that fail silently
 
