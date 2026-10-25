@@ -1,5 +1,31 @@
 # Changelog
 
+## v17.1.0 (2026-10-25)
+
+No migration required.
+
+- `app_navigation()` returns the app's `app.navigation` entries alone, without stk's Dashboard, Account and Administration sections, for a layout that draws its own sidebar (Frontend, Navigation).
+- The layout ships an import map, `{{ import_map() }}`, that maps every `.js` and `.mjs` file in the app's, extensions' and stk's static folders to its versioned URL, app first. A module imported by another module is fresh after a deploy too. A layout that does not extend `stk/layout.html` calls it in its `<head>` (Frontend).
+- `build_alembic_config("myapp", url)` takes the app's import name with a URL, so a test can migrate a throwaway database before it builds its app. Passing the app still works (Models, Migrations).
+- `stk db revision` imports the module of each column type Alembic writes by its path (pgvector's `HALFVEC` and `BIT`, an app's `UserDefinedType`), then sorts the revision's imports and formats it with the app's ruff config. Before, such revisions failed with a `NameError`.
+- `stk db revision` warns about each column-level `CheckConstraint` in the columns it adds: Alembic autogenerate leaves them out. Declare checks in `__table_args__`, or add them to the revision by hand (Models, Migrations).
+- Configuration documents app paths in `settings.py` (`Path(__file__).resolve().parent.parent`) in place of the removed `Config.PROJECT_ROOT`, and `app.root_path` and `app.instance_path` at runtime.
+
+### Upgrade considerations
+
+Nothing breaks. Apps can delete what they wrote around these gaps:
+
+- A Jinja global that returns `app.navigation` (Sealbook's `rail_navigation` in `sealbook/shell/__init__.py`): call `app_navigation()` in the layout instead.
+- An app import map (Sealbook's `import_map()` and `MODULE_DIRS` in `sealbook/assets.py`): stk's `import_map()` global has the same name, so a copied layout that calls `{{ import_map() }}` keeps working. stk's map also lists minified `.js` files; they are harmless there.
+- Tests that import the module-level app only to call `build_alembic_config(app, url)`: pass `"myapp"` instead.
+- Nothing in existing revisions: hand-written imports there stay correct. New revisions import their types themselves.
+
+Paste-ready prompt for a coding agent:
+
+```text
+Upgrade this app to stkit 17.1.0 (bump the pin, `uv lock`). Then delete the workarounds 17.1.0 makes unnecessary: (1) any Jinja global returning app.navigation; call app_navigation() in the layout instead. (2) any app-built import map of versioned static modules; stk's import_map() global replaces it, so keep `{{ import_map() }}` in a copied layout and delete the app's function and its registration, plus test assertions that minified files are absent from the map. (3) in tests, `build_alembic_config(app, url, ...)` where the app was imported only for that: pass the app's import name, `build_alembic_config("<package>", url, ...)`, and drop the import. Leave existing migration revisions alone, including their hand-written imports and checks. Done when the tests, `uv run stk verify` and `uv run stk smoke` pass.
+```
+
 ## v17.0.2 (2026-10-25)
 
 No migration required.
