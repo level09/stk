@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.0.2 (2026-10-25)
+
+No migration required.
+
+- `stk verify` follows redirects from `/` and checks that the page it lands on answers 200, so an app whose `/` sends people to sign-in or to its own home passes. A redirect to a broken page still fails.
+- Replacing stk's landing view is documented: `app.view_functions["public.index"] = home` in an extension's `init_app` (Architecture, Public).
+- `STK_CLI_SECTIONS` groups an app's own commands in `stk --help`, after stk's sections, instead of listing them all under Other.
+
 ## v17.0.1 (2026-10-25)
 
 No migration required.
