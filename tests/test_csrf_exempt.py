@@ -5,7 +5,7 @@ import unittest
 from quart import Blueprint
 
 import stk.extensions as ext
-from stk.app import create_app
+from stk.app import Stk
 from stk.security import csrf_exempt
 from stk.settings import TestingConfig
 
@@ -15,7 +15,7 @@ class CsrfConfig(TestingConfig):
 
 
 def make_app(config=CsrfConfig):
-    app = create_app(config)
+    app = Stk(__name__, config=config)
     bp = Blueprint("hooks", __name__)
 
     @bp.post("/webhook")

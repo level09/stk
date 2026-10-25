@@ -1,13 +1,13 @@
 ---
 name: stk-blueprint
 description: |
-  Scaffold a new stk blueprint with models, views, templates, and Alembic migration. Use when creating a new feature module, adding a new section to the app, or scaffolding a blueprint.
+  Scaffold a new extension in an stk app: blueprint, model, page, sidebar entry, and Alembic migration. Use when creating a new feature module, adding a new section to the app, or scaffolding a blueprint.
 argument-hint: "[blueprint-name]"
 ---
 
 # Scaffold stk Blueprint
 
-Create a complete blueprint for `$ARGUMENTS` in the stk framework.
+Create a complete extension for `$ARGUMENTS` in the app package (run from the app's directory).
 
 ## Workflow
 
@@ -19,15 +19,14 @@ uv run stk new <name>
 
 `<name>` must be lowercase snake_case (e.g. `blog_post`, `invoice_line`). Reserved names (`user`, `role`, `portal`, `public`, `session`, `admin`, etc.) are rejected with a clear error.
 
-The command generates:
-- `stk/<name>/__init__.py`, `models.py`, `views.py`
-- `stk/templates/cms/<name>.html`
-- Patches `stk/app.py` (import + `register_blueprint`)
-- Patches `stk/static/js/navigation.js` (nav entry)
-- Generates AND applies the Alembic migration, then prints the page URL
+The command generates, inside the app package (`myapp/`):
+- `<name>/__init__.py` with `init_app(app)`: registers the blueprint and appends the sidebar entry to `app.navigation`
+- `<name>/models.py`, `<name>/views.py`, `<name>/templates/<name>/index.html`
+- Adds `<name>` to `extensions` in the app module (import + list entry)
+- Generates AND applies the migration in the app's lineage, then prints the page URL
 
-Then:
-1. Customize `stk/<name>/models.py` -- add/rename fields to fit your domain
+It never edits a stk file. Then:
+1. Customize `<name>/models.py` -- add/rename fields to fit your domain; point at core tables by foreign key (`ForeignKey("user.id")`)
 2. If you changed the model after scaffolding: `uv run stk db revision -m "update <name>"` and review, then `uv run stk db upgrade`
    (only needed for post-scaffold model edits; the initial migration is already applied. With `--no-migrate`, the first revision is manual)
 3. Verify: `uv run stk verify && uv run stk smoke`

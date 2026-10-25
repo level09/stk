@@ -2,6 +2,8 @@
 
 Guidance for coding agents working in this repository. `AGENTS.md` is a symlink to this file.
 
+stk is an installed package. An app is a separate package made by `stk init`: `myapp/app.py` builds `Stk(__name__, config=Config, extensions=[...])`, each extension is a package with `init_app(app)`, and the app never edits a stk file. This repository runs its bundled example app, `examples/minimal`.
+
 ## What is stk
 
 Async Quart web framework with a Vue 3 + Vuetify frontend and no build step. Full auth stack via quart-security (session auth, 2FA/TOTP, WebAuthn, OAuth). SQLite by default, PostgreSQL optional, Alembic for migrations.
@@ -14,7 +16,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 
 ## Where truth lives
 
-1. **The running code.** Ask it before reading files: `uv run stk inspect context --json` (routes with auth, models), `uv run stk inspect commands --json` (every command and option), `uv run stk doctor` (checkout state, each problem with its fix). `uv run stk new <module>` writes the canonical CRUD module; copy its patterns.
+1. **The running code.** Ask it before reading files: `uv run stk inspect context --json` (routes with auth, models), `uv run stk inspect commands --json` (every command and option), `uv run stk doctor` (app state, each problem with its fix). `uv run stk new <module>` writes the canonical CRUD extension into the app; copy its patterns.
 2. **The docs**, in `docs/src/content/docs/`, published at https://docs.stk.dev (with `/llms.txt`). Read the page for your task before writing code:
 
 | Task | Page |
@@ -22,7 +24,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 | Setup, `.env`, first run | `docs/src/content/docs/getting-started.md` |
 | doctor, scaffold, watch, smoke, which checks a change needs, test login | `docs/src/content/docs/build-loop.md` |
 | Async REPL against the real app | `docs/src/content/docs/shell.md` |
-| Layout, blueprints, request lifecycle | `docs/src/content/docs/architecture.md` |
+| App package, extensions, overrides, blueprints, request lifecycle | `docs/src/content/docs/architecture.md` |
 | Models, queries, migrations, SQLite traps | `docs/src/content/docs/models.md` |
 | JSON endpoints, error conventions, webhooks | `docs/src/content/docs/api.md` |
 | Vue/Vuetify pages, components, navigation | `docs/src/content/docs/frontend.md` |
@@ -32,7 +34,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 | How agents work in stk | `docs/src/content/docs/ai-coding.md` |
 | Every environment variable and config key | `docs/src/content/docs/configuration.md` |
 | Every command and option (generated) | `docs/src/content/docs/cli.md` |
-| Production, Docker, upgrades | `docs/src/content/docs/deployment.md` |
+| Production, Docker, upgrading stk in an app | `docs/src/content/docs/deployment.md` |
 | Production security contract | `SECURITY.md` |
 
 3. **Skills** in `.claude/skills/` (mirrored at `.agents/skills/`) hold procedures: `stk-blueprint`, `stk-api`, `stk-migrate`, `stk-deploy`, and `stk-lessons` (when a gotcha the docs missed costs you time, log one line in `.stk/lessons.md`).
@@ -41,21 +43,21 @@ When you change behavior, update its docs page in the same commit. `cli.md` is g
 
 ## Commands
 
-Everything runs through `stk` (`uv run stk --help` for the grouped map). The app factory is baked in, so `QUART_APP` is never needed.
+Everything runs through `stk` (`uv run stk --help` for the grouped map). It finds the app from `[tool.stk] app` in the nearest `pyproject.toml`.
 
 ```bash
-./setup.sh                          # First-time setup (venv, deps, .env)
-uv sync --extra dev                 # Dev tools, Playwright, ptpython
+uv run stk init <name>              # New app package with fresh secrets
+./setup.sh                          # Working on stk itself: deps and .env
 uv run stk run                      # Dev server at localhost:5000 (--port 5001 on macOS)
-uv run stk create-db                # Apply all migrations
+uv run stk db upgrade               # stk's migrations, then the app's
 uv run stk install                  # Create admin user
 uv run stk doctor                   # What is wrong, and the command that fixes it
-uv run stk new <module>             # Scaffold + migrate, ends at a URL
+uv run stk new <module>             # Extension + migration, ends at a URL
 uv run stk verify --watch           # Re-run affected checks on every save
 uv run stk verify --json            # Lint, sanity, migration drift (exit 0/1)
 uv run stk smoke --json             # Real-browser behavioral check
 uv run stk shell -c "await count(User)"   # One-shot query against the real app
-uv run stk db revision -m "desc"    # Autogenerate a migration, then: uv run stk db upgrade
+uv run stk db revision -m "desc"    # Autogenerate in the app's lineage, then: uv run stk db upgrade
 uv run ruff check --fix . && uv run ruff format .
 uv run python -m unittest discover -s tests
 ```
@@ -73,6 +75,8 @@ Backend:
 - SQLite migrations: DDL is not transactional; a new NOT NULL column needs `server_default` in migration and model; keep the constraint naming convention on `Base.metadata`.
 - `stk verify` blocks drops, renames, retypes, and NOT NULL adds without a default in `upgrade()`. A rename is usually a mistaken drop + add from autogenerate; mark a deliberate one with `# destructive: <reason>`.
 - Tests: subclass `TestingConfig` (`stk/settings.py`), never `Config`; `.env` loads at import. Pin any other env-driven switch a test depends on.
+- Apps attach tables to core ones by foreign key (`user.id`); core models are fixed. App revisions depend on stk's head, so never merge heads by hand.
+- An app overrides a template or static file by putting one at the same path; `stk/<name>` is the original. Override a block, do not copy the layout. Python is never overridden.
 
 Frontend:
 - Vue Options API (`data()`, `methods`, `mounted()`), never Composition API. Delimiters are `${}`. Every page uses `mixins: [layoutMixin]` and calls `registerStkComponents(app)` before mount.
@@ -89,5 +93,5 @@ Security:
 - Never commit secrets, databases, reviews, or machine paths: `stk verify` fails on them.
 
 Product:
-- Rename an app with `APP_NAME` / `APP_TAGLINE` / `APP_DESCRIPTION` and by replacing `stk/templates/_brand.html` and the favicon. Never edit names across templates.
+- Rename an app with `APP_NAME` / `APP_TAGLINE` / `APP_DESCRIPTION` and its own `templates/_brand.html` and favicon. Never edit names across templates.
 - Before reporting UI work done, run `uv run stk smoke` and look at a screenshot with real rows. A 200 and green tests do not prove a page renders.

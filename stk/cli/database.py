@@ -1,14 +1,17 @@
 """Database and migration commands."""
 
-import os
-import tempfile
-from pathlib import Path
-
 import click
-
 from alembic import command
-from stk.cli.base import console
-from stk.migrations import build_alembic_config, get_target_metadata
+
+from stk.cli.base import cli_app, console
+from stk.migrations import (
+    CORE_LABEL,
+    app_label,
+    app_versions,
+    build_alembic_config,
+    get_target_metadata,
+    throwaway_database_url,
+)
 
 
 def run_alembic(action, *args, **kwargs):
@@ -39,32 +42,35 @@ def _describe_diff(diff):
     return f"{diff[0]}: {' '.join(parts)}".strip()
 
 
-def build_migration_drift_report():
-    """Return differences between the migrations at head and model metadata.
+def build_migration_drift_report(app=None, database_url=None):
+    """Return differences between the migrations at their heads and the models.
 
-    Migrations run against a throwaway database, so the answer does not depend
-    on the state of any developer machine.
+    Migrations run against a throwaway database of the app's dialect, so the
+    answer does not depend on the state of any developer machine. With no app,
+    stk's own lineage is checked against its own models.
     """
     from alembic.autogenerate import compare_metadata
     from alembic.runtime.migration import MigrationContext
     from sqlalchemy import create_engine
 
-    with tempfile.TemporaryDirectory(prefix="stk-drift-") as temp_dir:
-        # ponytail: SQLite stands in for any dialect; revisit if models grow
-        # Postgres-only types that autogenerate renders differently.
-        config = build_alembic_config()
-        # env.py skips fileConfig without an ini path: migrating the throwaway
-        # database is an implementation detail, not output.
-        config.config_file_name = None
-        config.set_main_option("sqlalchemy.url", f"sqlite:///{Path(temp_dir)}/drift.db")
-        command.upgrade(config, "head")
+    from stk.migrations import include_object
 
-        engine = create_engine(config.get_main_option("sqlalchemy.url"))
+    if database_url is None:
+        database_url = app.config["SQLALCHEMY_DATABASE_URI"]
+    with throwaway_database_url(database_url, sync=True) as url:
+        config = build_alembic_config(app, url, quiet=True)
+        command.upgrade(config, "heads")
+
+        engine = create_engine(url)
         try:
             with engine.connect() as connection:
                 context = MigrationContext.configure(
                     connection,
-                    opts={"compare_type": True, "compare_server_default": True},
+                    opts={
+                        "compare_type": True,
+                        "compare_server_default": True,
+                        "include_object": include_object,
+                    },
                 )
                 diffs = compare_metadata(context, get_target_metadata())
         finally:
@@ -73,14 +79,51 @@ def build_migration_drift_report():
     return [_describe_diff(diff) for diff in _flatten(diffs)]
 
 
+def generate_revision(app, message, *, autogenerate=True, head=None, quiet=False):
+    """Write a revision in the app's lineage, or in `head`'s when given.
+
+    The app's first revision starts its branch. Every app revision depends on
+    stk's head at the time it is written, so core tables (`user`) exist first.
+    """
+    from alembic.script import ScriptDirectory
+
+    config = build_alembic_config(app, quiet=quiet)
+    if head is not None:
+        return run_alembic(
+            command.revision,
+            config,
+            message=message,
+            autogenerate=autogenerate,
+            head=head,
+        )
+    script = ScriptDirectory.from_config(config)
+    label = app_label(app)
+    started = any(label in rev.branch_labels for rev in script.walk_revisions())
+    core_head = script.get_revision(f"{CORE_LABEL}@head").revision
+    options = (
+        {"head": f"{label}@head"}
+        if started
+        else {
+            "head": "base",
+            "branch_label": label,
+            "version_path": str(app_versions(app)),
+        }
+    )
+    app_versions(app).mkdir(exist_ok=True)
+    return run_alembic(
+        command.revision,
+        config,
+        message=message,
+        autogenerate=autogenerate,
+        depends_on=core_head,
+        **options,
+    )
+
+
 @click.command()
 def create_db():
-    """Apply all database migrations."""
-    from stk.settings import Config
-
-    instance_dir = os.path.join(Config.PROJECT_ROOT, "instance")
-    os.makedirs(instance_dir, exist_ok=True)
-    run_alembic(command.upgrade, build_alembic_config(), "head")
+    """Apply all database migrations (same as `stk db upgrade`)."""
+    run_alembic(command.upgrade, build_alembic_config(cli_app()), "heads")
     console.print("[green]Database migrations applied successfully[/]")
 
 
@@ -90,10 +133,10 @@ def db():
 
 
 @db.command("upgrade")
-@click.argument("revision", default="head")
+@click.argument("revision", default="heads")
 def db_upgrade(revision):
-    """Upgrade the database to a target revision."""
-    run_alembic(command.upgrade, build_alembic_config(), revision)
+    """Upgrade the database: stk's migrations and the app's, to their heads."""
+    run_alembic(command.upgrade, build_alembic_config(cli_app()), revision)
 
 
 # Relative targets like "-1" look like options to click; accept them as the argument.
@@ -101,7 +144,7 @@ def db_upgrade(revision):
 @click.argument("revision")
 def db_downgrade(revision):
     """Downgrade the database to a target revision."""
-    run_alembic(command.downgrade, build_alembic_config(), revision)
+    run_alembic(command.downgrade, build_alembic_config(cli_app()), revision)
 
 
 @db.command("revision")
@@ -111,20 +154,20 @@ def db_downgrade(revision):
     default=True,
     help="Autogenerate from model metadata or create an empty revision",
 )
-def db_revision(message, autogenerate):
-    """Create a new migration revision."""
-    run_alembic(
-        command.revision,
-        build_alembic_config(),
-        message=message,
-        autogenerate=autogenerate,
-    )
+@click.option(
+    "--head",
+    default=None,
+    help="Extend this head instead of the app's lineage (stk@head for core).",
+)
+def db_revision(message, autogenerate, head):
+    """Create a migration revision in the app's own lineage."""
+    generate_revision(cli_app(), message, autogenerate=autogenerate, head=head)
 
 
 @db.command("check")
 def db_check():
     """Fail if models have drifted away from the migrations."""
-    drift = build_migration_drift_report()
+    drift = build_migration_drift_report(cli_app())
     if not drift:
         console.print("[green]No migration drift: models match migrations[/]")
         return
@@ -140,17 +183,17 @@ def db_check():
 @db.command("current")
 def db_current():
     """Show the current database revision."""
-    run_alembic(command.current, build_alembic_config())
+    run_alembic(command.current, build_alembic_config(cli_app()))
 
 
 @db.command("history")
 def db_history():
     """Show migration history."""
-    run_alembic(command.history, build_alembic_config())
+    run_alembic(command.history, build_alembic_config(cli_app()))
 
 
 @db.command("stamp")
-@click.argument("revision", default="head")
+@click.argument("revision", default="heads")
 def db_stamp(revision):
     """Stamp a database with a revision without running migrations."""
-    run_alembic(command.stamp, build_alembic_config(), revision)
+    run_alembic(command.stamp, build_alembic_config(cli_app()), revision)

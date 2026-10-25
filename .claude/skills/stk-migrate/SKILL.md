@@ -13,10 +13,10 @@ Current revision:
 !`uv run stk db current 2>&1 | tail -5`
 
 Recent migrations:
-!`ls -1t alembic/versions/*.py 2>/dev/null | head -10`
+!`ls -1t */migrations/*.py 2>/dev/null | head -10`
 
 Models with tables:
-!`grep -rn "__tablename__" stk/*/models.py 2>/dev/null`
+!`grep -rn "__tablename__" */*/models.py 2>/dev/null`
 
 ## Steps
 
@@ -25,7 +25,7 @@ Models with tables:
    uv run stk db revision -m "$ARGUMENTS"
    ```
 
-2. **Review the generated file** in `alembic/versions/`. Check:
+2. **Review the generated file** in the app's `migrations/` (its own lineage; it already `depends_on` stk's head, so `stk db upgrade` applies both and heads never need merging). Check:
    - All expected table/column changes are present
    - Foreign keys reference correct tables and use correct column types
    - Indexes are created where needed (especially on foreign keys and unique constraints)
@@ -36,7 +36,7 @@ Models with tables:
      `# destructive: <reason>` comment, and tell the user
    - Column types match the model definitions (String lengths, nullable flags, defaults)
 
-3. **For SQLite compatibility**, verify batch mode is used. The `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
+3. **For SQLite compatibility**, verify batch mode is used. stk's `env.py` enables `render_as_batch` automatically for SQLite, but if writing manual SQL, wrap ALTER TABLE operations in `with op.batch_alter_table()`.
 
 4. **If the migration needs manual edits** (data migrations, complex constraints, multi-step operations):
    - Edit the generated file directly

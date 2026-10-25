@@ -15,8 +15,30 @@ def _cls(name: str) -> str:
     return "".join(w.capitalize() for w in name.split("_"))
 
 
-def render_init(name: str) -> str:  # noqa: ARG001
-    return '"""Blueprint package."""\n'
+def render_init(name: str, package: str) -> str:
+    title = name.replace("_", " ").title()
+    return _t(
+        '''\
+"""$title: blueprint, model, page, and sidebar entry."""
+
+from $package.$name.views import bp_$name
+
+
+def init_app(app):
+    app.register_blueprint(bp_$name)
+    app.navigation.append(
+        {
+            "title": "${title}s",
+            "icon": "ti ti-table",
+            "to": "/${name}s/",
+            "role": "admin",
+        }
+    )
+''',
+        name=name,
+        package=package,
+        title=title,
+    )
 
 
 def render_models(name: str) -> str:
@@ -29,7 +51,6 @@ import dataclasses
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Integer, String
-
 from stk.extensions import Base
 
 
@@ -65,7 +86,7 @@ class $cls(Base):
     )
 
 
-def render_views(name: str) -> str:
+def render_views(name: str, package: str) -> str:
     cls = _cls(name)
     plural = name + "s"
     # Pre-compute all function names to avoid string.Template misparses
@@ -84,9 +105,9 @@ import orjson as json
 from quart import Blueprint, Response, g, render_template, request
 from quart_security import auth_required, current_user, roles_required
 from sqlalchemy import func, select
-
 from stk.user.models import Activity
-from stk.$name.models import $cls
+
+from $package.$name.models import $cls
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +125,7 @@ async def before_request():
 
 @bp_$name.get("/$plural/")
 async def $fn_page():
-    return await render_template("cms/$name.html")
+    return await render_template("$name/index.html")
 
 
 @bp_$name.get("/api/$plural")
@@ -191,6 +212,7 @@ async def $fn_delete(id):
         return {"message": "Error deleting $name"}, 412
 ''',
         name=name,
+        package=package,
         cls=cls,
         plural=plural,
         fn_page=fn_page,
@@ -404,29 +426,3 @@ def render_template_html(name: str) -> str:
         plural=plural,
         plural_title=plural_title,
     )
-
-
-def render_nav_entry(name: str) -> str:
-    title = name.replace("_", " ").title()
-    plural = name + "s"
-    icon = "ti ti-table"
-    return (
-        f"  {{\n"
-        f"    title: '{title}',\n"
-        f"    icon: '{icon}',\n"
-        f"    to: '/{plural}',\n"
-        f"    role: 'admin'\n"
-        f"  }},\n"
-    )
-
-
-def render_app_import(name: str) -> str:
-    """Return the import line to add to app.py."""
-    bp = f"bp_{name}"
-    return f"from stk.{name}.views import {bp}\n"
-
-
-def render_app_register(name: str) -> str:
-    """Return the register_blueprint line to add to app.py."""
-    bp = f"bp_{name}"
-    return f"    app.register_blueprint({bp})\n"

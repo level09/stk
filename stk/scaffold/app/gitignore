@@ -1,0 +1,8 @@
+.env
+.env.backup*
+instance/
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.stk/smoke/

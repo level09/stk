@@ -48,7 +48,7 @@ ssh <app-user>@<domain>
 cd ~/<domain>
 git pull
 uv sync --frozen --no-dev
-uv run --no-sync stk db upgrade   # only if models changed
+uv run --no-sync stk db upgrade   # stk's migrations and the app's, if any are new
 sudo systemctl restart <domain>.service
 ```
 

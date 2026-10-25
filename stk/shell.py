@@ -22,9 +22,12 @@ from stk.migrations import import_model_modules
 
 console = Console()
 
-HISTORY_FILE = (
-    Path(__file__).resolve().parent.parent / "instance" / ".stk_shell_history"
-)
+
+def history_file(app) -> Path:
+    """The REPL history, kept with the app's instance data."""
+    return Path(app.instance_path) / ".stk_shell_history"
+
+
 BANNER_HELPERS = [
     ("find(Model, **kw)", "list rows matching equality filters"),
     ("first(Model, **kw)", "first row matching equality filters"),
@@ -132,7 +135,7 @@ def _masked_database_url() -> str:
     return make_url(Config.SQLALCHEMY_DATABASE_URI).render_as_string(hide_password=True)
 
 
-def _setup_readline(namespace) -> None:
+def _setup_readline(namespace, history: Path) -> None:
     """Tab completion and persistent history, best effort."""
     try:
         import readline
@@ -148,12 +151,12 @@ def _setup_readline(namespace) -> None:
     )
     readline.set_history_length(2000)
     try:
-        HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        if HISTORY_FILE.exists():
-            readline.read_history_file(str(HISTORY_FILE))
+        history.parent.mkdir(parents=True, exist_ok=True)
+        if history.exists():
+            readline.read_history_file(str(history))
     except OSError:  # unreadable history is not worth failing the shell over
         return
-    atexit.register(readline.write_history_file, str(HISTORY_FILE))
+    atexit.register(readline.write_history_file, str(history))
 
 
 def _configure_repl(repl) -> None:
@@ -173,13 +176,14 @@ async def _run_ptpython(app, db, namespace) -> None:
     """Full-screen REPL. User code is awaited in this task, so `g` stays bound."""
     from ptpython.repl import embed
 
-    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    history = history_file(app)
+    history.parent.mkdir(parents=True, exist_ok=True)
     async with app.app_context():
         g.db_session = db
         await embed(
             globals=namespace,
             title="stk shell",
-            history_filename=str(HISTORY_FILE),
+            history_filename=str(history),
             configure=_configure_repl,
             patch_stdout=True,
             return_asyncio_coroutine=True,
@@ -245,7 +249,7 @@ def run_shell(app, source: str | None = None) -> None:
         if _ptpython_usable():
             loop.run_until_complete(_run_ptpython(app, db, namespace))
             return
-        _setup_readline(namespace)
+        _setup_readline(namespace, history_file(app))
         AsyncConsole(namespace, build_awaiter(app, db, loop)).interact(
             banner="", exitmsg=""
         )

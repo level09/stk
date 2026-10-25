@@ -1,12 +1,14 @@
 """Watch loop, doctor report, and remedies: the parts that must not lie."""
 
+import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from stk.cli import watch
-from stk.cli.doctor import build_doctor_report
 from stk.cli.reports import REMEDIES, VERIFY_COMMANDS, build_verify_report
 
 
@@ -78,12 +80,21 @@ class RemedyTest(unittest.TestCase):
 
 class DoctorTest(unittest.TestCase):
     def test_report_covers_every_area_and_grades_itself(self):
-        report = build_doctor_report()
+        # A subprocess: loading the app here would add its tables to the
+        # metadata every other test shares.
+        result = subprocess.run(
+            [sys.executable, "-m", "stk", "doctor", "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        report = json.loads(result.stdout)
 
         names = {finding["name"] for finding in report["findings"]}
         self.assertLessEqual(
             {
                 "env file",
+                "app",
                 "secrets",
                 "database",
                 "migrations",

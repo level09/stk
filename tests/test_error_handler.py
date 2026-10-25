@@ -4,13 +4,13 @@ import unittest
 
 from sqlalchemy.exc import OperationalError
 
-from stk.app import create_app
+from stk.app import Stk
 from stk.settings import TestingConfig
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_database_error_is_500_and_logged(self):
-        app = create_app(TestingConfig)
+        app = Stk(__name__, config=TestingConfig)
 
         @app.get("/boom")
         async def boom():

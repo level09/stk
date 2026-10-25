@@ -2,7 +2,7 @@ import unittest
 
 from quart import Blueprint
 
-from stk.app import create_app
+from stk.app import Stk
 from stk.cli.reports import build_routes_report
 from stk.cli.smoke import (
     build_smoke_report,
@@ -11,11 +11,12 @@ from stk.cli.smoke import (
     smoke_exit_code,
 )
 from stk.security import csrf_exempt
+from stk.settings import TestingConfig
 
 
 class SmokePageDiscoveryTests(unittest.TestCase):
     def test_discovers_parameterless_admin_pages_only(self):
-        app = create_app()
+        app = Stk(__name__, config=TestingConfig)
         crm = Blueprint("smoke_demo", __name__)
 
         @crm.get("/smoke-demo/staff")

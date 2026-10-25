@@ -103,13 +103,17 @@ To see SQL as it runs, raise the engine logger: `logging.getLogger("sqlalchemy.e
 Schema changes go through Alembic. After changing a model:
 
 ```bash
-uv run stk db revision -m "add post"   # Autogenerate a revision
-uv run stk db upgrade                  # Apply it
+uv run stk db revision -m "add post"   # Autogenerate a revision in the app's lineage
+uv run stk db upgrade                  # Apply stk's migrations and the app's
 uv run stk db check                    # Fail if models drifted from migrations
 uv run stk db downgrade -1             # Roll back one step
 ```
 
-`stk verify` runs the drift check too, so a model change without a migration fails the gate. It also fails on a revision whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Autogenerate writes a renamed field as a drop plus an add, which loses the data. When a destructive step is intended, say so with a `# destructive: <reason>` comment inside `upgrade()`. Config lives in `stk/migrations.py`, the Alembic env in `alembic/env.py`, and revisions in `alembic/versions/`.
+There are two lineages and one version table. stk's revisions ship inside the package (`stk/migrations/versions/`) under the branch label `stk`. The app's live in `myapp/migrations/` under its package name as branch label: the first `stk db revision` starts that branch. Every app revision records `depends_on` stk's head at the time it was written, so core tables such as `user` exist before an app table points at them. `stk db upgrade` runs `upgrade heads`, so a new stk release and new app revisions apply in one command, and an app never merges heads by hand.
+
+`stk verify` runs the drift check too, so a model change without a migration fails the gate. The check migrates a throwaway database of the configured dialect (Postgres needs a role with CREATEDB), because SQLite cannot render Postgres types. It also fails on a revision whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Autogenerate writes a renamed field as a drop plus an add, which loses the data. When a destructive step is intended, say so with a `# destructive: <reason>` comment inside `upgrade()`. The Alembic env lives in `stk/migrations/env.py`, built in code; apps need no `alembic.ini`.
+
+A Postgres extension (PostGIS, pgvector) must exist before a non-superuser role migrates: create it as the superuser, as the app's `postgres/init-db.sh` notes. Autogenerate never offers to drop `spatial_ref_sys`, the table PostGIS owns. Mark a model table that needs PostGIS with `info={"postgis": True}`, and `stk.migrations.portable_tables()` leaves it out when tests build tables on SQLite.
 
 ## SQLite traps
 

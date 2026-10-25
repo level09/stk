@@ -5,7 +5,7 @@ description: "Vue 3 and Vuetify with no build step: page shape, conventions, and
 
 Pages are Jinja templates that mount a Vue 3 app (Options API) with Vuetify. Vue, Vuetify, Axios, and Tabler Icons are vendored into `stk/static/`, so there is no npm, bundler, or build step. Versions are pinned in `stk/static/VERSIONS.txt`; to bump one, edit `vendor.sh`, run `./vendor.sh`, then `uv run stk smoke`.
 
-The fastest way to see the whole pattern is `uv run stk new <module>`: the generated `stk/templates/cms/<module>.html` is a working CRUD page that follows every rule below.
+The fastest way to see the whole pattern is `uv run stk new <module>`: the generated `<module>/templates/<module>/index.html` in your app is a working CRUD page that follows every rule below.
 
 ## Page shape
 
@@ -81,24 +81,29 @@ Logout is POST-only: call `logout()` from `layoutMixin`. See [JSON APIs](/api) f
 
 ## Navigation
 
-Sidebar entries live in `stk/static/js/navigation.js`:
+The sidebar is data. stk's layout renders its own entries (Dashboard, the account pages, user administration) with the app's pages under Dashboard. An extension adds its page in `init_app`:
 
-```javascript
-const stkNavigation = [
-  { heading: 'Section Title' },
-  { title: 'Dashboard', icon: 'ti ti-home', to: '/dashboard' },
-  { title: 'Activity', icon: 'ti ti-history', to: '/activities', role: 'admin' },
-  {
-    title: 'Users', icon: 'ti ti-users-group', role: 'admin',
-    children: [
-      { title: 'Users', icon: 'ti ti-users', to: '/users' },
-      { title: 'Roles', icon: 'ti ti-shield', to: '/roles' },
-    ]
-  }
-];
+```python
+def init_app(app):
+    app.register_blueprint(bp_report)
+    app.navigation.append(
+        {"title": "Reports", "icon": "ti ti-chart-bar", "to": "/reports/", "role": "admin"}
+    )
 ```
 
-`role` is a single string, not an array. Optional link fields: `target`, `badge`, `badgeClass`. Hiding an entry is cosmetic; the view itself must check the role.
+Entries appear in extension order. A group takes `children` instead of `to`, a section title is `{"heading": "..."}`. `role` is a single string, not an array. Optional link fields: `target`, `badge`, `badgeClass`. Hiding an entry is cosmetic; the view itself must check the role. To replace the whole sidebar, override `layout.html`, extend `stk/layout.html`, and fill `{% block navigation %}` with your own `stkNavigation` array.
+
+## Overriding templates and static files
+
+Templates and static files resolve app first, then each extension's, then stk's, so a file at the same path in `myapp/templates/` or `myapp/static/` replaces stk's. The original stays reachable as `stk/<name>`:
+
+```html
+{# myapp/templates/layout.html #}
+{% extends "stk/layout.html" %}
+{% block title %}{{ config.APP_NAME }}{% endblock %}
+```
+
+`layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `content`, `navigation`, and `js`. Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
 
 ## layoutMixin
 

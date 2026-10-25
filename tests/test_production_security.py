@@ -14,7 +14,7 @@ from quart_session.sessions import RedisSessionInterface
 from sqlalchemy import select
 
 import stk.extensions as ext
-from stk.app import create_app
+from stk.app import Stk
 from stk.public.views import handle_oauth_callback
 from stk.settings import TestingConfig
 from stk.user.models import Base, OAuth, Role, User
@@ -44,7 +44,7 @@ class MemoryRedis:
 
 class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.app = create_app(TestConfig)
+        self.app = Stk(__name__, config=TestConfig)
 
         @self.app.get("/_fixture/oauth")
         async def oauth_fixture():

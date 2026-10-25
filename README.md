@@ -28,12 +28,13 @@
 ---
 
 ```bash
-git clone git@github.com:level09/stk.git && cd stk
-./setup.sh                  # deps + secure .env
-uv run stk create-db        # database via Alembic
+uvx --from git+https://github.com/level09/stk stk init myapp && cd myapp
+uv run stk db upgrade       # database via Alembic
 uv run stk install          # admin user
 uv run stk run              # localhost:5000
 ```
+
+Your app is its own package that composes stk, not a fork of it. Upgrading stk is a version bump.
 
 ## Why stk
 

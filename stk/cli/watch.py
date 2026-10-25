@@ -16,7 +16,6 @@ IGNORED_DIRS = {
     "node_modules",
     "instance",
     ".stk",
-    "alembic",
 }
 # Checks worth re-running when a file of this kind changes. Also defines what
 # counts as a source file, so the two can never disagree.

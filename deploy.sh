@@ -41,8 +41,8 @@ interactive_setup() {
     read -r -p "? Domain name: " DOMAIN
     [ -z "$DOMAIN" ] && error "Domain is required"
 
-    read -r -p "? Git repository [level09/stk]: " input
-    REPO="${input:-level09/stk}"
+    read -r -p "? App repository (owner/name): " REPO
+    [ -z "$REPO" ] && error "App repository is required"
 
     read -r -p "? Branch [master]: " input
     BRANCH="${input:-master}"
@@ -59,6 +59,7 @@ interactive_setup() {
 validate() {
     [ "$EUID" -eq 0 ] || error "Must run as root (use sudo)"
     [ -z "$DOMAIN" ] && error "DOMAIN is required"
+    [ -z "$REPO" ] && error "REPO is required: your app's GitHub repository (owner/name)"
     [ "$DB" = "sqlite" ] || [ "$DB" = "postgres" ] || error "DB must be sqlite or postgres"
 
     # Derive defaults
@@ -127,8 +128,6 @@ create_user() {
         getent group "$APP_USER" >/dev/null || groupadd "$APP_USER"
         useradd -m -s /bin/bash -g "$APP_USER" "$APP_USER"
     fi
-    # Add caddy to app user's group so it can serve static files
-    usermod -aG "$APP_USER" caddy 2>/dev/null || true
     step_done
 }
 
@@ -163,6 +162,9 @@ clone_repo() {
         rm -rf "$APP_DIR"
     fi
     sudo -u "$APP_USER" git clone -q --branch "$BRANCH" "$GIT_URL" "$APP_DIR"
+    # uvicorn serves the app named by `[tool.stk] app` in its pyproject.toml.
+    APP_MODULE=$(sed -n 's/^app *= *"\(.*\)"/\1/p' "${APP_DIR}/pyproject.toml" | head -1)
+    [ -n "$APP_MODULE" ] || error "${REPO} has no [tool.stk] app in pyproject.toml (create apps with: stk init)"
     step_done
 }
 
@@ -195,7 +197,6 @@ generate_env() {
     fi
 
     cat > "${APP_DIR}/.env" << EOF
-QUART_APP=run.py
 QUART_DEBUG=0
 STK_ENV=${environment}
 STK_PUBLIC_URL=${scheme}://${DOMAIN}
@@ -262,7 +263,7 @@ User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${APP_DIR}/.env
-ExecStart=${APP_DIR}/.venv/bin/uvicorn run:app --host 127.0.0.1 --port ${PYTHON_PORT} --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips=127.0.0.1
+ExecStart=${APP_DIR}/.venv/bin/uvicorn ${APP_MODULE} --host 127.0.0.1 --port ${PYTHON_PORT} --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=always
 RestartSec=3
 
@@ -300,17 +301,8 @@ ${site} {
         -Server
     }
 
-    # Static files with caching
-    handle_path /static/* {
-        root * ${APP_DIR}/stk/static
-        file_server
-        # Versioned URLs (?v=<hash>) never change content; the rest revalidate.
-        @versioned query v=*
-        header @versioned Cache-Control "public, max-age=31536000, immutable"
-        header ?Cache-Control "no-cache"
-    }
-
-    # App
+    # App, static files included: the app resolves its own files before stk's
+    # and sets their Cache-Control by version.
     reverse_proxy 127.0.0.1:${PYTHON_PORT} {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -393,7 +385,7 @@ success_message() {
 # Main
 main() {
     CURRENT_STEP=0
-    REPO="${REPO:-level09/stk}"
+    REPO="${REPO:-}"
     BRANCH="${BRANCH:-master}"
     DB="${DB:-sqlite}"
     SKIP_SSL="${SKIP_SSL:-false}"
@@ -404,7 +396,7 @@ main() {
         if [ ! -t 0 ]; then
             echo -e "${RED}Error:${NC} DOMAIN is required when running non-interactively"
             echo ""
-            echo "Usage: wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com bash /tmp/deploy.sh"
+            echo "Usage: wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com REPO=you/yourapp bash /tmp/deploy.sh"
             exit 1
         fi
         interactive_setup

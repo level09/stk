@@ -44,7 +44,7 @@ class StkCommandTest(unittest.TestCase):
         self.assertTrue(result.output.startswith("stk "), result.output)
 
     def test_app_commands_resolve_without_quart_app_env(self):
-        """create_app is baked in, so subcommands need no --app or QUART_APP."""
+        """The app comes from [tool.stk], so subcommands need no --app or QUART_APP."""
         result = self.runner.invoke(main, ["shell", "--help"])
 
         self.assertEqual(result.exit_code, 0)

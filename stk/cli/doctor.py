@@ -9,9 +9,12 @@ from pathlib import Path
 
 from sqlalchemy import func, select
 
+import stk
 import stk.extensions as ext
-from stk.cli.base import run_async
-from stk.migrations import PROJECT_ROOT, build_alembic_config, get_database_url
+from stk.cli.base import app_spec, cli_app, project_root, run_async
+from stk.migrations import build_alembic_config, sync_url
+
+CORE_STATIC = Path(stk.__file__).parent / "static"
 
 OK = "ok"
 WARN = "warn"
@@ -22,31 +25,36 @@ def _finding(name, status, detail, remedy=None):
     return {"name": name, "status": status, "detail": detail, "remedy": remedy}
 
 
-def _check_env_file():
-    path = PROJECT_ROOT / ".env"
+def _check_env_file(root):
+    path = root / ".env"
     if not path.exists():
-        return _finding("env file", FAIL, ".env is missing", "./setup.sh")
-    return _finding("env file", OK, str(path.relative_to(PROJECT_ROOT)))
+        return _finding(
+            "env file",
+            FAIL,
+            ".env is missing",
+            "copy .env-sample to .env, fill secrets",
+        )
+    return _finding("env file", OK, str(path.relative_to(root)))
 
 
 def _check_secrets(config):
     weak = [
         name
         for name in ("SECRET_KEY", "SECURITY_PASSWORD_SALT")
-        if not getattr(config, name, None) or len(str(getattr(config, name))) < 32
+        if len(str(config.get(name) or "")) < 32
     ]
     if weak:
         return _finding(
             "secrets",
             FAIL,
             f"weak or missing: {', '.join(weak)}",
-            "regenerate with ./setup.sh, or set 32+ random characters in .env",
+            "set 32+ random characters in .env",
         )
     return _finding("secrets", OK, "SECRET_KEY and password salt look random")
 
 
 def _check_database(config):
-    url = get_database_url()
+    url = config["SQLALCHEMY_DATABASE_URI"]
     if url.startswith("sqlite"):
         path = Path(url.split("///")[-1])
         if not path.exists():
@@ -58,44 +66,74 @@ def _check_database(config):
     return _finding("database", OK, url.split("@")[-1])
 
 
-def _check_migrations():
-    """Compare the database revision against the migration scripts on disk."""
+def _as_tuple(value):
+    return () if value is None else (value,) if isinstance(value, str) else value
+
+
+def _applied(script, current):
+    """Every revision the database already has: its heads and their ancestry.
+
+    The version table holds only heads, and an app revision that depends on
+    stk's head stands in for it.
+    """
+    applied, pending = set(), list(current)
+    while pending:
+        revision = script.get_revision(pending.pop())
+        if revision.revision not in applied:
+            applied.add(revision.revision)
+            pending += [
+                *_as_tuple(revision.down_revision),
+                *_as_tuple(revision.dependencies),
+            ]
+    return applied
+
+
+def _defined(script, revision):
+    try:
+        script.get_revision(revision)
+    except Exception:  # alembic raises CommandError for a revision it cannot find
+        return False
+    return True
+
+
+def _check_migrations(app):
+    """Compare the database revisions against the migration heads on disk."""
     from alembic.runtime.migration import MigrationContext
     from alembic.script import ScriptDirectory
     from sqlalchemy import create_engine
 
-    script = ScriptDirectory.from_config(build_alembic_config())
-    head = script.get_current_head()
-    engine = create_engine(get_database_url(sync=True))
+    script = ScriptDirectory.from_config(build_alembic_config(app))
+    heads = set(script.get_heads())
+    engine = create_engine(sync_url(app.config["SQLALCHEMY_DATABASE_URI"]))
     try:
         with engine.connect() as connection:
-            current = MigrationContext.configure(connection).get_current_revision()
+            current = set(MigrationContext.configure(connection).get_current_heads())
     except Exception as exc:  # unreachable database is its own diagnosis
-        return _finding("migrations", FAIL, str(exc)[:80], "uv run stk create-db")
+        return _finding("migrations", FAIL, str(exc)[:80], "uv run stk db upgrade")
     finally:
         engine.dispose()
 
-    if current is None:
+    shown = ", ".join(sorted(heads))
+    if not current:
         return _finding(
             "migrations", FAIL, "database has no revision", "uv run stk db upgrade"
         )
-    if current == head:
-        return _finding("migrations", OK, f"at head ({head})")
-    try:
-        script.get_revision(current)
-    except Exception:  # alembic raises CommandError for a revision it cannot find
+    unknown = sorted(rev for rev in current if not _defined(script, rev))
+    if unknown:
         return _finding(
             "migrations",
             FAIL,
-            f"database is stamped at {current}, which no migration defines",
-            f"uv run stk db stamp {head} (after checking the schema matches)",
+            f"database is stamped at {', '.join(unknown)}, which no migration defines",
+            "uv run stk db stamp heads (after checking the schema matches)",
         )
-    return _finding(
-        "migrations",
-        WARN,
-        f"database at {current}, head is {head}",
-        "uv run stk db upgrade",
-    )
+    if missing := sorted(heads - _applied(script, current)):
+        return _finding(
+            "migrations",
+            WARN,
+            f"database is behind: {', '.join(missing)} not applied",
+            "uv run stk db upgrade",
+        )
+    return _finding("migrations", OK, f"at heads ({shown})")
 
 
 def _check_admin():
@@ -113,18 +151,18 @@ def _check_admin():
     try:
         admins = run_async(_count())
     except Exception as exc:
-        return _finding("admin user", FAIL, str(exc)[:80], "uv run stk create-db")
+        return _finding("admin user", FAIL, str(exc)[:80], "uv run stk db upgrade")
     if admins:
         return _finding("admin user", OK, f"{admins} admin(s)")
     return _finding("admin user", WARN, "no admin user", "uv run stk install")
 
 
 def _check_assets():
-    versions = PROJECT_ROOT / "stk" / "static" / "VERSIONS.txt"
+    versions = CORE_STATIC / "VERSIONS.txt"
     if not versions.exists():
         return _finding("assets", WARN, "VERSIONS.txt missing", "./vendor.sh")
     expected = [
-        PROJECT_ROOT / "stk" / "static" / name
+        CORE_STATIC / name
         for name in (
             "js/vue.min.js",
             "js/vuetify.min.js",
@@ -141,8 +179,8 @@ def _check_assets():
 
 
 def _check_agent_login(config):
-    enabled = getattr(config, "STK_ENABLE_AGENT_LOGIN", False)
-    env = getattr(config, "STK_ENV", "production")
+    enabled = config.get("STK_ENABLE_AGENT_LOGIN", False)
+    env = config.get("STK_ENV", "production")
     if enabled and env != "development":
         return _finding(
             "agent login",
@@ -197,19 +235,24 @@ def _check_repl():
 
 def build_doctor_report():
     """Return every finding, plus the worst status seen."""
-    from stk.settings import Config
-
-    findings = [
-        _check_env_file(),
-        _check_secrets(Config),
-        _check_database(Config),
-        _check_migrations(),
-        _check_admin(),
-        _check_assets(),
-        _check_agent_login(Config),
-        _check_browser(),
-        _check_repl(),
-    ]
+    findings = [_check_env_file(project_root())]
+    try:
+        app = cli_app()
+    except Exception as exc:  # an app that cannot load is the diagnosis
+        findings.append(
+            _finding("app", FAIL, str(exc)[:120], "read the error, then rerun")
+        )
+        app = None
+    if app is not None:
+        findings += [
+            _finding("app", OK, app_spec()),
+            _check_secrets(app.config),
+            _check_database(app.config),
+            _check_migrations(app),
+            _check_admin(),
+            _check_agent_login(app.config),
+        ]
+    findings += [_check_assets(), _check_browser(), _check_repl()]
     if any(item["status"] == FAIL for item in findings):
         status = FAIL
     elif any(item["status"] == WARN for item in findings):

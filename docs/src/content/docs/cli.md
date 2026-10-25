@@ -9,11 +9,21 @@ Agents can read the same data as JSON with `uv run stk inspect commands --json`.
 
 ## Develop
 
+### `stk init`
+
+`stk init [OPTIONS] NAME`
+
+Start a new app package NAME in ./NAME, depending on this stk version.
+
+| Option | Description |
+|---|---|
+| `--source` | Install stk from this checkout or wheel instead of its release tag. |
+
 ### `stk new`
 
 `stk new [OPTIONS] NAME`
 
-Scaffold a new blueprint module, ending at a page you can open.
+Scaffold a new extension module in the app, ending at a page you can open.
 
 | Option | Description |
 |---|---|
@@ -35,15 +45,13 @@ Show all registered routes with endpoints and methods.
 
 `stk run [OPTIONS]`
 
-Run a local development server.
+Run a local development server (uvicorn, as in production).
 
 | Option | Description |
 |---|---|
-| `--host, -h` | The interface to bind to. |
-| `--port, -p` | The port to bind to. |
-| `--certfile, --cert` | Specify a certificate file to use HTTPS. |
-| `--keyfile, --key` | The key file to use when specifying a certificate. |
-| `--reload, --no-reload` | Enable or disable the reloader |
+| `--host` | The interface to bind to. |
+| `-p, --port` | The port to bind to. |
+| `--reload, --no-reload` | Restart on code changes (default: on when QUART_DEBUG is set). |
 
 ### `stk shell`
 
@@ -61,7 +69,7 @@ Async REPL with the app, a live DB session, and all models loaded.
 
 `stk create-db [OPTIONS]`
 
-Apply all database migrations.
+Apply all database migrations (same as `stk db upgrade`).
 
 ### `stk db check`
 
@@ -91,12 +99,13 @@ Show migration history.
 
 `stk db revision [OPTIONS]`
 
-Create a new migration revision.
+Create a migration revision in the app's own lineage.
 
 | Option | Description |
 |---|---|
 | `-m, --message` | Revision message |
 | `--autogenerate, --empty` | Autogenerate from model metadata or create an empty revision |
+| `--head` | Extend this head instead of the app's lineage (stk@head for core). |
 
 ### `stk db stamp`
 
@@ -108,7 +117,7 @@ Stamp a database with a revision without running migrations.
 
 `stk db upgrade [OPTIONS] [REVISION]`
 
-Upgrade the database to a target revision.
+Upgrade the database: stk's migrations and the app's, to their heads.
 
 ## Verify
 

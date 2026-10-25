@@ -7,13 +7,12 @@ from uuid import uuid4
 
 import click
 from email_validator import EmailNotValidError, validate_email
-from quart.cli import ScriptInfo
 from quart_security import hash_password
 from sqlalchemy import select
 
 import stk.extensions as ext
 from stk.agent_login import create_agent_login_token
-from stk.cli.base import console, run_async
+from stk.cli.base import cli_app, console, run_async
 from stk.user.models import User
 
 
@@ -36,9 +35,7 @@ def browser_token():
 @click.option("--next", "next_path", default="/dashboard/", help="Local redirect path.")
 def browser_token_create(email, ttl, next_path):
     """Create a signed test-only browser login URL."""
-    from stk.app import create_app
-
-    app = create_app()
+    app = cli_app()
     if ttl > app.config["STK_AGENT_LOGIN_MAX_TTL_SECONDS"]:
         raise click.ClickException("ttl exceeds STK_AGENT_LOGIN_MAX_TTL_SECONDS")
     if not app.config["STK_ENABLE_AGENT_LOGIN"]:
@@ -57,7 +54,7 @@ def browser_token_create(email, ttl, next_path):
 @click.option("-p", "--password", default=None, help="Admin password")
 def install(email, password):
     """Install a default admin user and add an admin role to it."""
-    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
+    app = cli_app()
 
     async def _run():
         from stk.user.models import Role
@@ -123,7 +120,7 @@ def install(email, password):
 def create(email, password):
     """Creates a user using an email."""
     _check_email(email)
-    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
+    app = cli_app()
 
     async def _run():
         async with ext.async_session_factory() as session:
@@ -192,7 +189,7 @@ def add_role(email, role):
 @click.option("-p", "--password", hide_input=True, prompt=True, default=None)
 def reset(email, password):
     """Reset a user password using email"""
-    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
+    app = cli_app()
     try:
         pwd = hash_password(password, app=app)
 
@@ -237,7 +234,7 @@ def protect_mfa():
     from quart_security.totp import encrypt_totp_secret
     from sqlalchemy import update
 
-    app = click.get_current_context().ensure_object(ScriptInfo).load_app()
+    app = cli_app()
 
     async def _run():
         count = 0
