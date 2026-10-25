@@ -17,6 +17,22 @@ description: "Every environment variable stk reads, and the app config values be
 | `SQLALCHEMY_DATABASE_URI` | SQLite at `instance/stk.db`, beside the app package | Use `postgresql+asyncpg://...` for PostgreSQL; plain `postgresql://` will not work. |
 | `REDIS_URL` | unset | Stores sessions in Redis when the `full` extra is installed. `REDIS_SESSION` is read as a legacy alias. |
 
+### Paths in the app's settings
+
+`Config` has no project root setting. Build a path from the settings file itself:
+
+```python
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent  # beside the app package
+
+
+class Config(stk.Config):
+    BLOB_DIR = os.environ.get("BLOB_DIR", str(PROJECT_ROOT / "instance" / "blobs"))
+```
+
+At runtime the app knows both: `app.root_path` is the app package and `app.instance_path` is `instance/` beside it, where the default SQLite database lives.
+
 ## Branding
 
 | Variable | Default | Purpose |
