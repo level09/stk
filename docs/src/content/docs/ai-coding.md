@@ -18,6 +18,8 @@ uv run stk new invoice               # The canonical CRUD module, as code
 
 **2. These docs explain everything else**, and they ship inside the repo at `docs/src/content/docs/`. An agent reads the version that matches the code it is editing, straight from disk. The same files build this site, `/llms.txt`, and a Markdown copy of every page (`/frontend.md`), so a human, a browser agent, and a coding agent all read one source.
 
+The same pages are served over MCP at `https://mcp.stkit.dev/mcp` (Streamable HTTP, no auth) with three read-only tools: `search_docs`, `get_page`, and `get_command`. The server lives in `mcp/` and rebuilds its content from these files on every test and deploy. Connect it with `claude mcp add --transport http stk-docs https://mcp.stkit.dev/mcp` or `codex mcp add stk-docs --url https://mcp.stkit.dev/mcp`.
+
 **3. `AGENTS.md` is the index.** It is short on purpose: what stk is, the rules that fail silently, and a table mapping each task to its docs page. It is always in the agent's context, so the agent knows which page to open without having to remember to look. `CLAUDE.md` is the same file, for agents that read that name.
 
 Skills hold procedures, not facts. Each `SKILL.md` in `.claude/skills/` (mirrored at `.agents/skills/`) is a step-by-step workflow an agent loads when the task matches, and links to the docs for the why:

@@ -1,0 +1,28 @@
+{
+  "name": "stk-docs-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "content": "node build-content.mjs",
+    "predev": "node build-content.mjs",
+    "dev": "wrangler dev",
+    "predeploy": "node build-content.mjs",
+    "deploy": "wrangler deploy",
+    "pretest": "node build-content.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "agents": "0.30.1",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.7",
+    "@modelcontextprotocol/server": "2.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "5.20260731.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11",
+    "wrangler": "4.147.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stk-docs-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "mcp.stkit.dev", "custom_domain": true }],
+  "rules": [{ "type": "Text", "globs": ["**/*.md", "**/*.txt"], "fallthrough": true }],
+  "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 60, "period": 60 } }],
+  "observability": { "enabled": false }
+}
