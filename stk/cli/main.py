@@ -1,16 +1,22 @@
 """The `stk` command: one entry point for the whole framework.
 
-Wraps Quart's own CLI group, so `stk run`, `stk routes`, and every command
-registered in `stk/cli/__init__.py` are available without setting QUART_APP.
+Wraps Quart's own CLI group. Every command in `stk/cli/__init__.py` lives on
+this group, so commands that need no app (`stk init`) run anywhere. The app is
+found from `[tool.stk] app` in the nearest pyproject.toml, or from STK_APP, and
+commands it registers (`app.cli.add_command`) appear here too.
 """
 
+import inspect
 from importlib.metadata import version
 
 import click
 from quart.cli import QuartGroup
 
+import stk.cli as cli
+from stk.cli.base import load_app
+
 SECTIONS = [
-    ("Develop", ["run", "shell", "new", "routes"]),
+    ("Develop", ["init", "run", "shell", "new", "routes"]),
     ("Database", ["db", "create-db"]),
     ("Verify", ["doctor", "verify", "smoke", "inspect", "report"]),
     (
@@ -59,9 +65,7 @@ class StkGroup(QuartGroup):
 
 
 def _create_app(**_kwargs):
-    from stk.app import create_app
-
-    return create_app()
+    return load_app()
 
 
 def _print_version(ctx, _param, value):
@@ -91,3 +95,7 @@ main = StkGroup(
     ],
     context_settings={"help_option_names": ["-h", "--help"]},
 )
+
+for _name, _command in inspect.getmembers(cli):
+    if isinstance(_command, click.Command):
+        main.add_command(_command)

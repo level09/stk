@@ -2,13 +2,13 @@ import importlib.util
 import os
 from datetime import timedelta
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 # Detect optional dependencies (installed via --extra full)
 REDIS_AVAILABLE = importlib.util.find_spec("redis") is not None
 
-os_env = os.environ
-load_dotenv()
+# The app's .env, found from the working directory: stk itself may live in site-packages.
+load_dotenv(find_dotenv(usecwd=True))
 
 # Session configuration - computed at module level
 _redis_url = os.environ.get("REDIS_URL") or os.environ.get("REDIS_SESSION")
@@ -20,21 +20,15 @@ else:
 
 
 class Config:
+    # Checked when the app is built, so importing stk needs no environment.
     SECRET_KEY = os.environ.get("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable is required")
     # Product name and sign-in copy; apps set these instead of editing templates
     APP_NAME = os.environ.get("APP_NAME", "stk")
     APP_TAGLINE = os.environ.get("APP_TAGLINE", "Secure. Scalable. Swift.")
     APP_DESCRIPTION = os.environ.get("APP_DESCRIPTION", "")
-    APP_DIR = os.path.abspath(os.path.dirname(__file__))  # This directory
-    PROJECT_ROOT = os.path.abspath(os.path.join(APP_DIR, os.pardir))
 
-    # Database - default to async SQLite in instance folder
-    _default_db = (
-        f"sqlite+aiosqlite:///{os.path.join(PROJECT_ROOT, 'instance', 'stk.db')}"
-    )
-    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", _default_db)
+    # Unset means SQLite at instance/stk.db, next to the app's package.
+    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
 
     STK_PUBLIC_URL = os.environ.get("STK_PUBLIC_URL")
 
@@ -48,8 +42,6 @@ class Config:
     SECURITY_TRACKABLE = True
     SECURITY_PASSWORD_HASH = "argon2"
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
-    if not SECURITY_PASSWORD_SALT:
-        raise ValueError("SECURITY_PASSWORD_SALT environment variable is required")
     # quart-security handles email normalization internally
 
     SECURITY_POST_LOGIN_VIEW = "/dashboard"

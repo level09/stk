@@ -22,9 +22,10 @@ hero:
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ```bash
-git clone git@github.com:level09/stk.git && cd stk && ./setup.sh
+uvx --from git+https://github.com/level09/stk stk init myapp && cd myapp
+uv run stk db upgrade        # stk's migrations, then the app's
 uv run stk doctor            # am I ready? every problem names its fix
-uv run stk new invoice       # model, API, page, and migration, ending at a URL
+uv run stk new invoice       # an extension: model, API, page, migration, at a URL
 uv run stk verify --watch    # lint, sanity, migration drift on every save
 uv run stk smoke             # a real browser, before you ship
 ```
@@ -47,7 +48,7 @@ uv run stk smoke             # a real browser, before you ship
 ## Start here
 
 <CardGrid>
-	<LinkCard title="Quick start" description="Clone, set up, and sign in" href="/getting-started/" />
+	<LinkCard title="Quick start" description="Start an app and sign in" href="/getting-started/" />
 	<LinkCard title="The build loop" description="doctor, scaffold, watch, smoke" href="/build-loop/" />
 	<LinkCard title="Working with agents" description="How agents find the truth, and how it stays true" href="/ai-coding/" />
 	<LinkCard title="Deployment" description="One command to a hardened VPS, or Docker" href="/deployment/" />

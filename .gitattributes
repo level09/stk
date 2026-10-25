@@ -1,8 +1,0 @@
-# Apps built on stk merge framework releases (docs: Deployment, "Upgrading an app
-# built on stk"). These files belong to the app, so a merge keeps the app's copy once
-# `git config merge.ours.driver true` is set in the clone.
-README.md merge=ours
-CHANGELOG.md merge=ours
-uv.lock merge=ours
-stk/templates/_brand.html merge=ours
-stk/static/img/favicon.ico merge=ours

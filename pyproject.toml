@@ -1,6 +1,6 @@
 [project]
 name = "stk"
-version = "16.4.1"
+version = "17.0.0"
 description = "An async Quart framework optimized for AI-assisted development workflows"
 authors = [
     {name = "Level09", email = "hello@level09.com"}
@@ -42,10 +42,6 @@ dependencies = [
 [project.scripts]
 stk = "stk.cli.main:main"
 
-# Overrides Quart's built-in `shell` (plugin commands win over built-ins).
-[project.entry-points."quart.commands"]
-shell = "stk.cli:shell"
-
 [project.optional-dependencies]
 full = [
     "asyncpg>=0.30.0",
@@ -60,6 +56,11 @@ dev = [
 asgi = [
     "hypercorn>=0.17.0",
 ]
+
+# The bundled example app, so stk's own repository runs as an app.
+[tool.stk]
+app = "minimal.app:app"
+path = "examples/minimal"
 
 [build-system]
 requires = ["hatchling"]
@@ -91,7 +92,6 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"alembic/versions/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["stk"]

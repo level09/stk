@@ -1,4 +1,4 @@
-"""Click commands, grouped by concern. `register_commands` registers everything here."""
+"""Click commands, grouped by concern. `stk.cli.main` registers everything here."""
 
 from stk.cli.agent import (
     doctor_cmd,
@@ -14,6 +14,7 @@ from stk.cli.database import (
     create_db,
     db,
 )
+from stk.cli.develop import init, run
 from stk.cli.users import (
     add_role,
     browser_token,
@@ -33,12 +34,14 @@ __all__ = [
     "create_db",
     "db",
     "doctor_cmd",
+    "init",
     "inspect_cmd",
     "install",
     "new_module",
     "protect_mfa",
     "report",
     "reset",
+    "run",
     "run_async",
     "shell",
     "smoke",

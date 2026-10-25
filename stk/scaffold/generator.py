@@ -1,47 +1,59 @@
 """Filesystem operations for the scaffolder.
 
-generate_module() is the single entry point -- it writes files and patches
-app.py + navigation.js. All path logic is centralised here.
+generate_app() writes a new app package (`stk init`); generate_module() writes
+an extension into an existing app and adds it to the app's extension list
+(`stk new`). Neither touches stk's own files.
 """
 
+import os
 import re
+import secrets
+import shutil
+import sys
 from pathlib import Path
 
+import stk
 from stk.scaffold.templates import (
-    render_app_import,
-    render_app_register,
     render_init,
     render_models,
-    render_nav_entry,
     render_template_html,
     render_views,
 )
+
+APP_TEMPLATE = Path(__file__).parent / "app"
+# Template files stored without a leading dot, so packaging never drops them.
+DOTFILES = {
+    "gitignore": ".gitignore",
+    "dockerignore": ".dockerignore",
+    "env-sample": ".env-sample",
+}
 
 # Names that conflict with existing blueprints, SQLAlchemy reserved words, or
 # Python builtins that would make imports ambiguous.
 RESERVED = frozenset(
     {
         "user",
+        "users",
         "role",
         "public",
         "portal",
         "websocket",
+        "ws",
         "activity",
         "session",
+        "security",
         "oauth",
         "webauthn",
         "admin",
         "static",
+        "templates",
+        "migrations",
         "api",
+        "app",
+        "stk",
         "test",
         "tests",
-        "scaffold",
-        "extensions",
-        "commands",
-        "migrations",
         "settings",
-        "tasks",
-        "utils",
         # Python builtins
         "type",
         "list",
@@ -60,13 +72,6 @@ RESERVED = frozenset(
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
-# Markers used for idempotent text insertion into app.py
-_IMPORT_ANCHOR = "from stk.websocket import ws_bp\n"
-_REGISTER_ANCHOR = "    app.register_blueprint(ws_bp)\n"
-
-# Marker used for navigation.js insertion
-_NAV_ANCHOR = "  {\n    title: 'Activity Logs',"
-
 
 def validate_name(name: str) -> None:
     """Raise ValueError with a clear message if name is invalid."""
@@ -79,103 +84,123 @@ def validate_name(name: str) -> None:
         raise ValueError(f"Name '{name}' is reserved. Choose a different name.")
 
 
-def _project_root() -> Path:
-    """Return the project root (parent of the stk package)."""
-    return Path(__file__).resolve().parent.parent.parent
+def _local_source(target: Path, source: str) -> str:
+    """The `[tool.uv.sources]` entry that installs stk from a local path."""
+    path = Path(source).resolve()
+    if not path.exists():
+        raise ValueError(f"--source {source} does not exist")
+    relative = Path(os.path.relpath(path, target)).as_posix()
+    editable = ", editable = true" if path.is_dir() else ""
+    return f'stk = {{ path = "{relative}"{editable} }}'
 
 
-def scaffold_paths(name: str, root: Path | None = None) -> dict[str, Path]:
-    """Return a dict of {key: absolute Path} for all generated files."""
-    r = root or _project_root()
-    return {
-        "pkg_init": r / "stk" / name / "__init__.py",
-        "pkg_models": r / "stk" / name / "models.py",
-        "pkg_views": r / "stk" / name / "views.py",
-        "template": r / "stk" / "templates" / "cms" / f"{name}.html",
-        "app_py": r / "stk" / "app.py",
-        "nav_js": r / "stk" / "static" / "js" / "navigation.js",
-    }
+def _env(sample: str) -> str:
+    """A development .env from the sample, with fresh secrets."""
+    for key in ("SECRET_KEY", "SECURITY_PASSWORD_SALT"):
+        sample = sample.replace(
+            f"\n{key}=\n", f'\n{key}="{secrets.token_urlsafe(32)}"\n'
+        )
+    return sample
 
 
-def generate_module(name: str, root: Path | None = None) -> list[str]:
-    """Write all scaffold files and patch app.py + navigation.js.
-
-    Returns a list of human-readable action strings for the checklist.
-
-    Raises ValueError on invalid name or FileExistsError if blueprint dir exists.
-    """
+def generate_app(name: str, target: Path, source: str | None = None) -> list[str]:
+    """Write a new app package at `target` from the app template."""
     validate_name(name)
+    if target.exists():
+        raise FileExistsError(f"{target} already exists. Choose another directory.")
 
-    r = root or _project_root()
-    paths = scaffold_paths(name, r)
+    major = int(stk.__version__.split(".")[0])
+    tokens = {
+        "__app__": name,
+        "__App__": name.replace("_", " ").title(),
+        "__stk_version__": stk.__version__,
+        "__stk_next__": str(major + 1),
+    }
+    actions = []
+    for template in sorted(APP_TEMPLATE.rglob("*")):
+        relative = template.relative_to(APP_TEMPLATE)
+        # Tool caches (__pycache__, .ruff_cache) are not part of the template.
+        if template.is_dir() or any(
+            part.startswith((".", "__pycache__")) for part in relative.parts
+        ):
+            continue
+        parts = [
+            DOTFILES.get(part, part).replace("__app__", name) for part in relative.parts
+        ]
+        path = target.joinpath(*parts)
+        text = template.read_text()
+        for token, value in tokens.items():
+            text = text.replace(token, value)
+        if source is not None and parts == ["pyproject.toml"]:
+            text = re.sub(
+                r"^stk = \{ git = .*$", _local_source(target, source), text, flags=re.M
+            )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        shutil.copymode(template, path)
+        actions.append(f"created {path.relative_to(target.parent)}")
 
-    pkg_dir = paths["pkg_init"].parent
-    if pkg_dir.exists():
-        raise FileExistsError(
-            f"Blueprint directory {pkg_dir} already exists. Remove it first."
+    (target / ".env").write_text(_env((target / ".env-sample").read_text()))
+    actions.append(
+        f"created {(target / '.env').relative_to(target.parent)} (fresh secrets)"
+    )
+    return actions
+
+
+def _add_extension(source: str, package: str, name: str) -> str:
+    """Import `name` in the app module and append it to `extensions = [...]`."""
+    listing = re.search(r"^extensions = \[([^\]]*)\]", source, re.M)
+    if listing is None:
+        raise RuntimeError(
+            f"no `extensions = [...]` line in the app module. Add {package}.{name} "
+            "to the list you pass to Stk(extensions=...) by hand."
         )
+    items = [item.strip() for item in listing.group(1).split(",") if item.strip()]
+    if name not in items:
+        items.append(name)
+    source = source.replace(listing.group(0), f"extensions = [{', '.join(items)}]")
 
-    actions: list[str] = []
-
-    # 1. Blueprint package
-    pkg_dir.mkdir(parents=True)
-    paths["pkg_init"].write_text(render_init(name))
-    actions.append(f"created {paths['pkg_init'].relative_to(r)}")
-
-    paths["pkg_models"].write_text(render_models(name))
-    actions.append(f"created {paths['pkg_models'].relative_to(r)}")
-
-    paths["pkg_views"].write_text(render_views(name))
-    actions.append(f"created {paths['pkg_views'].relative_to(r)}")
-
-    # 2. Template
-    paths["template"].parent.mkdir(parents=True, exist_ok=True)
-    paths["template"].write_text(render_template_html(name))
-    actions.append(f"created {paths['template'].relative_to(r)}")
-
-    # 3. Patch app.py (import + register)
-    app_text = paths["app_py"].read_text()
-    import_line = render_app_import(name)
-    register_line = render_app_register(name)
-
-    if import_line not in app_text:
-        if _IMPORT_ANCHOR not in app_text:
-            raise RuntimeError(
-                f"Could not find import anchor '{_IMPORT_ANCHOR.strip()}' in app.py. "
-                "Patch app.py manually."
-            )
-        app_text = app_text.replace(_IMPORT_ANCHOR, _IMPORT_ANCHOR + import_line)
-        actions.append(f"patched stk/app.py: added import for bp_{name}")
-    else:
-        actions.append("stk/app.py import already present (idempotent)")
-
-    if register_line not in app_text:
-        if _REGISTER_ANCHOR not in app_text:
-            raise RuntimeError(
-                "Could not find register anchor in app.py. Patch register_blueprints() manually."
-            )
-        app_text = app_text.replace(_REGISTER_ANCHOR, _REGISTER_ANCHOR + register_line)
-        actions.append(f"patched stk/app.py: registered bp_{name}")
-    else:
-        actions.append("stk/app.py register already present (idempotent)")
-
-    paths["app_py"].write_text(app_text)
-
-    # 4. Patch navigation.js
-    nav_text = paths["nav_js"].read_text()
-    nav_entry = render_nav_entry(name)
-
-    if f"to: '/{name}s'" not in nav_text:
-        if _NAV_ANCHOR not in nav_text:
-            raise RuntimeError(
-                f"Could not find navigation anchor in navigation.js. Add the nav entry manually:\n{nav_entry}"
-            )
-        nav_text = nav_text.replace(_NAV_ANCHOR, nav_entry + _NAV_ANCHOR)
-        paths["nav_js"].write_text(nav_text)
-        actions.append(
-            f"patched stk/static/js/navigation.js: added nav entry for {name}"
+    imports = re.search(rf"^from {package} import ([\w, ]+)$", source, re.M)
+    if imports:
+        names = sorted({*imports.group(1).split(", "), name})
+        return source.replace(
+            imports.group(0), f"from {package} import {', '.join(names)}"
         )
-    else:
-        actions.append("navigation.js entry already present (idempotent)")
+    anchor = re.search(rf"^from {package}\.", source, re.M)
+    if anchor is None:
+        raise RuntimeError(f"add `from {package} import {name}` to the app module")
+    return (
+        source[: anchor.start()]
+        + f"from {package} import {name}\n"
+        + source[anchor.start() :]
+    )
 
+
+def generate_module(name: str, app) -> list[str]:
+    """Write an extension package into the app and add it to the app's list."""
+    validate_name(name)
+    root = Path(app.root_path)
+    package = app.import_name.split(".")[0]
+    app_module = Path(sys.modules[app.import_name].__file__)
+    module = root / name
+    if module.exists():
+        raise FileExistsError(f"{module} already exists. Remove it first.")
+
+    files = {
+        module / "__init__.py": render_init(name, package),
+        module / "models.py": render_models(name),
+        module / "views.py": render_views(name, package),
+        module / "templates" / name / "index.html": render_template_html(name),
+    }
+    project = root.parent
+    actions = []
+    for path, text in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        actions.append(f"created {path.relative_to(project)}")
+
+    app_module.write_text(_add_extension(app_module.read_text(), package, name))
+    actions.append(
+        f"added {name} to the extensions in {app_module.relative_to(project)}"
+    )
     return actions

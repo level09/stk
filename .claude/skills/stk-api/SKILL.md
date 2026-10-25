@@ -10,10 +10,10 @@ argument-hint: "[ModelName]"
 ## Current state
 
 Models available:
-!`grep -rn "class.*Base" stk/*/models.py 2>/dev/null`
+!`grep -rn "class.*Base" */*/models.py 2>/dev/null`
 
 Existing API routes:
-!`grep -rn "@bp\.\(get\|post\|put\|delete\|patch\)\|@bp\.route" stk/*/views.py 2>/dev/null | head -30`
+!`grep -rn "@bp_[a-z_]*\.\(get\|post\|put\|delete\|patch\|route\)" */*/views.py 2>/dev/null | head -30`
 
 ## Steps
 
@@ -44,7 +44,7 @@ Existing API routes:
    ```python
    @bp.get("/<plural>/")
    async def <plural>_page():
-       return await render_template("cms/<plural>.html")
+       return await render_template("<name>/index.html")
    ```
 
 7. **Verify:**

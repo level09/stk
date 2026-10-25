@@ -4,13 +4,13 @@ import unittest
 
 from quart import url_for
 
-from stk.app import create_app
+from stk.app import Stk
 from stk.settings import TestingConfig
 
 
 class StaticVersioningTests(unittest.IsolatedAsyncioTestCase):
     async def test_versioned_static_is_immutable_and_bare_static_revalidates(self):
-        app = create_app(TestingConfig)
+        app = Stk(__name__, config=TestingConfig)
         async with app.test_request_context("/"):
             url = url_for("static", filename="js/config.js")
         self.assertRegex(url, r"^/static/js/config\.js\?v=[0-9a-f]{12}$")

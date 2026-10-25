@@ -26,9 +26,10 @@ uv run stk doctor
 
 ```
 ✓ env file       .env
+✓ app            myapp.app:app
 ✓ secrets        SECRET_KEY and password salt look random
 ✓ database       sqlite stk.db (124 KiB)
-! migrations     database at 20261006_0001, head is 20261006_0002
+! migrations     database is behind: stk_0002 not applied
     → uv run stk db upgrade
 ✓ admin user     1 admin(s)
 ✓ assets         vue 3.5.40 vuetify 4.1.6
@@ -49,10 +50,11 @@ Every line that is not `✓` tells you the command that fixes it. A `!` is a war
 uv run stk new invoice
 ```
 
-`NAME` is a lowercase snake_case identifier. This writes the blueprint package (model
-and views) and its template, registers it in `app.py`, adds a sidebar entry to
-`navigation.js`, generates the migration for the new model, applies it, and then tells
-you where to look:
+`NAME` is a lowercase snake_case identifier. This writes an extension package into your
+app (`myapp/invoice/`: model, views, template, and an `init_app` that registers the
+blueprint and its sidebar entry), adds it to `extensions` in `myapp/app.py`, generates
+the migration for the new model in the app's lineage, applies it, and then tells you
+where to look. It never touches stk's files:
 
 ```
 Open: http://localhost:5000/invoices/  (start it with: stk run)
@@ -72,7 +74,7 @@ can break. A `.py` edit re-runs ruff, the sanity checks, and migration drift; a 
 JS, or CSS edit re-runs only the sanity checks.
 
 ```
-changed: stk/invoice/models.py
+changed: myapp/invoice/models.py
 ✗ migration-drift
     add_column: invoice due_date
     → uv run stk db revision -m "describe change" && uv run stk db upgrade
@@ -106,7 +108,7 @@ uv run stk verify && uv run stk smoke
 uv run stk report          # docs/stk-report.html: routes, auth, gate results
 ```
 
-`stk verify` runs ruff, `checks.py`, and migration drift, and exits `1` if any fail.
+`stk verify` runs ruff, the sanity checks in `stk/checks.py` against your app, and migration drift, and exits `1` if any fail.
 CI runs both `stk verify --json` and `stk smoke --json` (after the unit tests), so the
 pair above is the same gate locally. `stk report --json` prints the routes and verify
 results instead of writing HTML, and `-o` picks another output path.

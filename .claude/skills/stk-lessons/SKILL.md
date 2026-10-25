@@ -28,14 +28,14 @@ most three per run. Append and continue the task; never stop it to log.
 Input: `.stk/lessons.md`, or the path the user gives.
 
 1. **Drop what is covered.** Search `docs/src/content/docs/`, `CLAUDE.md`, the skills, and
-   `checks.py`. A lesson that recurs despite an existing rule means the rule sits too low:
+   `stk/checks.py`. A lesson that recurs despite an existing rule means the rule sits too low:
    move it up the ladder below instead of repeating it.
 2. **Drop one-offs**: a single occurrence with no general cause.
 3. **Confirm in code.** Reproduce it, or point at the line that allows it. Leave an
    unconfirmed lesson in the inbox with `unconfirmed` appended.
 4. **Route** each survivor to the highest home that holds:
    1. a code default that makes the mistake impossible
-   2. a check in `checks.py`, so `stk verify` fails on it
+   2. a check in `stk/checks.py`, so `stk verify` fails on it
    3. a hint in `stk/cli/doctor.py`, so `stk doctor` names it with its fix
    4. one line on the docs page for its topic
    5. a step in the skill for that workflow

@@ -1,0 +1,26 @@
+[project]
+name = "__app__"
+version = "0.1.0"
+description = "__App__, built on stk"
+requires-python = ">=3.11"
+dependencies = ["stk>=__stk_version__,<__stk_next__"]
+
+[project.optional-dependencies]
+full = ["stk[full]"]  # PostgreSQL and Redis
+
+[dependency-groups]
+dev = ["stk[dev]"]
+
+[tool.uv.sources]
+stk = { git = "https://github.com/level09/stk", tag = "v__stk_version__" }
+
+[tool.stk]
+app = "__app__.app:app"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501", "B008"]

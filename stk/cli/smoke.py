@@ -6,7 +6,6 @@ import secrets
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -14,7 +13,7 @@ import click
 import httpx
 
 from stk.agent_login import create_agent_login_token
-from stk.cli.base import run_async
+from stk.cli.base import cli_app, run_async
 
 SMOKE_EMAIL = "smoke@example.com"
 SMOKE_PASSWORD = "SmokePassword123!"
@@ -164,13 +163,13 @@ def _free_localhost_port():
         return sock.getsockname()[1]
 
 
-def _smoke_env(database_path):
+def _smoke_env(database_uri):
     env = os.environ.copy()
     env.update(
         {
             "SECRET_KEY": secrets.token_urlsafe(32),
             "SECURITY_PASSWORD_SALT": secrets.token_urlsafe(32),
-            "SQLALCHEMY_DATABASE_URI": f"sqlite+aiosqlite:///{database_path}",
+            "SQLALCHEMY_DATABASE_URI": database_uri,
             "STK_ENV": "development",
             "STK_ENABLE_AGENT_LOGIN": "true",
             "SESSION_COOKIE_SECURE": "False",
@@ -210,23 +209,14 @@ def _run_smoke_setup(env):
             )
 
 
-def _prepare_smoke(database_uri, secret_key, password_salt):
+def _prepare_smoke(app, secret_key):
     """Return an agent login token and the extra page paths to visit."""
-    from stk.app import create_app
     from stk.cli.reports import build_routes_report
-    from stk.settings import Config
-
-    class SmokeConfig(Config):
-        SECRET_KEY = secret_key
-        SECURITY_PASSWORD_SALT = password_salt
-        SQLALCHEMY_DATABASE_URI = database_uri
-        SESSION_TYPE = None
-        STK_ENV = "development"
-        STK_ENABLE_AGENT_LOGIN = True
 
     async def _create_token():
-        app = create_app(SmokeConfig)
         async with app.app_context():
+            # Signed with the key the smoke server runs with, not the app's own.
+            app.config["SECRET_KEY"] = secret_key
             token = create_agent_login_token(SMOKE_EMAIL, "/dashboard/")
         skip = machine_paths(app) | set(app.config.get("STK_SMOKE_SKIP", ()))
         paths = discover_smoke_paths(build_routes_report(app), skip)
@@ -246,6 +236,7 @@ def _start_smoke_server(port, env):
             "127.0.0.1",
             "--port",
             str(port),
+            "--no-reload",
         ],
         env=env,
         stdout=subprocess.PIPE,
@@ -372,16 +363,14 @@ async def _run_playwright_smoke(base_url, token, extra_paths):
 
 def run_smoke():
     """Boot a throwaway app on a free port and drive it with a real browser."""
-    with tempfile.TemporaryDirectory(prefix="stk-smoke-") as temp_dir:
-        database_path = Path(temp_dir) / "smoke.db"
-        env = _smoke_env(database_path)
+    from stk.migrations import throwaway_database_url
+
+    app = cli_app()
+    with throwaway_database_url(app.config["SQLALCHEMY_DATABASE_URI"]) as database_uri:
+        env = _smoke_env(database_uri)
         _run_smoke_setup(env)
 
-        token, extra_paths = _prepare_smoke(
-            env["SQLALCHEMY_DATABASE_URI"],
-            env["SECRET_KEY"],
-            env["SECURITY_PASSWORD_SALT"],
-        )
+        token, extra_paths = _prepare_smoke(app, env["SECRET_KEY"])
         port = _free_localhost_port()
         base_url = f"http://127.0.0.1:{port}"
         server = _start_smoke_server(port, env)

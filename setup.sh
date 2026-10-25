@@ -64,24 +64,11 @@ generate_secure_string() {
     fi
 }
 
-# Check if .env-sample exists
-if [ ! -f .env-sample ]; then
-    echo -e "${RED}Error: .env-sample file not found${NC}"
+# The env sample ships with the app template
+ENV_SAMPLE=stk/scaffold/app/env-sample
+if [ ! -f "$ENV_SAMPLE" ]; then
+    echo -e "${RED}Error: $ENV_SAMPLE not found${NC}"
     exit 1
-fi
-
-# Ask about Docker configuration; non-interactive runs default to no.
-REPLY=n
-if [ -t 0 ]; then
-    read -p "Would you like to configure Docker settings? (y/N) " -n 1 -r
-    echo
-fi
-DOCKER_CONFIG=false
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    DOCKER_CONFIG=true
-    echo -e "${GREEN}Docker configuration will be included.${NC}"
-else
-    echo -e "${YELLOW}Skipping Docker configuration.${NC}"
 fi
 
 # Check if .env already exists
@@ -105,17 +92,14 @@ if [ -f .env ]; then
 fi
 
 # Copy the sample file
-if ! cp .env-sample .env; then
-    echo -e "${RED}Error: Failed to copy .env-sample to .env${NC}"
+if ! cp "$ENV_SAMPLE" .env; then
+    echo -e "${RED}Error: Failed to copy $ENV_SAMPLE to .env${NC}"
     exit 1
 fi
 
 # Generate secure random values
 SECRET_KEY=$(generate_secure_string 32)
 PASSWORD_SALT=$(generate_secure_string 32)
-REDIS_PASSWORD=$(generate_secure_string 20)
-DB_PASSWORD=$(generate_secure_string 20)
-DOCKER_UID=$(id -u)
 
 # Validate generated values
 if [ -z "$SECRET_KEY" ] || [ -z "$PASSWORD_SALT" ]; then
@@ -124,8 +108,7 @@ if [ -z "$SECRET_KEY" ] || [ -z "$PASSWORD_SALT" ]; then
 fi
 
 # Process the .env file
-if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
-       -v docker="$DOCKER_CONFIG" -v rpass="$REDIS_PASSWORD" -v dbpass="$DB_PASSWORD" -v uid="$DOCKER_UID" '
+if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" '
 {
     if ($0 ~ /^SECRET_KEY=/) {
         print "SECRET_KEY=\"" sk "\""
@@ -136,23 +119,6 @@ if ! awk -v sk="$SECRET_KEY" -v ps="$PASSWORD_SALT" \
     else if ($0 ~ /^SQLALCHEMY_DATABASE_URI=/) {
         # Skip - use default from settings.py (instance/stk.db)
         next
-    }
-    else if (docker == "true" && $0 ~ /^#REDIS_PASSWORD=/) {
-        print "REDIS_PASSWORD=" rpass
-    }
-    else if (docker == "true" && $0 ~ /^#DB_PASSWORD=/) {
-        print "DB_PASSWORD=" dbpass
-    }
-    else if (docker == "true" && $0 ~ /^#SQLALCHEMY_DATABASE_URI=postgresql/) {
-        print "SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://stk:${DB_PASSWORD}@postgres/stk"
-    }
-    else if (docker == "true" && $0 ~ /^#REDIS_SESSION=/) {
-        print "REDIS_SESSION=redis://:${REDIS_PASSWORD}@redis:6379/1"
-    }
-    else if (docker == "true" && $0 ~ /^# Docker-specific settings/) {
-        print "# Docker-specific settings"
-        print "DOCKER_UID=" uid
-        print
     }
     else {
         print $0
@@ -176,19 +142,7 @@ fi
 
 echo -e "${GREEN}Successfully generated .env file with secure keys${NC}"
 echo -e "${GREEN}Generated secure values for: SECRET_KEY, SECURITY_PASSWORD_SALT${NC}"
-if [ "$DOCKER_CONFIG" = true ]; then
-    echo -e "${GREEN}Docker configuration enabled with secure passwords for Redis and PostgreSQL${NC}"
-fi
-# Create instance directory for SQLite database
-mkdir -p instance
-
-# Create .quartenv for Quart CLI auto-loading
-cat > .quartenv << 'EOF'
-QUART_APP=run.py
-QUART_DEBUG=1
-EOF
-echo -e "${GREEN}Created .quartenv for Quart CLI${NC}"
-echo -e "${GREEN}SQLite database will be created at: instance/stk.db${NC}"
+echo -e "${GREEN}The bundled example app keeps its SQLite database in examples/minimal/instance/stk.db${NC}"
 echo
 echo -e "${GREEN}Next steps:${NC}"
 echo -e "1. Update the remaining values in your .env file (mail settings, etc.)"

@@ -11,7 +11,7 @@ There are three ways to deploy: the one-command VPS script, Docker Compose, or a
 
 ## Production requirements
 
-Set these in `.env` before the app serves real traffic. `./setup.sh` writes development values (`QUART_DEBUG=1`, `STK_ENV=development`, `SESSION_COOKIE_SECURE=False`), so change them.
+Set these in `.env` before the app serves real traffic. `stk init` writes development values (`QUART_DEBUG=1`, `STK_ENV=development`, `SESSION_COOKIE_SECURE=False`), so change them.
 
 ```bash
 STK_ENV=production
@@ -40,50 +40,36 @@ uv run stk db upgrade
 uv run stk protect-mfa
 ```
 
-`protect-mfa` encrypts legacy TOTP seeds and rotates existing ones to the current key in one transaction. Version 16 needs the `rate_limit_window` table and version 15 the `quart_security_state` table; `db upgrade` creates both.
+`protect-mfa` encrypts legacy TOTP seeds and rotates existing ones to the current key in one transaction. stk 17 starts a new migration history (one `stk_0001` revision), so it does not upgrade a database created by an earlier version.
 
-## Upgrading an app built on stk
+## Upgrading stk in an app
 
-An app is a git fork of stk and takes framework releases with an ordinary merge: your changes and stk's combine, and only real overlaps conflict. Once per clone:
-
-```bash
-git remote add stk https://github.com/level09/stk.git
-git config merge.ours.driver true    # honours merge=ours in .gitattributes
-```
-
-For each release, on a branch:
+An app depends on stk like any package, so an upgrade touches no app file except the version. Read the release note first: its "Breaking" and "Upgrade considerations" sections list anything a version bump cannot do, such as a server config change. Then, on a branch:
 
 ```bash
-git fetch stk --tags
-git merge <tag>
-uv lock && uv sync && uv run stk db upgrade
-uv run stk verify && uv run stk smoke
+# in pyproject.toml: bump the tag in [tool.uv.sources] and the range in dependencies
+uv sync
+uv run stk db upgrade     # stk's new migrations, then the app's, in one command
+uv run stk verify
+uv run stk smoke
 ```
 
-`.gitattributes` keeps the app's README, CHANGELOG, lockfile, and brand files. Resolve other conflicts by keeping both the app's behavior and the framework's fix, then read stk's release notes (`git show <tag>:CHANGELOG.md`) for steps a merge cannot do, such as server config. Upgrades conflict less when app code lives in its own files instead of edits to framework ones. When both the app and the release add migrations, Alembic reports two heads; join them with one empty merge revision (`uv run alembic merge -m "merge stk <tag>" heads`) before `db upgrade`.
-
-An app copied without stk's history first records the stk commit the copy came from:
-
-```bash
-git merge -s ours --allow-unrelated-histories <commit>
-```
-
-Choose it with care: a merge skips every change up to that commit, so a later guess silently drops fixes. Compare candidates with `git diff --shortstat <commit> HEAD -- stk` and take the closest; between near-ties, prefer the older one, which costs a conflict instead of a lost fix.
+stk's migrations and the app's are separate lineages in one version table, so a release that adds core migrations needs no merge revision. Templates the app overrides keep winning; templates it does not override pick up the release's changes.
 
 ## VPS deploy script
 
 On a fresh Ubuntu 22.04 or 24.04 server:
 
 ```bash
-wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com bash /tmp/deploy.sh
+wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/deploy.sh && sudo DOMAIN=example.com REPO=you/yourapp bash /tmp/deploy.sh
 ```
 
-`deploy.sh` installs Caddy with automatic TLS, uv-managed Python 3.13, a dedicated app user, UFW, fail2ban, and key-only SSH. It generates a production `.env` with fresh secrets and the public URL and WebAuthn values, applies migrations, creates an admin user, and runs uvicorn as a systemd service named after the domain. SQLite is the default; `DB=postgres` adds PostgreSQL, Redis, and the `full` extra. Admin credentials are saved to `/home/<user>/.credentials`.
+`deploy.sh` deploys an app made with `stk init` from its GitHub repository. It installs Caddy with automatic TLS, uv-managed Python 3.13, a dedicated app user, UFW, fail2ban, and key-only SSH. It generates a production `.env` with fresh secrets and the public URL and WebAuthn values, applies migrations, creates an admin user, and runs the app named by `[tool.stk] app` under uvicorn, as a systemd service named after the domain. SQLite is the default; `DB=postgres` adds PostgreSQL, Redis, and the `full` extra. Admin credentials are saved to `/home/<user>/.credentials`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DOMAIN` | (required) | Domain name, or server IP with `SKIP_SSL=true` |
-| `REPO` | `level09/stk` | GitHub repository to deploy |
+| `REPO` | (required) | Your app's GitHub repository, `owner/name` |
 | `BRANCH` | `master` | Branch to deploy |
 | `DB` | `sqlite` | `sqlite` or `postgres` |
 | `ADMIN_EMAIL` | `admin@$DOMAIN` | Admin login email |
@@ -93,7 +79,7 @@ wget -qO /tmp/deploy.sh https://raw.githubusercontent.com/level09/stk/master/dep
 
 `deploy.sh` is install-only. It deletes and re-clones the app directory, and with SQLite the database lives inside it at `instance/stk.db`, so running it again on a live server destroys production data. It also clones over plain HTTPS, so a private repository fails at the clone step: make it public, or clone it yourself with a read-only deploy key first.
 
-Update a deployed app as the app user, in the app directory:
+Commit the app's `uv.lock`: the install syncs from it. Update a deployed app as the app user, in the app directory:
 
 ```bash
 git pull && uv sync --frozen --no-dev && uv run stk db upgrade && sudo systemctl restart <domain>.service
@@ -104,6 +90,8 @@ Add `--extra full` to the sync on a PostgreSQL install, and run `protect-mfa` as
 Check a deploy with `curl -sI https://<domain>/` (expect 200 or a redirect to login) and `systemctl is-active <domain>.service`, then sign in with the saved credentials, create a record, restart the service, and confirm the record is still there.
 
 ## Docker Compose
+
+In the app directory, using the `Dockerfile` and `docker-compose.yml` that `stk init` wrote:
 
 ```bash
 docker compose up --build
@@ -122,25 +110,24 @@ TLS_PRIVATE_KEY=/absolute/path/key.pem
 
 Passwords must be unique and URL-safe because they are embedded in connection URLs. `STK_HOST` is the bare DNS name; Compose derives `https://` URLs from it. The certificate paths must be absolute, valid for that host, and readable by the Nginx container user (`DOCKER_UID`, default 1000). Renew certificates and reload Nginx before they expire.
 
-Only Nginx is published: port 80 redirects to HTTPS on 443. A new PostgreSQL volume gets a separate non-superuser `stk` role for the app. Initialization scripts do not run on an existing volume, so review that role's privileges yourself.
+Only Nginx is published: port 80 redirects to HTTPS on 443. A new PostgreSQL volume gets a separate non-superuser `stk` role for the app, created by the app's `postgres/init-db.sh`. That role cannot create extensions, so add any your migrations need (PostGIS, pgvector) to that script, which runs as the superuser. Initialization scripts do not run on an existing volume, so review that role's privileges yourself.
 
 ## Manual setup
 
 You need Python 3.11+, uv, and a TLS-terminating reverse proxy. PostgreSQL and Redis are optional.
 
 ```bash
-git clone https://github.com/level09/stk.git
-cd stk
-./setup.sh                    # deps and .env with generated secrets
-uv sync --frozen --extra full # only for PostgreSQL or Redis
-# edit .env with the production requirements above
-uv run stk create-db
+git clone https://github.com/you/yourapp.git
+cd yourapp
+uv sync --frozen --no-dev     # add --extra full for PostgreSQL or Redis
+# write .env from .env-sample, with the production requirements above
+uv run stk db upgrade
 uv run stk install
 ```
 
-SQLite works with no configuration and lives in `instance/stk.db`. For PostgreSQL, set `SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname`; the `postgresql://` scheme will not work. For Redis sessions, set `REDIS_URL`.
+SQLite works with no configuration and lives in `instance/stk.db` beside the app package. For PostgreSQL, set `SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname`; the `postgresql://` scheme will not work. For Redis sessions, set `REDIS_URL`.
 
-Run uvicorn under systemd, bound to localhost and trusting forwarded headers only from the local proxy:
+Run uvicorn under systemd, bound to localhost and trusting forwarded headers only from the local proxy. Its target is the `[tool.stk] app` value from the app's `pyproject.toml`:
 
 ```ini
 [Unit]
@@ -149,29 +136,18 @@ After=network.target
 
 [Service]
 User=your_user
-WorkingDirectory=/path/to/stk
-EnvironmentFile=/path/to/stk/.env
-ExecStart=/path/to/stk/.venv/bin/uvicorn run:app --host 127.0.0.1 --port 5000 --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips=127.0.0.1
+WorkingDirectory=/path/to/yourapp
+EnvironmentFile=/path/to/yourapp/.env
+ExecStart=/path/to/yourapp/.venv/bin/uvicorn yourapp.app:app --host 127.0.0.1 --port 5000 --ws-max-size 65536 --ws-max-queue 16 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-The proxy must pass `Host` and `X-Forwarded-Proto`, upgrade WebSocket connections, and can serve `stk/static` directly. With Nginx:
+The proxy must pass `Host` and `X-Forwarded-Proto` and upgrade WebSocket connections. Let it pass `/static/` to the app too: the app serves the app's files before stk's and sets their cache headers by version, which a proxy reading one folder from disk cannot. With Nginx:
 
 ```nginx
-# Versioned static URLs (?v=<hash>) never change content; the rest revalidate.
-map $arg_v $static_expires {
-    '' epoch;
-    default max;
-}
-
-location /static/ {
-    alias /path/to/stk/stk/static/;
-    expires $static_expires;
-}
-
 location / {
     proxy_pass http://127.0.0.1:5000;
     proxy_http_version 1.1;
@@ -183,7 +159,7 @@ location / {
 }
 ```
 
-`$connection_upgrade` needs the `map` block from `nginx/stk.conf`. Use Certbot or your own certificates for TLS.
+`$connection_upgrade` needs the `map` block from the app's `nginx/stk.conf`. Use Certbot or your own certificates for TLS.
 
 ## Troubleshooting
 

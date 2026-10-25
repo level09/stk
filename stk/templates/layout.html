@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config.APP_NAME }}</title>
+    <title>{% block title %}{{ config.APP_NAME }}{% endblock %}</title>
     <meta name="description" content="A framework for the next decade">
     <meta name="author" content="{{ config.APP_NAME }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -194,8 +194,10 @@
 <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
 <script>axios.defaults.headers.common["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;</script>
 
-<!-- Navigation Data -->
-<script src="{{ url_for('static', filename='js/navigation.js') }}"></script>
+<!-- Navigation Data: core entries plus the app's `app.navigation` -->
+{% block navigation %}
+<script>const stkNavigation = {{ stk_navigation() | tojson }};</script>
+{% endblock %}
 
 <!-- stk Components -->
 <script src="{{ url_for('static', filename='js/components/TransitionExpand.js') }}"></script>

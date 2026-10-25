@@ -3,7 +3,7 @@ title: "JSON APIs"
 description: "List and mutation endpoints, error conventions, CSRF, and webhooks"
 ---
 
-`uv run stk new <module>` writes a complete, working set of these endpoints in `stk/<module>/views.py`. Start from that file; this page explains its conventions.
+`uv run stk new <module>` writes a complete, working set of these endpoints in `myapp/<module>/views.py`. Start from that file; this page explains its conventions.
 
 ## List endpoints
 
@@ -59,7 +59,7 @@ async def create_post():
         return {"message": "Error creating post"}, 412
 ```
 
-Responses are `{"message": ...}`: 400 for invalid input, 404 for a missing row, 412 for a failed write. An unhandled exception reaches the global error handler in `app.py`, which rolls back the session and returns JSON for API requests.
+Responses are `{"message": ...}`: 400 for invalid input, 404 for a missing row, 412 for a failed write. An unhandled exception reaches stk's global error handler (`stk/app.py`), which rolls back the session and returns JSON for API requests.
 
 ## Protecting endpoints
 

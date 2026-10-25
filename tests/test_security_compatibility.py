@@ -8,7 +8,7 @@ from quart_security import hash_password
 from sqlalchemy import select
 
 import stk.extensions as ext
-from stk.app import create_app
+from stk.app import Stk
 from stk.settings import TestingConfig
 from stk.user.models import Base, SecurityState, Session, User
 
@@ -19,7 +19,7 @@ class SecurityConfig(TestingConfig):
 
 class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.app = create_app(SecurityConfig)
+        self.app = Stk(__name__, config=SecurityConfig)
         async with ext.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         async with ext.async_session_factory() as db:

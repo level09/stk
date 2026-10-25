@@ -1,12 +1,14 @@
 """Agent-facing commands: inspect, verify, smoke, report, shell, scaffold."""
 
 import json
+import subprocess
+import sys
 import time
 from pathlib import Path
 
 import click
 
-from stk.cli.base import console
+from stk.cli.base import cli_app, console
 from stk.cli.reports import (
     build_commands_report,
     build_context_report,
@@ -27,9 +29,7 @@ def inspect_cmd():
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def inspect_routes(as_json):
     """Inspect registered routes."""
-    from stk.app import create_app
-
-    report = build_routes_report(create_app())
+    report = build_routes_report(cli_app())
     if as_json:
         click.echo(json.dumps(report, indent=2))
         return
@@ -43,9 +43,7 @@ def inspect_routes(as_json):
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def inspect_context(as_json):
     """Inspect routes and models as one agent-readable contract."""
-    from stk.app import create_app
-
-    report = build_context_report(create_app())
+    report = build_context_report(cli_app())
     if as_json:
         click.echo(json.dumps(report, indent=2))
         return
@@ -74,10 +72,9 @@ def inspect_commands(as_json, markdown):
 @click.option("-c", "--command", "source", default=None, help="Run code and exit.")
 def shell(source):
     """Async REPL with the app, a live DB session, and all models loaded."""
-    from stk.app import create_app
     from stk.shell import run_shell
 
-    run_shell(create_app(), source)
+    run_shell(cli_app(), source)
 
 
 MARKERS = {"passed": "[green]✓[/]", "failed": "[red]✗[/]", "skipped": "[yellow]-[/]"}
@@ -199,9 +196,7 @@ def doctor_cmd(as_json):
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def report(output, as_json):
     """Generate a static project report."""
-    from stk.app import create_app
-
-    routes = build_routes_report(create_app())
+    routes = build_routes_report(cli_app())
     verify_report = build_verify_report()
     report_data = {"routes": routes, "verification": verify_report}
     if as_json:
@@ -215,6 +210,12 @@ def report(output, as_json):
     console.print(f"[green]Project report written:[/] {output_path}")
 
 
+def _run_stk(args):
+    result = subprocess.run([sys.executable, "-m", "stk", *args], check=False)
+    if result.returncode != 0:
+        raise click.ClickException(f"stk {' '.join(args)} failed")
+
+
 @click.command("new")
 @click.argument("name")
 @click.option(
@@ -224,38 +225,37 @@ def report(output, as_json):
 )
 @click.option("--port", default=5000, show_default=True, help="Port used in the URL.")
 def new_module(name, migrate, port):
-    """Scaffold a new blueprint module, ending at a page you can open.
+    """Scaffold a new extension module in the app, ending at a page you can open.
 
     NAME must be a lowercase snake_case identifier (e.g. blog_post).
-    Generates blueprint package, template, and wires into app.py + navigation.js.
+    Writes the module package and adds it to the app's extension list.
     """
-    from alembic import command
-    from stk.cli.database import run_alembic
-    from stk.migrations import build_alembic_config
+    from stk.migrations import app_label
     from stk.scaffold.generator import generate_module
 
+    app = cli_app()
     try:
-        actions = generate_module(name)
+        actions = generate_module(name, app)
     except (ValueError, FileExistsError, RuntimeError) as exc:
         raise click.ClickException(str(exc)) from exc
 
-    console.print(f"\n[green]Scaffolded blueprint:[/] [bold]{name}[/]")
+    console.print(f"\n[green]Scaffolded module:[/] [bold]{name}[/]")
     for action in actions:
         console.print(f"  [blue]+[/] {action}")
 
     if migrate:
-        config = build_alembic_config()
-        # Skip alembic's own logging config; the scaffold output is the message here.
-        config.config_file_name = None
-        run_alembic(command.revision, config, message=f"add {name}", autogenerate=True)
-        run_alembic(command.upgrade, config, "head")
+        # The app object predates the module; a fresh process imports it.
+        # Autogenerate compares against a database at its heads.
+        _run_stk(["db", "upgrade"])
+        _run_stk(["db", "revision", "-m", f"add {name}"])
+        _run_stk(["db", "upgrade"])
         console.print(f"  [blue]+[/] migration generated and applied for {name}")
 
     url = f"http://localhost:{port}/{name}s/"
     console.print(f"\n[green]Open:[/] [bold]{url}[/]  [dim](start it with: stk run)[/]")
     console.print(
         f"""[dim]Then:[/]
-  Shape the domain in [bold]stk/{name}/models.py[/]{
+  Shape the domain in [bold]{app_label(app)}/{name}/models.py[/]{
             ', and re-run `stk db revision -m "..." && stk db upgrade`'
             if migrate
             else ', then `stk db revision -m "add ' + name + '"` and `stk db upgrade`'

@@ -1,7 +1,7 @@
 import pathlib
 import unittest
 
-from stk.app import create_app
+from stk.app import Stk
 from stk.settings import TestingConfig
 
 
@@ -11,7 +11,7 @@ class AcmeConfig(TestingConfig):
 
 class BrandingTests(unittest.IsolatedAsyncioTestCase):
     async def test_login_uses_app_name(self):
-        app = create_app(AcmeConfig)
+        app = Stk(__name__, config=AcmeConfig)
         response = await app.test_client().get("/login")
         html = await response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)

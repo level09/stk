@@ -3,7 +3,7 @@ title: "Configuration"
 description: "Every environment variable stk reads, and the app config values behind them"
 ---
 
-`./setup.sh` copies `.env-sample` to `.env` and generates the secrets. `stk/settings.py` reads the variables below; `stk verify` fails if it starts reading one this page does not list.
+`stk init` writes the app's `.env` from `.env-sample` with fresh secrets. stk's `Config` in `stk/settings.py` reads the variables below; `stk verify` fails if it starts reading one this page does not list. The app's own settings subclass it (`class Config(stk.Config)` in `myapp/settings.py`), read their own variables the same way, and override any default by attribute name.
 
 ## Core
 
@@ -14,7 +14,7 @@ description: "Every environment variable stk reads, and the app config values be
 | `STK_ENV` | `production` | `development` enables development-only features such as agent login. |
 | `QUART_DEBUG` | unset | `1` for the reloader and debug pages. Never in production. |
 | `STK_PUBLIC_URL` | unset | Public origin, e.g. `https://app.example.com`. Restricts accepted hosts, builds OAuth callbacks, and sets the allowed WebSocket origin. Set it in production. |
-| `SQLALCHEMY_DATABASE_URI` | `instance/stk.db` (SQLite) | Use `postgresql+asyncpg://...` for PostgreSQL; plain `postgresql://` will not work. |
+| `SQLALCHEMY_DATABASE_URI` | SQLite at `instance/stk.db`, beside the app package | Use `postgresql+asyncpg://...` for PostgreSQL; plain `postgresql://` will not work. |
 | `REDIS_URL` | unset | Stores sessions in Redis when the `full` extra is installed. `REDIS_SESSION` is read as a legacy alias. |
 
 ## Branding
@@ -65,11 +65,11 @@ See [Authentication](/authentication#oauth).
 
 ## Docker Compose
 
-Read by `docker-compose.yml`, not by the app: `DB_ADMIN_PASSWORD`, `DB_PASSWORD`, `REDIS_PASSWORD`, `STK_HOST`, `TLS_CERTIFICATE`, `TLS_PRIVATE_KEY`, and `DOCKER_UID`. See [Deployment](/deployment#docker-compose).
+Read by the app's `docker-compose.yml`, not by the app: `DB_ADMIN_PASSWORD`, `DB_PASSWORD`, `REDIS_PASSWORD`, `STK_HOST`, `TLS_CERTIFICATE`, `TLS_PRIVATE_KEY`, and `DOCKER_UID`. See [Deployment](/deployment#docker-compose).
 
 ## App config values
 
-Some limits are app config only, with no environment variable. Set them on your `Config` class in `stk/settings.py`:
+Some limits are app config only, with no environment variable. Set them on your app's `Config` class:
 
 | Key | Default | Purpose |
 |---|---|---|

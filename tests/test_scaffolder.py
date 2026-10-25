@@ -1,30 +1,24 @@
-"""Unit tests for the stk module scaffolder.
+"""Unit tests for the stk scaffolders: `stk init` and `stk new`.
 
-Uses pure-function rendering -- no filesystem I/O except for the integration
-test that exercises generate_module() in a temp directory that mirrors the
-real tree layout.
+Rendering is tested as pure functions. The integration tests run the real
+commands in subprocesses against a fresh app in a temp directory, because each
+step must see the app as a new process would.
 """
 
 import ast
-import py_compile
-import shutil
+import hashlib
+import json
+import subprocess
+import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
-from stk.scaffold.generator import (
-    RESERVED,
-    generate_module,
-    scaffold_paths,
-    validate_name,
-)
+import stk
+from stk.scaffold.generator import RESERVED, _add_extension, validate_name
 from stk.scaffold.templates import (
-    render_app_import,
-    render_app_register,
     render_init,
     render_models,
-    render_nav_entry,
     render_template_html,
     render_views,
 )
@@ -65,11 +59,20 @@ class ValidateNameTests(unittest.TestCase):
 
 class RenderInitTests(unittest.TestCase):
     def test_is_valid_python(self):
-        src = render_init("widget")
+        src = render_init("widget", "acme")
         ast.parse(src)
 
     def test_is_non_empty(self):
-        self.assertTrue(render_init("widget").strip())
+        self.assertTrue(render_init("widget", "acme").strip())
+
+
+class RenderInitContentTests(unittest.TestCase):
+    def test_registers_blueprint_and_sidebar_entry(self):
+        src = render_init("blog_post", "acme")
+        self.assertIn("from acme.blog_post.views import bp_blog_post", src)
+        self.assertIn("app.register_blueprint(bp_blog_post)", src)
+        self.assertIn('"to": "/blog_posts/"', src)
+        self.assertIn('"title": "Blog Posts"', src)
 
 
 class RenderModelsTests(unittest.TestCase):
@@ -103,7 +106,7 @@ class RenderModelsTests(unittest.TestCase):
 
 class RenderViewsTests(unittest.TestCase):
     def setUp(self):
-        self.src = render_views("demo_item")
+        self.src = render_views("demo_item", "acme")
 
     def test_is_valid_python(self):
         ast.parse(self.src)
@@ -181,128 +184,129 @@ class RenderTemplateHtmlTests(unittest.TestCase):
         self.assertNotIn("setup()", self.src)
 
 
-class RenderNavEntryTests(unittest.TestCase):
-    def test_contains_plural_route(self):
-        entry = render_nav_entry("widget")
-        self.assertIn("'/widgets'", entry)
-
-    def test_role_admin(self):
-        entry = render_nav_entry("widget")
-        self.assertIn("role: 'admin'", entry)
-
-    def test_title_titlecased(self):
-        entry = render_nav_entry("blog_post")
-        self.assertIn("'Blog Post'", entry)
-
-
-class RenderAppHelpersTests(unittest.TestCase):
-    def test_import_line(self):
-        line = render_app_import("widget")
-        self.assertEqual(line, "from stk.widget.views import bp_widget\n")
-
-    def test_register_line(self):
-        line = render_app_register("widget")
-        self.assertEqual(line, "    app.register_blueprint(bp_widget)\n")
-
-
-class GenerateModuleIntegrationTests(unittest.TestCase):
-    """Exercises generate_module() in a controlled fake tree."""
-
-    # Minimal app.py that contains the anchors generate_module() patches.
-    _FAKE_APP_PY = textwrap.dedent(
-        """\
-        from stk.websocket import ws_bp
-
-        def register_blueprints(app):
-            app.register_blueprint(ws_bp)
-        """
+class AddExtensionTests(unittest.TestCase):
+    APP = (
+        "from stk import Stk\n\n"
+        "from acme.settings import Config\n\n"
+        "extensions = []\n\n"
+        "app = Stk(__name__, config=Config, extensions=extensions)\n"
     )
 
-    # Minimal navigation.js that contains the nav anchor.
-    _FAKE_NAV_JS = textwrap.dedent(
-        """\
-        const stkNavigation = [
-          {
-            title: 'Activity Logs',
-            icon: 'ti ti-history',
-            to: '/activities',
-            role: 'admin'
-          }
-        ];
-        """
+    def test_first_extension_adds_import_and_entry(self):
+        source = _add_extension(self.APP, "acme", "widget")
+        self.assertIn(
+            "from acme import widget\nfrom acme.settings import Config", source
+        )
+        self.assertIn("extensions = [widget]", source)
+
+    def test_later_extensions_keep_order_and_one_import_line(self):
+        source = _add_extension(self.APP, "acme", "widget")
+        source = _add_extension(source, "acme", "gadget")
+        self.assertIn("from acme import gadget, widget\n", source)
+        self.assertIn("extensions = [widget, gadget]", source)
+
+    def test_missing_list_says_what_to_do(self):
+        with self.assertRaises(RuntimeError):
+            _add_extension("app = Stk(__name__)\n", "acme", "widget")
+
+
+def _stk(*args, cwd):
+    return subprocess.run(
+        [sys.executable, "-m", "stk", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
-    def _make_fake_root(self) -> Path:
-        root = Path(tempfile.mkdtemp(prefix="stk-scaffold-test-"))
-        (root / "stk").mkdir()
-        (root / "stk" / "static" / "js").mkdir(parents=True)
-        (root / "stk" / "templates" / "cms").mkdir(parents=True)
-        (root / "stk" / "app.py").write_text(self._FAKE_APP_PY)
-        (root / "stk" / "static" / "js" / "navigation.js").write_text(self._FAKE_NAV_JS)
-        return root
 
-    def setUp(self):
-        self.root = self._make_fake_root()
+def _package_digest():
+    package = Path(stk.__file__).parent
+    digest = hashlib.sha256()
+    for path in sorted(package.rglob("*")):
+        if path.is_file() and "__pycache__" not in path.parts:
+            digest.update(str(path).encode() + path.read_bytes())
+    return digest.hexdigest()
 
-    def tearDown(self):
-        shutil.rmtree(self.root, ignore_errors=True)
 
-    def test_generates_expected_files(self):
-        generate_module("widget", root=self.root)
-        paths = scaffold_paths("widget", root=self.root)
-        for key, path in paths.items():
-            if key in ("app_py", "nav_js"):
-                continue
-            with self.subTest(key=key):
-                self.assertTrue(path.exists(), f"{key} not created at {path}")
+class InitAndNewTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory(prefix="stk-scaffold-test-")
+        cls.before = _package_digest()
+        cls.init = _stk("init", "acme", cwd=cls.tmp.name)
+        cls.app = Path(cls.tmp.name) / "acme"
+        cls.new = _stk("new", "widget", cwd=cls.app)
+        cls.second = _stk("new", "gadget", "--no-migrate", cwd=cls.app)
 
-    def test_python_files_compile(self):
-        generate_module("widget", root=self.root)
-        paths = scaffold_paths("widget", root=self.root)
-        for key in ("pkg_init", "pkg_models", "pkg_views"):
-            with self.subTest(key=key):
-                py_compile.compile(str(paths[key]), doraise=True)
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
 
-    def test_app_py_patched(self):
-        generate_module("widget", root=self.root)
-        app_text = (self.root / "stk" / "app.py").read_text()
-        self.assertIn("from stk.widget.views import bp_widget", app_text)
-        self.assertIn("app.register_blueprint(bp_widget)", app_text)
+    def test_init_writes_a_thin_app_package(self):
+        self.assertEqual(self.init.returncode, 0, self.init.stderr)
+        pyproject = (self.app / "pyproject.toml").read_text()
+        self.assertIn('app = "acme.app:app"', pyproject)
+        self.assertIn(f'tag = "v{stk.__version__}"', pyproject)
+        for name in (".gitignore", ".env-sample", "acme/settings.py", "Dockerfile"):
+            self.assertTrue((self.app / name).is_file(), name)
+        env = (self.app / ".env").read_text()
+        self.assertNotIn("\nSECRET_KEY=\n", env)
+        self.assertNotIn("__app__", (self.app / "Dockerfile").read_text())
 
-    def test_nav_js_patched(self):
-        generate_module("widget", root=self.root)
-        nav_text = (self.root / "stk" / "static" / "js" / "navigation.js").read_text()
-        self.assertIn("'/widgets'", nav_text)
+    def test_init_refuses_an_existing_directory(self):
+        result = _stk("init", "acme", cwd=self.tmp.name)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already exists", result.stderr)
 
-    def test_idempotent_patch_does_not_duplicate(self):
-        generate_module("widget", root=self.root)
-        # Simulate re-running (e.g. agent runs new twice)
-        generate_module("gadget", root=self.root)
-        app_text = (self.root / "stk" / "app.py").read_text()
-        self.assertEqual(app_text.count("bp_widget"), 2)  # import + register
+    def test_new_writes_the_extension_and_lists_it(self):
+        self.assertEqual(self.new.returncode, 0, self.new.stderr)
+        self.assertEqual(self.second.returncode, 0, self.second.stderr)
+        for name in (
+            "__init__.py",
+            "models.py",
+            "views.py",
+            "templates/widget/index.html",
+        ):
+            self.assertTrue((self.app / "acme" / "widget" / name).is_file(), name)
+        for name in ("__init__.py", "models.py", "views.py"):
+            ast.parse((self.app / "acme" / "widget" / name).read_text())
+        app_module = (self.app / "acme" / "app.py").read_text()
+        self.assertIn("from acme import gadget, widget", app_module)
+        self.assertIn("extensions = [widget, gadget]", app_module)
 
-    def test_duplicate_name_raises(self):
-        generate_module("widget", root=self.root)
-        with self.assertRaises(FileExistsError):
-            generate_module("widget", root=self.root)
+    def test_new_starts_the_app_lineage_after_stk(self):
+        (revision,) = (self.app / "acme" / "migrations").glob("*.py")
+        assigned = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in ast.parse(revision.read_text()).body
+            if isinstance(node, ast.Assign)
+        }
+        self.assertEqual(assigned["branch_labels"], ("acme",))
+        self.assertEqual(assigned["depends_on"], "stk_0001")
+        self.assertIn("create_table('widget'", revision.read_text())
 
-    def test_reserved_name_raises(self):
-        with self.assertRaises(ValueError):
-            generate_module("user", root=self.root)
+    def test_both_lineages_match_the_models(self):
+        # gadget was scaffolded without a migration, so it is the only drift.
+        result = _stk("db", "check", cwd=self.app)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("add_table: gadget", result.stdout)
+        self.assertNotIn("widget", result.stdout)
 
-    def test_invalid_name_raises(self):
-        with self.assertRaises(ValueError):
-            generate_module("My-Module", root=self.root)
+    def test_extensions_serve_their_pages(self):
+        result = _stk("inspect", "routes", "--json", cwd=self.app)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rules = {route["rule"] for route in json.loads(result.stdout)}
+        self.assertLessEqual({"/widgets/", "/api/widgets", "/gadgets/"}, rules)
 
-    def test_template_html_has_correct_api_url(self):
-        generate_module("widget", root=self.root)
-        tmpl = (self.root / "stk" / "templates" / "cms" / "widget.html").read_text()
-        self.assertIn("/api/widgets", tmpl)
+    def test_new_never_touches_stk(self):
+        self.assertEqual(_package_digest(), self.before)
 
-    def test_actions_returned(self):
-        actions = generate_module("widget", root=self.root)
-        self.assertIsInstance(actions, list)
-        self.assertTrue(len(actions) >= 4)
+    def test_new_refuses_duplicates_and_reserved_names(self):
+        for name in ("widget", "user"):
+            with self.subTest(name=name):
+                result = _stk("new", name, "--no-migrate", cwd=self.app)
+                self.assertNotEqual(result.returncode, 0)
 
 
 if __name__ == "__main__":

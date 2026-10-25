@@ -9,7 +9,7 @@ from quart_security import hash_password
 import stk.extensions as ext
 import stk.settings
 from stk.agent_login import create_agent_login_token, read_agent_login_token
-from stk.app import create_app
+from stk.app import Stk
 from stk.cli.reports import (
     _command_runner,
     _guards,
@@ -19,12 +19,13 @@ from stk.cli.reports import (
     build_verify_report,
 )
 from stk.cli.smoke import build_smoke_report, smoke_exit_code
+from stk.settings import TestingConfig
 from stk.user.models import Role, User
 
 
 class AgentOperabilityTests(unittest.TestCase):
     def test_routes_report_exposes_registered_routes(self):
-        app = create_app()
+        app = Stk(__name__, config=TestingConfig)
 
         routes = build_routes_report(app)
         by_rule = {route["rule"]: route for route in routes}
@@ -57,7 +58,7 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertEqual(_guards(open_view), [])
 
     def test_context_report_exposes_routes_and_models(self):
-        report = build_context_report(create_app())
+        report = build_context_report(Stk(__name__, config=TestingConfig))
 
         self.assertEqual(set(report), {"routes", "models"})
         self.assertIn("user", report["models"])
@@ -99,7 +100,7 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertEqual(stderr, "ruff not installed")
 
     def test_project_report_html_includes_routes_and_verification_status(self):
-        app = create_app()
+        app = Stk(__name__, config=TestingConfig)
         routes = build_routes_report(app)
         verify_report = {"status": "passed", "checks": []}
 
@@ -111,13 +112,13 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertIn("passed", html)
 
     def test_agent_operability_commands_are_registered(self):
-        app = create_app()
+        from stk.cli.main import main
 
-        self.assertIn("inspect", app.cli.commands)
-        self.assertIn("verify", app.cli.commands)
-        self.assertIn("smoke", app.cli.commands)
-        self.assertIn("report", app.cli.commands)
-        self.assertNotIn("explain", app.cli.commands)
+        self.assertIn("inspect", main.commands)
+        self.assertIn("verify", main.commands)
+        self.assertIn("smoke", main.commands)
+        self.assertIn("report", main.commands)
+        self.assertNotIn("explain", main.commands)
 
     def test_smoke_report_marks_only_behavioral_failures_as_failed(self):
         report = build_smoke_report(
@@ -187,7 +188,7 @@ class AgentLoginConfigTests(unittest.TestCase):
             os.environ.pop("STK_ENABLE_AGENT_LOGIN", None)
             defaults = importlib.reload(stk.settings).Config
         importlib.reload(stk.settings)
-        app = create_app(defaults)
+        app = Stk(__name__, config=defaults)
 
         self.assertFalse(app.config["STK_ENABLE_AGENT_LOGIN"])
         self.assertEqual(app.config["STK_ENV"], "production")
@@ -216,23 +217,23 @@ class AgentLoginTestingConfig(AgentLoginEnabledConfig):
 
 class AgentLoginBlueprintTests(unittest.TestCase):
     def test_agent_login_registers_in_development_only_when_enabled(self):
-        app = create_app(AgentLoginEnabledConfig)
+        app = Stk(__name__, config=AgentLoginEnabledConfig)
 
         self.assertIn("agent_login.agent_login", app.view_functions)
 
     def test_agent_login_registers_when_testing_even_if_env_is_production(self):
-        app = create_app(AgentLoginTestingConfig)
+        app = Stk(__name__, config=AgentLoginTestingConfig)
 
         self.assertIn("agent_login.agent_login", app.view_functions)
 
     def test_agent_login_crashes_when_enabled_in_production(self):
         with self.assertRaisesRegex(RuntimeError, "agent login cannot be enabled"):
-            create_app(AgentLoginUnsafeConfig)
+            Stk(__name__, config=AgentLoginUnsafeConfig)
 
 
 class AgentLoginTokenTests(unittest.IsolatedAsyncioTestCase):
     async def test_agent_login_token_round_trips_user_and_next_path(self):
-        app = create_app(AgentLoginTestingConfig)
+        app = Stk(__name__, config=AgentLoginTestingConfig)
 
         async with app.app_context():
             token = create_agent_login_token("admin@example.com", "/dashboard/")
@@ -242,7 +243,7 @@ class AgentLoginTokenTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["next"], "/dashboard/")
 
     async def test_agent_login_token_rejects_external_redirect(self):
-        app = create_app(AgentLoginTestingConfig)
+        app = Stk(__name__, config=AgentLoginTestingConfig)
 
         async with app.app_context():
             with self.assertRaisesRegex(ValueError, "next path must be local"):
@@ -251,7 +252,7 @@ class AgentLoginTokenTests(unittest.IsolatedAsyncioTestCase):
 
 class AgentLoginRouteTests(unittest.IsolatedAsyncioTestCase):
     async def test_agent_login_rejects_missing_token(self):
-        app = create_app(AgentLoginTestingConfig)
+        app = Stk(__name__, config=AgentLoginTestingConfig)
 
         async with app.test_client() as client:
             response = await client.get("/_test/login")
@@ -259,7 +260,7 @@ class AgentLoginRouteTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 400)
 
     async def test_agent_login_rejects_non_example_user(self):
-        app = create_app(AgentLoginTestingConfig)
+        app = Stk(__name__, config=AgentLoginTestingConfig)
 
         async with app.app_context():
             token = create_agent_login_token("real@company.com", "/dashboard/")
@@ -272,7 +273,7 @@ class AgentLoginRouteTests(unittest.IsolatedAsyncioTestCase):
 
 class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.app = create_app(AgentLoginTestingConfig)
+        self.app = Stk(__name__, config=AgentLoginTestingConfig)
         async with ext.engine.begin() as conn:
             await conn.run_sync(Role.metadata.create_all)
 
@@ -307,7 +308,7 @@ class AgentLoginSessionTests(unittest.IsolatedAsyncioTestCase):
 
 class AgentLoginVerificationTests(unittest.TestCase):
     def test_verify_report_marks_agent_login_disabled_as_safe(self):
-        app = create_app()
+        app = Stk(__name__, config=TestingConfig)
         routes = build_routes_report(app)
 
         self.assertNotIn("/_test/login", {route["rule"] for route in routes})

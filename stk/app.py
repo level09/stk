@@ -1,17 +1,20 @@
 import asyncio
 import functools
 import hashlib
+import importlib
+import importlib.util
 import inspect
+import os
 from pathlib import Path
 
-import click
-from quart import Quart, g, render_template, request
+from jinja2 import ChoiceLoader, FileSystemLoader, PrefixLoader
+from quart import Quart, g, render_template, request, send_from_directory
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.security import safe_join
 
-import stk.cli as cli
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
@@ -23,17 +26,77 @@ from stk.user.models import Role, User, WebAuthn
 from stk.user.views import bp_user
 from stk.websocket import ws_bp
 
+CORE_TEMPLATES = Path(__file__).parent / "templates"
+CORE_STATIC = Path(__file__).parent / "static"
 
-def create_app(config_object=Config):
-    app = Quart(__name__)
-    app.config.from_object(config_object)
 
-    register_blueprints(app)
-    register_extensions(app)
-    register_errorhandlers(app)
-    register_commands(app, cli)
-    register_static_versioning(app)
-    return app
+class Stk(Quart):
+    """A Quart app with stk's core, then the app's extensions in list order.
+
+    Each extension is a package exposing `init_app(app)`; its `models` module, if
+    any, is imported first so migrations see its tables. Templates and static
+    files resolve app first, then each extension's, then stk's. Core templates
+    stay reachable as `stk/<name>`, so an override can extend the original.
+    """
+
+    def __init__(self, import_name, *, config=Config, extensions=()):
+        super().__init__(
+            import_name, static_folder=str(CORE_STATIC), template_folder=None
+        )
+        self.config.from_object(config)
+        for key in ("SECRET_KEY", "SECURITY_PASSWORD_SALT"):
+            if not self.config.get(key):
+                raise ValueError(f"{key} is required: set it in .env")
+        if not self.config.get("SQLALCHEMY_DATABASE_URI"):
+            os.makedirs(self.instance_path, exist_ok=True)
+            database = Path(self.instance_path) / "stk.db"
+            self.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite+aiosqlite:///{database}"
+
+        roots = [Path(self.root_path), *(Path(m.__path__[0]) for m in extensions)]
+        self.template_folders = [
+            *(path for root in roots if (path := root / "templates").is_dir()),
+            CORE_TEMPLATES,
+        ]
+        self.static_folders = [
+            *(path for root in roots if (path := root / "static").is_dir()),
+            CORE_STATIC,
+        ]
+        # Sidebar pages the app adds; the layout places them under Dashboard.
+        self.navigation = []
+
+        register_blueprints(self)
+        register_extensions(self)
+        register_errorhandlers(self)
+        register_static_versioning(self)
+        register_navigation(self)
+
+        for module in extensions:
+            if importlib.util.find_spec(f"{module.__name__}.models"):
+                importlib.import_module(f"{module.__name__}.models")
+            module.init_app(self)
+
+    @functools.cached_property
+    def jinja_loader(self):
+        return ChoiceLoader(
+            [
+                PrefixLoader({"stk": FileSystemLoader(CORE_TEMPLATES)}),
+                *(FileSystemLoader(folder) for folder in self.template_folders),
+            ]
+        )
+
+    def static_file(self, filename):
+        """Return the first static file at `filename`, app first, or None."""
+        for folder in self.static_folders:
+            path = safe_join(str(folder), filename)
+            if path is not None and os.path.isfile(path):
+                return Path(path)
+        return None
+
+    async def send_static_file(self, filename):
+        path = self.static_file(filename)
+        if path is None:
+            raise NotFound()
+        return await send_from_directory(path.parent, path.name)
 
 
 def register_extensions(app):
@@ -150,12 +213,13 @@ def register_static_versioning(app):
     Unversioned files carry no cache lifetime, so browsers keep them heuristically
     and an old component can blank every page until a hard reload.
     """
-    static = Path(app.static_folder)
 
     @app.url_defaults
     def _version_static(endpoint, values):
         if endpoint == "static" and "filename" in values:
-            path = static / values["filename"]
+            path = app.static_file(values["filename"])
+            if path is None:
+                raise FileNotFoundError(f"no static file {values['filename']}")
             values["v"] = _static_digest(path, path.stat().st_mtime_ns)
 
     @app.after_request
@@ -167,6 +231,42 @@ def register_static_versioning(app):
                 else "no-cache"
             )
         return response
+
+
+CORE_NAVIGATION_START = [
+    {"heading": "Main"},
+    {"title": "Dashboard", "icon": "ti ti-home", "to": "/dashboard"},
+]
+CORE_NAVIGATION_END = [
+    {"heading": "Account"},
+    {"title": "Change Password", "icon": "ti ti-key", "to": "/change"},
+    {"title": "Two-Factor Auth", "icon": "ti ti-shield-lock", "to": "/tf-setup"},
+    {"title": "Recovery Codes", "icon": "ti ti-lifebuoy", "to": "/mf-recovery-codes"},
+    {"heading": "Administration"},
+    {
+        "title": "User Management",
+        "icon": "ti ti-users-group",
+        "role": "admin",
+        "children": [
+            {"title": "Users", "icon": "ti ti-users", "to": "/users"},
+            {"title": "Roles", "icon": "ti ti-shield", "to": "/roles"},
+        ],
+    },
+    {
+        "title": "Activity Logs",
+        "icon": "ti ti-history",
+        "to": "/activities",
+        "role": "admin",
+    },
+]
+
+
+def register_navigation(app):
+    app.jinja_env.globals["stk_navigation"] = lambda: [
+        *CORE_NAVIGATION_START,
+        *app.navigation,
+        *CORE_NAVIGATION_END,
+    ]
 
 
 def register_errorhandlers(app):
@@ -221,10 +321,3 @@ def register_errorhandlers(app):
     for errcode in [401, 404, 500]:
         app.errorhandler(errcode)(render_error)
     return None
-
-
-def register_commands(app: Quart, commands_module):
-    """Automatically register all Click commands and command groups."""
-    for _name, obj in inspect.getmembers(commands_module):
-        if isinstance(obj, click.Command | click.Group):
-            app.cli.add_command(obj)
