@@ -5,7 +5,7 @@ import logging
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from stk.migrations import get_target_metadata, include_object
+from stk.migrations import get_target_metadata, include_object, render_item
 
 config = context.config
 
@@ -25,6 +25,7 @@ def run_migrations_offline() -> None:
         compare_type=True,
         compare_server_default=True,
         include_object=include_object,
+        render_item=render_item,
         render_as_batch=url.startswith("sqlite"),
     )
 
@@ -44,6 +45,7 @@ def run_migrations_online() -> None:
             compare_type=True,
             compare_server_default=True,
             include_object=include_object,
+            render_item=render_item,
             # SQLite alters tables by copying them; batch mode does that for us.
             render_as_batch=connection.dialect.name == "sqlite",
         )

@@ -329,7 +329,8 @@ class InitAndNewTests(unittest.TestCase):
         }
         self.assertEqual(assigned["branch_labels"], ("acme",))
         self.assertEqual(assigned["depends_on"], "stk_0001")
-        self.assertIn("create_table('widget'", revision.read_text())
+        # Formatted by the app's ruff config.
+        self.assertIn('op.create_table(\n        "widget",', revision.read_text())
 
     def test_both_lineages_match_the_models(self):
         # gadget was scaffolded without a migration, so it is the only drift.

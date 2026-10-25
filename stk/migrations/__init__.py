@@ -56,6 +56,17 @@ def include_object(obj, name, type_, reflected, compare_to):
     return not (type_ == "table" and name in EXTENSION_TABLES)
 
 
+def render_item(type_, obj, autogen_context):
+    """Import the module of a type Alembic renders by its path (pgvector's, the app's).
+
+    Alembic writes such a type as `pgvector.sqlalchemy.halfvec.HALFVEC(dim=3)` and
+    imports only SQLAlchemy dialects, so the revision would not run.
+    """
+    if type_ == "type" and not type(obj).__module__.startswith("sqlalchemy."):
+        autogen_context.imports.add(f"import {type(obj).__module__}")
+    return False
+
+
 def sync_url(database_url: str) -> str:
     """Convert an async driver URL to the sync driver Alembic uses."""
     url = make_url(database_url)

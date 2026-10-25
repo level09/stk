@@ -112,6 +112,18 @@ There are two lineages and one version table. stk's revisions ship inside the pa
 
 `stk verify` runs the drift check too, so a model change without a migration fails the gate. The check migrates a throwaway database of the configured dialect (Postgres needs a role with CREATEDB), because SQLite cannot render Postgres types. It also fails on a revision whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Autogenerate writes a renamed field as a drop plus an add, which loses the data. When a destructive step is intended, say so with a `# destructive: <reason>` comment inside `upgrade()`. The Alembic env lives in `stk/migrations/env.py`, built in code; apps need no `alembic.ini`.
 
+`stk db revision` imports the module of every column type Alembic writes by its path, such as `pgvector.sqlalchemy.halfvec.HALFVEC` or a `UserDefinedType` of your own, then sorts the revision's imports and formats it with the app's ruff config, so the revision runs and passes `ruff check`.
+
+Alembic autogenerate leaves out a `CheckConstraint` passed to a single column (`mapped_column(Integer, CheckConstraint("rank > 0"))`), and the drift check cannot see it either: the revision creates the column without the check. Declare checks at table level, which autogenerate does write:
+
+```python
+class Place(Base):
+    __tablename__ = "place"
+    __table_args__ = (CheckConstraint("rank > 0", name="rank_positive"),)
+```
+
+Or add the check to the revision by hand. `stk db revision` warns about each column-level check in the columns it adds.
+
 A test that needs a migrated database builds the same config in code. `build_alembic_config` takes the app, or its import name plus a URL, so a test can migrate a throwaway database before it builds its app:
 
 ```python
