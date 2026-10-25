@@ -11,12 +11,14 @@ import json
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
 import stk
 from stk.scaffold.generator import RESERVED, _add_extension, validate_name
 from stk.scaffold.templates import (
+    plural,
     render_init,
     render_models,
     render_template_html,
@@ -184,6 +186,36 @@ class RenderTemplateHtmlTests(unittest.TestCase):
         self.assertNotIn("setup()", self.src)
 
 
+class PluralTests(unittest.TestCase):
+    def test_pages_use_the_english_plural(self):
+        cases = {
+            "invoice_line": "invoice_lines",
+            "status": "statuses",
+            "box": "boxes",
+            "batch": "batches",
+            "category": "categories",
+            "day": "days",
+        }
+        for name, expected in cases.items():
+            with self.subTest(name=name):
+                self.assertEqual(plural(name), expected)
+
+
+class LocalSourceTests(unittest.TestCase):
+    def test_source_installs_stkit_from_a_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            checkout = Path(stk.__file__).parent.parent
+            result = _stk("init", "acme", "--source", str(checkout), cwd=tmp)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            sources = tomllib.loads((Path(tmp) / "acme/pyproject.toml").read_text())[
+                "tool"
+            ]["uv"]["sources"]
+            self.assertTrue(sources["stkit"]["editable"])
+            self.assertTrue(
+                (Path(tmp) / "acme" / sources["stkit"]["path"]).samefile(checkout)
+            )
+
+
 class AddExtensionTests(unittest.TestCase):
     APP = (
         "from stk import Stk\n\n"
@@ -247,12 +279,25 @@ class InitAndNewTests(unittest.TestCase):
         self.assertEqual(self.init.returncode, 0, self.init.stderr)
         pyproject = (self.app / "pyproject.toml").read_text()
         self.assertIn('app = "acme.app:app"', pyproject)
-        self.assertIn(f'tag = "v{stk.__version__}"', pyproject)
-        for name in (".gitignore", ".env-sample", "acme/settings.py", "Dockerfile"):
+        self.assertIn(f'"stkit>={stk.__version__},<', pyproject)
+        self.assertNotIn("[tool.uv.sources]", pyproject)
+        for name in (
+            ".gitignore",
+            ".env-sample",
+            "acme/settings.py",
+            "Dockerfile",
+            ".github/workflows/checks.yml",
+        ):
             self.assertTrue((self.app / name).is_file(), name)
         env = (self.app / ".env").read_text()
         self.assertNotIn("\nSECRET_KEY=\n", env)
         self.assertNotIn("__app__", (self.app / "Dockerfile").read_text())
+        # Agents working on the app get stk's rules and skills.
+        self.assertIn(
+            "## Rules that fail silently", (self.app / "CLAUDE.md").read_text()
+        )
+        self.assertTrue((self.app / "AGENTS.md").samefile(self.app / "CLAUDE.md"))
+        self.assertTrue((self.app / ".agents/skills/stk-blueprint/SKILL.md").is_file())
 
     def test_init_refuses_an_existing_directory(self):
         result = _stk("init", "acme", cwd=self.tmp.name)

@@ -3,16 +3,16 @@ name = "minimal"
 version = "0.1.0"
 description = "Minimal, built on stk"
 requires-python = ">=3.11"
-dependencies = ["stk>=17.0.0,<18"]
+dependencies = ["stkit>=17.0.0,<18"]
 
 [project.optional-dependencies]
-full = ["stk[full]"]  # PostgreSQL and Redis
+full = ["stkit[full]"]  # PostgreSQL and Redis
 
 [dependency-groups]
-dev = ["stk[dev]"]
+dev = ["stkit[dev]"]
 
 [tool.uv.sources]
-stk = { path = "../..", editable = true }
+stkit = { path = "../..", editable = true }
 
 [tool.stk]
 app = "minimal.app:app"

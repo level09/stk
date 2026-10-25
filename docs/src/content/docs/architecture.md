@@ -11,6 +11,7 @@ stk is an installed package. An app is a separate package that composes it and n
 myapp/
 ├── pyproject.toml        # depends on stk; [tool.stk] app = "myapp.app:app"
 ├── .env                  # secrets, never committed
+├── CLAUDE.md, .claude/   # agent index (AGENTS.md links to it) and stk's skills
 ├── myapp/
 │   ├── app.py            # the composition (below)
 │   ├── settings.py       # class Config(stk.Config)
@@ -23,6 +24,7 @@ myapp/
 │       ├── views.py
 │       └── templates/note/index.html
 ├── tests/
+├── .github/workflows/     # CI: tests, verify, smoke
 ├── Dockerfile, docker-compose.yml, nginx/, postgres/
 └── instance/             # SQLite database, shell history
 ```

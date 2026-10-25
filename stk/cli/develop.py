@@ -13,7 +13,7 @@ from stk.cli.base import app_root, app_spec, cli_app, console
 @click.option(
     "--source",
     default=None,
-    help="Install stk from this checkout or wheel instead of its release tag.",
+    help="Install stk from this checkout or wheel instead of the stkit package.",
 )
 def init(name, source):
     """Start a new app package NAME in ./NAME, depending on this stk version."""

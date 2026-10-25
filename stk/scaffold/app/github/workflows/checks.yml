@@ -1,0 +1,35 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+env:
+  SECRET_KEY: ci-only-secret-key-not-for-production
+  SECURITY_PASSWORD_SALT: ci-only-password-salt-not-for-production
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9.0.0
+      - name: Install dependencies
+        run: uv sync
+      - name: Install Chromium
+        run: uv run playwright install --with-deps chromium
+      - name: Migrate
+        run: uv run stk db upgrade
+      - name: Unit tests
+        run: uv run python -m unittest discover -s tests -v
+      - name: Verify (lint, sanity, migrations)
+        run: uv run stk verify --json
+      - name: Browser smoke (behavioral)
+        run: uv run stk smoke --json
+      - name: Upload smoke artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-artifacts
+          path: .stk/smoke/
+          if-no-files-found: ignore

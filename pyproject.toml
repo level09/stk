@@ -1,5 +1,5 @@
 [project]
-name = "stk"
+name = "stkit"
 version = "17.0.0"
 description = "An async Quart framework optimized for AI-assisted development workflows"
 authors = [
@@ -13,13 +13,14 @@ dependencies = [
     "alembic>=1.16.0",
     "aiosmtplib>=5.0.0",
     "aiosqlite>=0.20.0",
-    "authlib>=1.7.2,<2",
+    "authlib>=1.9.1,<2",
     "bcrypt>=4.3.0",
     "blinker>=1.9.0",
     "click>=8.3.1",
     "cryptography>=45.0.5",
     "email-validator>=2.2.0",
     "httpx>=0.27.0",
+    "httpx2>=2.16.0",  # authlib's HTTP client; plain httpx is its deprecated fallback
     "jinja2>=3.1.6",
     "joserfc>=1.7.1,<2",
     "libpass>=1.9.0",
@@ -69,6 +70,11 @@ build-backend = "hatchling.build"
 # Explicit so an app can rename the project without breaking the build.
 [tool.hatch.build.targets.wheel]
 packages = ["stk"]
+
+# Listed, not walked: .claude/skills and .agents/skills link into the app template,
+# and hatch keeps a linked file under only one path, dropping the template's copy.
+[tool.hatch.build.targets.sdist]
+only-include = ["stk", "tests", "examples", "CHANGELOG.md", "SECURITY.md"]
 
 [tool.ruff]
 line-length = 88

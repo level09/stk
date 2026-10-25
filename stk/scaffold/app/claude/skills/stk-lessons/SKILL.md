@@ -27,7 +27,7 @@ most three per run. Append and continue the task; never stop it to log.
 
 Input: `.stk/lessons.md`, or the path the user gives.
 
-1. **Drop what is covered.** Search `docs/src/content/docs/`, `CLAUDE.md`, the skills, and
+1. **Drop what is covered.** Search the docs (https://docs.stk.dev), `CLAUDE.md`, the skills, and
    `stk/checks.py`. A lesson that recurs despite an existing rule means the rule sits too low:
    move it up the ladder below instead of repeating it.
 2. **Drop one-offs**: a single occurrence with no general cause.
@@ -39,6 +39,9 @@ Input: `.stk/lessons.md`, or the path the user gives.
    3. a hint in `stk/cli/doctor.py`, so `stk doctor` names it with its fix
    4. one line on the docs page for its topic
    5. a step in the skill for that workflow
+
+   In an app, these are stk's homes: route app lessons to the app's own code, a test,
+   its `CLAUDE.md`, or its skills, and stk lessons to Upstream below.
 5. **Propose** one table: lesson, home, exact diff, and the test or check that fails
    without the change. Apply nothing until the user approves each row.
 6. **Apply** the approved rows, then `uv run stk verify`. Size budgets cap `CLAUDE.md` at

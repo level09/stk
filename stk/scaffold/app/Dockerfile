@@ -3,7 +3,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build deps + uv in one layer (git fetches stk from its release tag)
+# Install build deps + uv in one layer (git, for dependencies pinned to a commit)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential python3-dev git \
     && rm -rf /var/lib/apt/lists/* \

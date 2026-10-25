@@ -22,7 +22,7 @@ hero:
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ```bash
-uvx --from git+https://github.com/level09/stk stk init myapp && cd myapp
+uvx --from stkit stk init myapp && cd myapp
 uv run stk db upgrade        # stk's migrations, then the app's
 uv run stk doctor            # am I ready? every problem names its fix
 uv run stk new invoice       # an extension: model, API, page, migration, at a URL
