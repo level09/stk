@@ -107,6 +107,7 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
     SQLite cannot render. Postgres needs a role with CREATEDB.
     """
     from sqlalchemy import create_engine, text
+    from sqlalchemy.exc import ProgrammingError
 
     url = make_url(database_url)
     if url.get_backend_name() != "postgresql":
@@ -119,8 +120,14 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
         _render(url.set(database="postgres"), sync=True), isolation_level="AUTOCOMMIT"
     )
     try:
-        with admin.connect() as connection:
-            connection.execute(text(f'create database "{name}"'))
+        try:
+            with admin.connect() as connection:
+                connection.execute(text(f'create database "{name}"'))
+        except ProgrammingError as exc:
+            raise RuntimeError(
+                f"role {url.username!r} cannot create a throwaway database: grant it"
+                " CREATEDB, or run this check with a role that has it"
+            ) from exc
         try:
             yield _render(url.set(database=name), sync=sync)
         finally:

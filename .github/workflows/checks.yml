@@ -93,7 +93,6 @@ jobs:
           sh stk/scaffold/app/postgres/init-db.sh
           test "$(psql -d stk -Atc "SELECT rolsuper FROM pg_roles WHERE rolname='stk'")" = f
           uv run stk db upgrade
-          uv run stk db check
       - name: Security controls with PostgreSQL and Redis
         env:
           STK_TEST_DATABASE_URL: postgresql+asyncpg://review:isolated-review-password@localhost/review

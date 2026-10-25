@@ -167,7 +167,10 @@ def db_revision(message, autogenerate, head):
 @db.command("check")
 def db_check():
     """Fail if models have drifted away from the migrations."""
-    drift = build_migration_drift_report(cli_app())
+    try:
+        drift = build_migration_drift_report(cli_app())
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     if not drift:
         console.print("[green]No migration drift: models match migrations[/]")
         return
