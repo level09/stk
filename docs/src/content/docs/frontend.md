@@ -87,7 +87,12 @@ The sidebar is data. stk's layout renders its own entries (Dashboard, the accoun
 def init_app(app):
     app.register_blueprint(bp_report)
     app.navigation.append(
-        {"title": "Reports", "icon": "ti ti-chart-bar", "to": "/reports/", "role": "admin"}
+        {
+            "title": "Reports",
+            "icon": "ti ti-chart-bar",
+            "to": "/reports/",
+            "role": "admin",
+        }
     )
 ```
 

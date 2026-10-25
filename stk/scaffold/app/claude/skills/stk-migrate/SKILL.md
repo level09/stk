@@ -79,6 +79,7 @@ op.create_index("ix_products_name", "products", ["name"])
 from alembic import op
 from sqlalchemy import text
 
+
 def upgrade():
     op.add_column("users", sa.Column("display_name", sa.String(255)))
     op.execute(text("UPDATE users SET display_name = name WHERE display_name IS NULL"))
@@ -92,5 +93,7 @@ with op.batch_alter_table("users") as batch_op:
 
 **Add a composite unique constraint:**
 ```python
-op.create_unique_constraint("uq_oauth_provider_user", "oauth", ["provider", "provider_user_id"])
+op.create_unique_constraint(
+    "uq_oauth_provider_user", "oauth", ["provider", "provider_user_id"]
+)
 ```

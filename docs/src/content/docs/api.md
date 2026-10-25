@@ -16,6 +16,7 @@ from sqlalchemy import func, or_, select
 
 PER_PAGE = 25
 
+
 @bp.get("/api/posts")
 async def list_posts():
     page = request.args.get("page", 1, type=int)
@@ -23,10 +24,16 @@ async def list_posts():
 
     query = select(Post)
     if search := request.args.get("search"):
-        query = query.where(or_(Post.title.ilike(f"%{search}%"), Post.content.ilike(f"%{search}%")))
+        query = query.where(
+            or_(Post.title.ilike(f"%{search}%"), Post.content.ilike(f"%{search}%"))
+        )
 
-    total = await g.db_session.scalar(select(func.count()).select_from(query.subquery()))
-    result = await g.db_session.execute(query.offset((page - 1) * per_page).limit(per_page))
+    total = await g.db_session.scalar(
+        select(func.count()).select_from(query.subquery())
+    )
+    result = await g.db_session.execute(
+        query.offset((page - 1) * per_page).limit(per_page)
+    )
     items = [p.to_dict() for p in result.scalars().all()]
     return Response(
         json.dumps({"items": items, "total": total, "perPage": per_page}),

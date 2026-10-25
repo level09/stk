@@ -10,8 +10,9 @@ Use `run_in_background()` for fire-and-forget async tasks. There is no Celery an
 ```python
 from stk.tasks import run_in_background
 
-async def send_email(user_id):
-    ...
+
+async def send_email(user_id): ...
+
 
 await run_in_background(send_email(user.id))
 ```
@@ -21,8 +22,10 @@ For tasks that need their own DB session, `run_with_session` opens one, commits 
 ```python
 from stk.tasks import run_with_session
 
+
 async def cleanup_old_records(session):
     await session.execute(...)
+
 
 await run_with_session(cleanup_old_records)
 ```
@@ -38,7 +41,9 @@ Signed-in pages connect to `/ws` automatically through `layoutMixin`. Push a mes
 ```python
 from stk.websocket import broadcast
 
-await broadcast({"type": "notification", "title": "Export ready", "to": "/exports"}, user_id=user.id)
+await broadcast(
+    {"type": "notification", "title": "Export ready", "to": "/exports"}, user_id=user.id
+)
 ```
 
 There is no broadcast-to-everyone: every message names its recipient. `{type: 'notification'}` messages land in the notification bell; extend `_onWsMessage` in `layout.html` for your own types. `Activity.register()` stores audit events and does not broadcast.

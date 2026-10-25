@@ -2,9 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version == '3.13.*'",
-    "python_full_version == '3.12.*'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten'",
     "python_full_version < '3.12'",
 ]
 
@@ -1423,9 +1426,12 @@ name = "pyee"
 version = "14.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version == '3.13.*'",
-    "python_full_version == '3.12.*'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten'",
 ]
 dependencies = [
     { name = "typing-extensions" },
@@ -1564,7 +1570,8 @@ name = "quart"
 version = "0.22.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version == '3.12.*'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten'",
     "python_full_version < '3.12'",
 ]
 dependencies = [
@@ -1588,8 +1595,10 @@ name = "quart"
 version = "0.23.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version == '3.13.*'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten'",
 ]
 dependencies = [
     { name = "aiofiles" },
@@ -1609,7 +1618,7 @@ wheels = [
 
 [[package]]
 name = "quart-security"
-version = "2.0.2"
+version = "2.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosmtplib" },
@@ -1628,9 +1637,9 @@ dependencies = [
     { name = "webauthn" },
     { name = "wtforms" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/f4/d3fdecdf5e74d847697dec38792566df256b50af7938b35cc3ac2b9d70ff/quart_security-2.0.2.tar.gz", hash = "sha256:c86caeee3fc37e61866cf6483e8d45a9b7fec63d8380032c97b489973d433808", size = 35641, upload-time = "2026-10-25T10:15:43.37Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/88/43c45890dd40db6fa5e57d09705b35c42f3a36981997ab3269a2c33403a0/quart_security-2.0.3.tar.gz", hash = "sha256:74be1c5177afca54cc90bafd10d7ae69a1f4923e1786ff106fb9990dd8f7eb5c", size = 35687, upload-time = "2026-10-25T10:39:02.875Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/f8/8e01289c18c5e1cf03c06ef57b05828c35e8a21eb47620bb929223e66483/quart_security-2.0.2-py3-none-any.whl", hash = "sha256:6091d1f4c89bdfef3eaf1b008b0cc5718f3255e41f2e976a12e600d81bea0717", size = 41802, upload-time = "2026-10-25T10:15:41.837Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/b5/798c32a417ecba01152a4633cc4552b7ae0a4d70285f003ea7e5f1799e61/quart_security-2.0.3-py3-none-any.whl", hash = "sha256:08ac07b53242b70b519515299e89912cca2c21fabf12a6d25b87f6e4c8601268", size = 41815, upload-time = "2026-10-25T10:39:01.684Z" },
 ]
 
 [[package]]
@@ -1782,7 +1791,7 @@ asyncio = [
 
 [[package]]
 name = "stkit"
-version = "17.0.0"
+version = "17.0.1"
 source = { editable = "../../" }
 dependencies = [
     { name = "aiosmtplib" },
@@ -1852,7 +1861,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "quart", specifier = ">=0.20.0" },
-    { name = "quart-security", specifier = ">=2.0.2,<3" },
+    { name = "quart-security", specifier = ">=2.0.3,<3" },
     { name = "quart-session", specifier = ">=3.0.0" },
     { name = "redis", marker = "extra == 'full'", specifier = ">=7.1.0" },
     { name = "rich", specifier = ">=14.0.0" },

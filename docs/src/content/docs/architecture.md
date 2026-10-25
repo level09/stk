@@ -95,10 +95,12 @@ from quart_security import auth_required
 
 portal = Blueprint("portal", __name__, static_folder="../static")
 
+
 @portal.before_request
 @auth_required("session")
 async def before_request():
     pass
+
 
 @portal.route("/dashboard/")
 async def dashboard():
@@ -111,6 +113,7 @@ Admin pages and JSON APIs for users, roles, and activity (`/users/`, `/roles/`, 
 
 ```python
 bp_user = Blueprint("users", __name__, static_folder="../static")
+
 
 @bp_user.before_request
 @auth_required("session")
@@ -127,6 +130,7 @@ Unauthenticated routes: the landing page, `/health`, `robots.txt`, and the Googl
 
 ```python
 public = Blueprint("public", __name__, static_folder="../static")
+
 
 @public.route("/")
 async def index():

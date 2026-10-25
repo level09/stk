@@ -59,6 +59,7 @@ Callbacks are `/login/google/callback` and `/login/github/callback`, built from 
 ```python
 from quart_security import auth_required, roles_required
 
+
 @app.route("/admin")
 @auth_required("session")
 @roles_required("admin")

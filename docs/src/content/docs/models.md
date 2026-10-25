@@ -16,6 +16,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from stk.extensions import Base
 
+
 @dataclasses.dataclass
 class Post(Base):
     __tablename__ = "post"
@@ -61,9 +62,7 @@ posts = result.scalars().all()
 post = await g.db_session.get(Post, 1)
 
 # Filtered query
-result = await g.db_session.execute(
-    select(Post).where(Post.title.like("%python%"))
-)
+result = await g.db_session.execute(select(Post).where(Post.title.like("%python%")))
 posts = result.scalars().all()
 
 # Update

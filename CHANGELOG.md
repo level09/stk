@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.0.1 (2026-10-25)
+
+No migration required.
+
+- Every dependency is locked at its latest release and tested: SQLAlchemy 2.1, Quart 0.23, webauthn 3, uvicorn 0.54, cryptography 50.0.2, and the rest. `pip-audit` finds no known vulnerabilities.
+- Requires quart-security 2.0.3, which declares the passkey usage choices the way wtforms 3.3 expects (tuple choices are removed in wtforms 3.4).
+- The pre-commit ruff hook matches the locked ruff (0.17.2). Ruff now also formats the Python samples in the docs.
+
 ## v17.0.0 (2026-10-25)
 
 stk becomes an installed, versioned package. An app is a separate, thin package that composes it and never edits a framework file, so upgrading stk is a version bump plus whatever its release note says.
