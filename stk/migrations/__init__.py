@@ -7,6 +7,7 @@ label; an app's carry its package name and live in `<package>/migrations/`.
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import os
 import pkgutil
 import tempfile
@@ -71,11 +72,20 @@ def app_label(app) -> str:
 
 
 def app_versions(app) -> Path:
+    """The app's migrations directory; `app` is the app or its import name."""
+    if isinstance(app, str):
+        return Path(importlib.util.find_spec(app).origin).parent / "migrations"
     return Path(app.root_path) / "migrations"
 
 
 def build_alembic_config(app=None, url=None, *, quiet=False) -> AlembicConfig:
-    """Build an Alembic config for stk's lineage plus the app's, if given."""
+    """Build an Alembic config for stk's lineage plus the app's, if given.
+
+    `app` is the app, or its import name (`"myapp"`) with an explicit `url`, so a
+    test can migrate a throwaway database before it builds the app.
+    """
+    if isinstance(app, str) and url is None:
+        raise ValueError("pass url when app is an import name")
     config = AlembicConfig()
     config.set_main_option("script_location", str(SCRIPT_DIR))
     config.set_main_option("path_separator", "os")

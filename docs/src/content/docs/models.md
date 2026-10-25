@@ -112,6 +112,16 @@ There are two lineages and one version table. stk's revisions ship inside the pa
 
 `stk verify` runs the drift check too, so a model change without a migration fails the gate. The check migrates a throwaway database of the configured dialect (Postgres needs a role with CREATEDB), because SQLite cannot render Postgres types. It also fails on a revision whose `upgrade()` drops or renames a table or column, retypes a column, or adds a NOT NULL column without a `server_default`. Autogenerate writes a renamed field as a drop plus an add, which loses the data. When a destructive step is intended, say so with a `# destructive: <reason>` comment inside `upgrade()`. The Alembic env lives in `stk/migrations/env.py`, built in code; apps need no `alembic.ini`.
 
+A test that needs a migrated database builds the same config in code. `build_alembic_config` takes the app, or its import name plus a URL, so a test can migrate a throwaway database before it builds its app:
+
+```python
+from alembic import command
+from stk.migrations import build_alembic_config, throwaway_database_url
+
+with throwaway_database_url(Config.SQLALCHEMY_DATABASE_URI, sync=True) as url:
+    command.upgrade(build_alembic_config("myapp", url, quiet=True), "heads")
+```
+
 A Postgres extension (PostGIS, pgvector) must exist before a non-superuser role migrates: create it as the superuser, as the app's `postgres/init-db.sh` notes. Autogenerate never offers to drop `spatial_ref_sys`, the table PostGIS owns. Mark a model table that needs PostGIS with `info={"postgis": True}`, and `stk.migrations.portable_tables()` leaves it out when tests build tables on SQLite.
 
 ## SQLite traps
