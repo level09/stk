@@ -1,5 +1,13 @@
 # Changelog
 
+## v16.4.1 (2026-10-25)
+
+No migration required.
+
+- Apps built on stk upgrade by merging stk release tags: see Deployment, "Upgrading an app built on stk". `.gitattributes` keeps an app's README, CHANGELOG, lockfile, and brand files on merge once `git config merge.ours.driver true` is set. An app copied without stk's history records its starting commit once with `git merge -s ours --allow-unrelated-histories <commit>`.
+- `stk smoke` skips every WebSocket route, not only `/ws`, and any path listed in the new `STK_SMOKE_SKIP` app config value.
+- The Vue brace check in `stk verify` ignores `<script>` bodies, where JS template literals are valid.
+
 ## v16.4.0 (2026-10-25)
 
 No migration required.
