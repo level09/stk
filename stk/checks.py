@@ -286,10 +286,11 @@ def check_admin_reset_route(app):
     )
 
 
-@check("GET / returns 200")
+@check("GET / answers 200, after any redirects")
 async def check_http_index(app):
+    # An app may send / to its sign-in or home page; what it lands on must work.
     client = app.test_client()
-    response = await client.get("/")
+    response = await client.get("/", follow_redirects=True)
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
 

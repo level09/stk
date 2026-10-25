@@ -10,7 +10,7 @@ import inspect
 from importlib.metadata import version
 
 import click
-from quart.cli import QuartGroup
+from quart.cli import NoAppException, QuartGroup, ScriptInfo
 
 import stk.cli as cli
 from stk.cli.base import load_app
@@ -44,7 +44,7 @@ class StkGroup(QuartGroup):
             if command is not None and not command.hidden:
                 commands[name] = command
 
-        for title, names in SECTIONS:
+        for title, names in [*SECTIONS, *_app_sections(ctx)]:
             rows = [
                 (name, commands.pop(name).get_short_help_str(limit=60))
                 for name in names
@@ -62,6 +62,17 @@ class StkGroup(QuartGroup):
                         for name, command in sorted(commands.items())
                     ]
                 )
+
+
+def _app_sections(ctx):
+    """The app's own help sections, `STK_CLI_SECTIONS`; none outside an app."""
+    try:
+        app = ctx.ensure_object(ScriptInfo).load_app()
+    except NoAppException:
+        return []
+    return [
+        (title, list(names)) for title, names in app.config.get("STK_CLI_SECTIONS", ())
+    ]
 
 
 def _create_app(**_kwargs):

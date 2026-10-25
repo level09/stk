@@ -137,6 +137,8 @@ async def index():
     return await render_template("index.html")
 ```
 
+To change the landing page, override `index.html` in your app. To answer `/` with something else, such as a redirect to your app's home or to sign-in, replace the view in an extension's `init_app`: `app.view_functions["public.index"] = home`. `stk verify` follows redirects from `/` and checks that the page it lands on answers 200.
+
 To add a module of your own, run `uv run stk new <module>`. It writes an extension into your app package (blueprint, model, template, sidebar entry), adds it to `extensions`, generates and applies its migration, and ends at a URL you can open.
 
 ## Request lifecycle
