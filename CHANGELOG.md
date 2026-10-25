@@ -24,7 +24,7 @@ stk becomes an installed, versioned package. An app is a separate, thin package 
 - `stk doctor` reports the app it loaded and understands two lineages.
 - `stk init` gives each app a `CLAUDE.md` (with `AGENTS.md` linked) carrying stk's rules and pointing at the docs, the stk skills, and a CI workflow running tests, `stk verify`, and `stk smoke`. `stk verify` in stk's repository fails when the template's rules drift from stk's.
 - `stk new` uses English plurals for pages and APIs (`category` gives `/categories/`). Pass the singular name.
-- stk depends on `httpx2` and `authlib>=1.9.1`, so authlib uses its supported HTTP client instead of warning about its deprecated httpx fallback on every command.
+- stk moves from httpx to `httpx2`, with `authlib>=1.9.1` and `quart-security>=2.0.2` doing the same, so authlib no longer warns about its deprecated httpx fallback on every command.
 - The unused `sidebar` and `layout_classes` blocks are gone from stk's templates and the scaffold.
 
 ### Upgrade considerations

@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 import click
-import httpx
+import httpx2
 
 from stk.agent_login import create_agent_login_token
 from stk.cli.base import cli_app, run_async
@@ -255,10 +255,10 @@ def _wait_for_smoke_server(base_url, process):
                 f"{stdout.strip()}\n{stderr.strip()}"
             )
         try:
-            response = httpx.get(f"{base_url}/login", timeout=1)
+            response = httpx2.get(f"{base_url}/login", timeout=1)
             if response.status_code < 500:
                 return
-        except httpx.HTTPError:
+        except httpx2.HTTPError:
             pass
         time.sleep(0.2)
     raise click.ClickException("smoke server did not start within 20 seconds")

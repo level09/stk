@@ -1,7 +1,7 @@
 import datetime
 import secrets
 
-import httpx
+import httpx2
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.oidc.core import CodeIDToken
 from joserfc import jwt
@@ -180,7 +180,7 @@ def get_github_client():
 
 
 async def google_discovery():
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx2.AsyncClient(timeout=10) as client:
         response = await client.get(GOOGLE_DISCOVERY_URL)
         response.raise_for_status()
         return response.json()
@@ -265,7 +265,7 @@ async def google_callback():
                 redirect_uri=transaction["redirect_uri"],
                 code_verifier=transaction["verifier"],
             )
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx2.AsyncClient(timeout=10) as client:
             response = await client.get(discovery["jwks_uri"])
             response.raise_for_status()
             decoded = jwt.decode(
@@ -315,7 +315,7 @@ async def github_callback():
                 redirect_uri=transaction["redirect_uri"],
                 code_verifier=transaction["verifier"],
             )
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx2.AsyncClient(timeout=10) as client:
             headers = {
                 "Authorization": f"Bearer {token['access_token']}",
                 "Accept": "application/json",
