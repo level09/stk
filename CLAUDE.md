@@ -80,6 +80,7 @@ Backend:
 
 Frontend:
 - Vue Options API (`data()`, `methods`, `mounted()`), never Composition API. Delimiters are `${}`. Every page uses `mixins: [layoutMixin]` and calls `registerStkComponents(app)` before mount.
+- Jinja output inside `#app` is compiled by Vue: user text there runs as code. Pass it as data, or put `v-pre` on its element.
 - Server data JSON `<script>` tags go in `{% block js %}`, never `{% block content %}`: Vue strips scripts inside `#app`.
 - Template expressions cannot see page globals: `app.config.globalProperties.name = value` before mount. The production build fails silently, so look at the rendered page.
 - Vuetify 4 uses MD3 type classes (`text-title-large`, not `text-h6`); MD2 classes do nothing. Icons are Tabler (`ti ti-*`), never MDI.
