@@ -151,3 +151,15 @@ jobs:
         if: failure()
         working-directory: ciapp
         run: docker compose logs --no-color
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+
+      # uv audit is a preview command; drop the flag once it is stable
+      - name: Audit locked dependencies for known vulnerabilities
+        run: uv audit --frozen --preview-features audit-command
