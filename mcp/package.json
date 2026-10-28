@@ -1,4 +1,5 @@
 {
+  "//": "ponytail: overrides patch sharp, undici and zod inside @cloudflare/vitest-pool-workers 0.23.0's pinned miniflare (dev-only); drop them once it ships a newer miniflare",
   "name": "stk-docs-mcp",
   "private": true,
   "type": "module",
@@ -13,16 +14,21 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "agents": "0.30.1",
     "@modelcontextprotocol/sdk": "1.32.1",
-    "zod": "4.6.7",
-    "@modelcontextprotocol/server": "2.3.1"
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "0.30.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/vitest-pool-workers": "0.23.0",
     "@cloudflare/workers-types": "5.20260731.1",
     "typescript": "7.0.2",
-    "vitest": "4.1.11",
-    "wrangler": "4.147.0"
+    "vitest": "4.1.12",
+    "wrangler": "4.154.0"
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "undici": "7.30.1",
+    "zod": "$zod"
   }
 }
