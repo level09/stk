@@ -1,4 +1,4 @@
 vue 3.5.44
 vuetify 4.3.1
 axios 1.21.0
-@tabler/icons-webfont 3.45.0
+@tabler/icons-webfont 3.50.0

@@ -4,6 +4,7 @@
 
 - The docs move to https://docs.stkit.dev, matching the PyPI name. An app made by an earlier `stk init` points its `CLAUDE.md` and `.claude/skills/` at docs.stk.dev: replace it with docs.stkit.dev.
 - stkit's PyPI page links to the docs, source and changelog.
+- Vendored Vue 3.5.44, Vuetify 4.3.1, axios 1.21.0 (fixes GHSA-m8m8-qj5v-23w3, GHSA-x97p-jq2g-jp4f and ten other axios advisories) and Tabler icons 3.50.0. Tabler now ships its font as unicode-range subsets in `icons/fonts/`, so the browser loads only the groups a page uses; `icons/fonts/tabler-icons.woff2` is gone. An app that preloads that file links `icons/fonts/tabler-icons.core.woff2` instead (Frontend).
 
 ## v17.1.0 (2026-10-25)
 

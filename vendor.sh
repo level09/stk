@@ -6,7 +6,7 @@ set -euo pipefail
 VUE_VERSION="3.5.44"
 VUETIFY_VERSION="4.3.1"
 AXIOS_VERSION="1.21.0"
-TABLER_VERSION="3.45.0"
+TABLER_VERSION="3.50.0"
 
 cd "$(dirname "$0")"
 STATIC="stk/static"
@@ -28,28 +28,13 @@ echo "axios $AXIOS_VERSION"
 fetch "$CDN/axios@$AXIOS_VERSION/dist/axios.min.js" "$STATIC/js/axios.min.js"
 
 echo "tabler icons $TABLER_VERSION"
-mkdir -p "$STATIC/icons/fonts"
+rm -rf "$STATIC/icons/fonts" && mkdir -p "$STATIC/icons/fonts"
 fetch "$CDN/@tabler/icons-webfont@$TABLER_VERSION/dist/tabler-icons.min.css" "$STATIC/icons/tabler-icons.min.css"
-fetch "$CDN/@tabler/icons-webfont@$TABLER_VERSION/dist/fonts/tabler-icons.woff2" "$STATIC/icons/fonts/tabler-icons.woff2"
-
-# Keep woff2 only; the published stylesheet also lists woff and ttf fallbacks
-# that we do not vendor, and a missing font file fails `quart smoke`.
-python3 - "$STATIC/icons/tabler-icons.min.css" <<'PY'
-import re
-import sys
-
-path = sys.argv[1]
-css = open(path).read()
-css, count = re.subn(
-    r'src:url\("\./fonts/tabler-icons\.woff2[^}]*?format\("truetype"\)',
-    'src:url("./fonts/tabler-icons.woff2") format("woff2")',
-    css,
-    count=1,
-)
-if count != 1:
-    raise SystemExit(f"tabler css @font-face changed shape, adjust {path}")
-open(path, "w").write(css)
-PY
+# Since 3.50 the font ships as unicode-range subsets; fetch every file the
+# stylesheet references so a missing font cannot fail `stk smoke`.
+for font in $(grep -o '\./fonts/[^"?)]*' "$STATIC/icons/tabler-icons.min.css" | sort -u); do
+  fetch "$CDN/@tabler/icons-webfont@$TABLER_VERSION/dist/${font#./}" "$STATIC/icons/${font#./}"
+done
 
 cat > "$STATIC/VERSIONS.txt" <<EOF
 vue $VUE_VERSION

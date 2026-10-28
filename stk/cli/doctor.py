@@ -168,7 +168,7 @@ def _check_assets():
             "js/vuetify.min.js",
             "css/vuetify.min.css",
             "icons/tabler-icons.min.css",
-            "icons/fonts/tabler-icons.woff2",
+            "icons/fonts/tabler-icons.core.woff2",
         )
     ]
     missing = [path.name for path in expected if not path.exists()]
