@@ -3,9 +3,9 @@
 # committed. Bump a version here, run this, then run `uv run quart smoke`.
 set -euo pipefail
 
-VUE_VERSION="3.5.40"
-VUETIFY_VERSION="4.1.6"
-AXIOS_VERSION="1.18.1"
+VUE_VERSION="3.5.44"
+VUETIFY_VERSION="4.3.1"
+AXIOS_VERSION="1.21.0"
 TABLER_VERSION="3.45.0"
 
 cd "$(dirname "$0")"
