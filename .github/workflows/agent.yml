@@ -1,0 +1,102 @@
+name: Agent repair
+
+# Code detects and verifies, the agent repairs, a human merges. The agent only
+# edits the working tree: it holds no push credentials, and this workflow
+# commits its diff only after the protected-path guard and the gate pass again.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  id-token: write
+
+env:
+  SECRET_KEY: test-secret-key-for-ci
+  SECURITY_PASSWORD_SALT: test-salt-for-ci
+  SECURITY_TOTP_SECRETS: test-totp-secret
+  # Paths only a human changes: the checks the agent is graded against, auth, and CI.
+  PROTECTED: '^(stk/checks\.py|stk/security\.py|stk/agent_login\.py|stk/user/|\.github/)'
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv python install 3.11
+      - run: uv sync --extra dev
+      - run: uv run stk db upgrade
+
+      - name: Gate
+        id: gate
+        run: |
+          failing=0
+          uv run stk verify --json > "$RUNNER_TEMP/verify.json" || failing=1
+          uv audit --frozen --preview-features audit-command > "$RUNNER_TEMP/audit.txt" 2>&1 || failing=1
+          echo "failing=$failing" >> "$GITHUB_OUTPUT"
+
+      - uses: anthropics/claude-code-action@v1
+        if: steps.gate.outputs.failing == '1'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: '--model claude-opus-5-5 --max-turns 40 --allowed-tools "Bash,Read,Edit,Write,Glob,Grep"'
+          show_full_output: true
+          prompt: |
+            stk's scheduled gate failed. The evidence:
+            - ${{ runner.temp }}/verify.json: `stk verify --json`. Each failed check has a
+              `remedy`; the `checks` entry lists every sanity check in `results`.
+            - ${{ runner.temp }}/audit.txt: `uv audit` of the locked dependencies.
+
+            Read CLAUDE.md first. Fix the root cause of each failure with the smallest
+            change. For an advisory, raise the dependency floor past the fixed version
+            in pyproject.toml and relock.
+
+            Never edit stk/checks.py, stk/security.py, stk/agent_login.py, stk/user/,
+            or .github/, and never weaken or delete a test to make it pass. If a
+            failure can only be fixed there, change nothing for it and say so in the
+            description.
+
+            Done means `uv run stk verify` and
+            `uv run python -m unittest discover -s tests` both pass.
+            Do not commit, branch, or push. Write the PR description to
+            ${{ runner.temp }}/pr.md: each failure, its root cause, and the fix.
+
+      - name: Open the PR
+        if: steps.gate.outputs.failing == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "::warning::Gate failed and the agent changed nothing; see the run log"
+            exit 1
+          fi
+          touched=$(git status --porcelain | cut -c4-)
+          if echo "$touched" | grep -E "$PROTECTED"; then
+            echo "::error::Agent touched protected paths"
+            exit 1
+          fi
+          branch="agent/repair-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -A
+          git commit -m "fix: repair failing scheduled checks"
+          # After the commit: verify also judges what is now tracked.
+          uv run stk verify
+          uv run python -m unittest discover -s tests
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" "$branch"
+          gh label create agent --force --color 5319e7 --description "Opened by the repair agent"
+          gh pr create --head "$branch" --base master --label agent \
+            --title "fix: repair failing scheduled checks" --body-file "$RUNNER_TEMP/pr.md"
+          # A GITHUB_TOKEN push triggers no workflows; a dispatch does, so the PR gets full CI.
+          gh workflow run checks.yml --ref "$branch"

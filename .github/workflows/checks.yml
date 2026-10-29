@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 env:
   SECRET_KEY: test-secret-key-for-ci
