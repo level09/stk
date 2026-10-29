@@ -205,7 +205,7 @@ def _run_smoke_setup(env):
         if result.returncode != 0:
             raise click.ClickException(
                 "smoke setup failed for "
-                f"{' '.join(command_args)}\n{result.stderr.strip()}"
+                f"{' '.join(command_args)}\n{result.stdout.strip()}\n{result.stderr.strip()}"
             )
 
 

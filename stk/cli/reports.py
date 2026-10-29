@@ -2,6 +2,7 @@
 
 import html
 import inspect as pyinspect
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -9,8 +10,8 @@ from pathlib import Path
 from stk.migrations import import_model_modules
 
 VERIFY_COMMANDS = [
-    ("ruff", ["ruff", "check", "."]),
-    ("checks", [sys.executable, "-m", "stk.checks"]),
+    ("ruff", ["ruff", "check", "--output-format", "concise", "."]),
+    ("checks", [sys.executable, "-m", "stk.checks", "--json"]),
     ("migration-drift", [sys.executable, "-m", "stk", "db", "check"]),
 ]
 
@@ -18,7 +19,7 @@ VERIFY_COMMANDS = [
 # twice. Every check names its remedy, in the report and in the JSON an agent reads.
 REMEDIES = {
     "ruff": "uv run ruff check --fix . && uv run ruff format .",
-    "checks": "read the failed assertion above; each check names what it expected",
+    "checks": "fix what each failed check reports, then rerun: uv run python -m stk.checks",
     "migration-drift": 'uv run stk db revision -m "describe change" && uv run stk db upgrade',
 }
 
@@ -214,21 +215,23 @@ def build_verify_report(commands=None, runner=_command_runner):
     checks = []
     for name, command_args in commands or VERIFY_COMMANDS:
         returncode, stdout, stderr = runner(command_args)
-        checks.append(
-            {
-                "name": name,
-                "command": command_args,
-                "returncode": returncode,
-                "status": "skipped"
-                if returncode is None
-                else "passed"
-                if returncode == 0
-                else "failed",
-                "stdout": stdout.strip(),
-                "stderr": stderr.strip(),
-                "remedy": REMEDIES.get(name),
-            }
-        )
+        entry = {
+            "name": name,
+            "command": command_args,
+            "returncode": returncode,
+            "status": "skipped"
+            if returncode is None
+            else "passed"
+            if returncode == 0
+            else "failed",
+            "stdout": stdout.strip(),
+            "stderr": stderr.strip(),
+            "remedy": REMEDIES.get(name),
+        }
+        # Empty when the checks crashed before reporting; stderr then says why.
+        if name == "checks" and stdout.strip():
+            entry["results"] = json.loads(stdout)
+        checks.append(entry)
     status = (
         "passed"
         if all(check["returncode"] in (0, None) for check in checks)

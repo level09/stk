@@ -1,10 +1,13 @@
 """An app may replace stk's landing page, and verify judges where / lands."""
 
+import contextlib
+import io
 import unittest
 from types import SimpleNamespace
 
 from quart import redirect
 
+from stk import checks
 from stk.app import Stk
 from stk.checks import check_http_index
 from stk.cli.main import _app_sections
@@ -21,7 +24,8 @@ class AppIndexTest(unittest.IsolatedAsyncioTestCase):
         app.view_functions["public.index"] = home
         response = await app.test_client().get("/")
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(await check_http_index(app))
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(await check_http_index(app))
 
     async def test_a_redirect_to_a_broken_page_fails_the_check(self):
         app = Stk(__name__, config=TestingConfig)
@@ -30,7 +34,10 @@ class AppIndexTest(unittest.IsolatedAsyncioTestCase):
             return redirect("/nowhere")
 
         app.view_functions["public.index"] = home
-        self.assertFalse(await check_http_index(app))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertFalse(await check_http_index(app))
+        self.assertIn("Expected 200, got 404", out.getvalue())
+        self.assertEqual(checks.RESULTS[-1]["detail"], "Expected 200, got 404")
 
 
 class AppHelpSectionsTest(unittest.TestCase):

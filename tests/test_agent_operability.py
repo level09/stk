@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import unittest
 from datetime import datetime
@@ -79,6 +80,19 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["checks"][0]["name"], "sample")
         self.assertEqual(report["checks"][0]["returncode"], 0)
+
+    def test_verify_report_carries_each_check_result(self):
+        results = [
+            {"name": "App boots", "status": "passed", "detail": None},
+            {"name": "Templates exist", "status": "failed", "detail": "missing x"},
+        ]
+        report = build_verify_report(
+            [("checks", ["checks"])],
+            runner=lambda command: (1, json.dumps(results), ""),
+        )
+
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["checks"][0]["results"], results)
 
     def test_verify_report_allows_skipped_optional_checks(self):
         report = build_verify_report(

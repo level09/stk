@@ -109,6 +109,9 @@ uv run stk report          # docs/stk-report.html: routes, auth, gate results
 ```
 
 `stk verify` runs ruff, the sanity checks in `stk/checks.py` against your app, and migration drift, and exits `1` if any fail.
+Each failure prints its reason and a remedy. In `stk verify --json`, the `checks` entry
+also carries `results`: one `{name, status, detail}` per sanity check, so a tool or agent
+reads which check failed and why without parsing text.
 CI runs both `stk verify --json` and `stk smoke --json` (after the unit tests), so the
 pair above is the same gate locally. `stk report --json` prints the routes and verify
 results instead of writing HTML, and `-o` picks another output path.

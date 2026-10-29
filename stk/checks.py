@@ -6,17 +6,20 @@ stk's own docs and run only inside the stk repository.
 
 Usage:
     uv run python -m stk.checks
-    uv run python -m stk.checks -v  # verbose
+    uv run python -m stk.checks --json  # one result per check, for stk verify
 """
 
 import asyncio
+import contextlib
+import json
 import sys
 
 from stk.cli.base import project_root
 
-VERBOSE = "-v" in sys.argv
+AS_JSON = "--json" in sys.argv
 PASSED = 0
 FAILED = 0
+RESULTS = []
 ROOT = project_root()
 # stk's own checkout: its docs, skills, and generated reference are checked too.
 IN_STK_REPO = (ROOT / "stk" / "__init__.py").is_file() and (
@@ -37,13 +40,15 @@ def check(name, repo_only=False):
                 if asyncio.iscoroutine(result):
                     await result
                 PASSED += 1
+                RESULTS.append({"name": name, "status": "passed", "detail": None})
                 print(f"  \033[32m✓\033[0m {name}")
                 return True
             except Exception as e:
                 FAILED += 1
+                detail = str(e) or type(e).__name__
+                RESULTS.append({"name": name, "status": "failed", "detail": detail})
                 print(f"  \033[31m✗\033[0m {name}")
-                if VERBOSE:
-                    print(f"    → {e}")
+                print(f"    → {detail}")
                 return False
 
         wrapper._check_name = name
@@ -632,4 +637,10 @@ async def run_checks():
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(run_checks()))
+    if not AS_JSON:
+        sys.exit(asyncio.run(run_checks()))
+    # stdout carries only the JSON, so prints from the app cannot corrupt it.
+    with contextlib.redirect_stdout(sys.stderr):
+        code = asyncio.run(run_checks())
+    print(json.dumps(RESULTS))
+    sys.exit(code)

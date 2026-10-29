@@ -85,9 +85,17 @@ def _print_verify_report(report, detail_lines=5):
         console.print(f"{MARKERS[check['status']]} {check['name']}", highlight=False)
         if check["status"] != "failed":
             continue
-        output = check["stdout"].strip() or check["stderr"].strip()
-        for line in output.splitlines()[-detail_lines:]:
-            console.print(f"    [dim]{line}[/]", highlight=False)
+        if "results" in check:
+            for result in check["results"]:
+                if result["status"] == "failed":
+                    console.print(
+                        f"    [dim]{result['name']}: {result['detail']}[/]",
+                        highlight=False,
+                    )
+        else:
+            output = check["stdout"].strip() or check["stderr"].strip()
+            for line in output.splitlines()[-detail_lines:]:
+                console.print(f"    [dim]{line}[/]", highlight=False)
         if check["remedy"]:
             console.print(f"    [cyan]→ {check['remedy']}[/]", highlight=False)
 

@@ -109,7 +109,7 @@ def _check_migrations(app):
         with engine.connect() as connection:
             current = set(MigrationContext.configure(connection).get_current_heads())
     except Exception as exc:  # unreachable database is its own diagnosis
-        return _finding("migrations", FAIL, str(exc)[:80], "uv run stk db upgrade")
+        return _finding("migrations", FAIL, str(exc), "uv run stk db upgrade")
     finally:
         engine.dispose()
 
@@ -151,7 +151,7 @@ def _check_admin():
     try:
         admins = run_async(_count())
     except Exception as exc:
-        return _finding("admin user", FAIL, str(exc)[:80], "uv run stk db upgrade")
+        return _finding("admin user", FAIL, str(exc), "uv run stk db upgrade")
     if admins:
         return _finding("admin user", OK, f"{admins} admin(s)")
     return _finding("admin user", WARN, "no admin user", "uv run stk install")
@@ -203,13 +203,8 @@ def _check_browser():
     try:
         with sync_playwright() as playwright:
             path = Path(playwright.chromium.executable_path)
-    except Exception:
-        return _finding(
-            "browser",
-            WARN,
-            "chromium not installed",
-            "uv run playwright install chromium",
-        )
+    except Exception as exc:  # report the real error, not a guess at its cause
+        return _finding("browser", WARN, str(exc), "uv run playwright install chromium")
     if not path.exists():
         return _finding(
             "browser",
@@ -239,9 +234,7 @@ def build_doctor_report():
     try:
         app = cli_app()
     except Exception as exc:  # an app that cannot load is the diagnosis
-        findings.append(
-            _finding("app", FAIL, str(exc)[:120], "read the error, then rerun")
-        )
+        findings.append(_finding("app", FAIL, str(exc), "read the error, then rerun"))
         app = None
     if app is not None:
         findings += [
