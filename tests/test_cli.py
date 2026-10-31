@@ -55,6 +55,16 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class PublicUrlDoctorTest(unittest.TestCase):
+    def test_warns_only_outside_development_without_a_public_url(self):
+        from stk.cli.doctor import _check_public_url
+
+        self.assertEqual(_check_public_url({})["status"], "warn")
+        self.assertEqual(_check_public_url({"STK_ENV": "development"})["status"], "ok")
+        set_url = {"STK_PUBLIC_URL": "https://app.example.com"}
+        self.assertEqual(_check_public_url(set_url)["status"], "ok")
+
+
 class DowngradeArgumentTest(unittest.TestCase):
     def test_relative_revision_is_accepted(self):
         with patch("stk.cli.database.run_alembic") as run:

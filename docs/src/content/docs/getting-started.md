@@ -33,7 +33,7 @@ To drop the `uv run` prefix, activate the venv once per shell with `source .venv
 Anything unclear about the state of your app? One command answers it:
 
 ```bash
-uv run stk doctor       # env file, app, secrets, database, migrations, admin, assets, browser
+uv run stk doctor       # env file, app, secrets, database, migrations, admin, public url, assets, browser
 ```
 
 `stk smoke` needs a browser for Playwright. If doctor flags it, run `uv run playwright install chromium`.

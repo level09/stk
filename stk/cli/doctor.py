@@ -193,6 +193,18 @@ def _check_agent_login(config):
     )
 
 
+def _check_public_url(config):
+    env = config.get("STK_ENV", "production")
+    if env != "development" and not config.get("STK_PUBLIC_URL"):
+        return _finding(
+            "public url",
+            WARN,
+            f"STK_PUBLIC_URL unset with STK_ENV={env}: any Host header is accepted",
+            "set STK_PUBLIC_URL to the origin users visit, e.g. https://app.example.com",
+        )
+    return _finding("public url", OK, config.get("STK_PUBLIC_URL") or "development")
+
+
 def _check_browser():
     try:
         from playwright.sync_api import sync_playwright
@@ -244,6 +256,7 @@ def build_doctor_report():
             _check_migrations(app),
             _check_admin(),
             _check_agent_login(app.config),
+            _check_public_url(app.config),
         ]
     findings += [_check_assets(), _check_browser(), _check_repl()]
     if any(item["status"] == FAIL for item in findings):
