@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from stk.cli.copy_rules import (
@@ -48,6 +49,11 @@ class CopyRuleTests(unittest.TestCase):
             ["Status: pending_review", "Sorted by created_at"],
             ["jane_doe@example.com", "/static/app_icon.png", "STK_ENV", "Pending"],
         )
+
+    def test_raw_score_is_linear_on_long_blank_runs(self):
+        start = time.perf_counter()
+        self.assertEqual(raw_score("score" + " " * 50_000 + "!"), [])
+        self.assertLess(time.perf_counter() - start, 1)
 
     def test_raw_score(self):
         self.assertRule(

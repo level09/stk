@@ -41,7 +41,8 @@ HEX = re.compile(r"[0-9a-f]{6,}", re.I)
 HASH_LABEL = re.compile(r"(?:sha-?256|sha|md5|hash|digest|fingerprint)\W{0,3}$", re.I)
 SNAKE = re.compile(r"(?<![\w./@-])[a-z][a-z0-9]*(?:_[a-z0-9]+)+(?![\w@-]|\.\w)")
 SCORE = re.compile(
-    r"\b(?:score|similarity|confidence|distance|cosine)\b\s*[:=]?\s*-?\d*\.\d+", re.I
+    r"\b(?:score|similarity|confidence|distance|cosine)\b\s*(?:[:=]\s*)?-?\d*\.\d+",
+    re.I,
 )
 ONE = re.compile(r"(?<![\d.,:/-])\b1[ \t]+([A-Za-z]+s)\b")
 # Words ending in s after a 1 that are not plurals: "1 is", "1 status".
