@@ -240,7 +240,7 @@ Registered by `registerStkComponents(app)`:
 |---|---|
 | `<vertical-nav-link>`, `<vertical-nav-group>`, `<vertical-nav-section-title>` | Sidebar entries |
 | `<transition-expand>` | Animated height for nav groups |
-| `<notification-dropdown>` | The signed-in user's bell: unread badge, list, mark read. Loads `/api/notifications` itself and takes live ones from the socket |
+| `<notification-dropdown>` | With `stk.notification` in the app's extensions, the signed-in user's bell: unread badge, list, mark read. Loads `/api/notifications` itself and takes live ones from the socket |
 | `<theme-switcher>` | Light/dark toggle, persisted in localStorage |
 
 Create notifications on the server with `notify()`; see [Background Work](/background-work#notifications).

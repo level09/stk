@@ -61,6 +61,8 @@ Admins see every job, its payload, and its last error at `/jobs`. Done jobs stay
 
 ## Notifications
 
+The bell and the `/api/notifications` routes are opt-in: add `stk.notification` to the app's extensions (`import stk.notification`, then `extensions=[stk.notification, ...]`). Apps made by `stk init` start with it listed. Without it stk claims none of those paths, so an app can serve its own. `notify` stores rows either way.
+
 `notify` stores a notification for one user in `stk_notification`, then pushes it to that user's open sockets, where it lands in the bell in the app bar:
 
 ```python

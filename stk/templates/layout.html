@@ -48,8 +48,10 @@
             <!-- Theme Switcher -->
             <theme-switcher></theme-switcher>
 
-            <!-- Notifications -->
+            {% if stk_notifications %}
+            <!-- Notifications: only with stk.notification in the app's extensions -->
             <notification-dropdown ref="notifications"></notification-dropdown>
+            {% endif %}
 
             <!-- Connection Status -->
             <v-tooltip :text="wsConnected ? 'Real-time connected' : 'Reconnecting...'" location="bottom">

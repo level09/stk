@@ -5,6 +5,7 @@ import unittest
 from quart_security import hash_password
 
 import stk.extensions as ext
+import stk.notification
 from stk.app import Stk
 from stk.extensions import Base
 from stk.notification import notify
@@ -14,7 +15,7 @@ from stk.user.models import User
 
 class NotificationTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.app = Stk(__name__, config=TestingConfig)
+        self.app = Stk(__name__, config=TestingConfig, extensions=[stk.notification])
         async with ext.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         async with ext.async_session_factory() as db:

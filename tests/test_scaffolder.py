@@ -321,7 +321,7 @@ class InitAndNewTests(unittest.TestCase):
             ast.parse((self.app / "acme" / "widget" / name).read_text())
         app_module = (self.app / "acme" / "app.py").read_text()
         self.assertIn("from acme import gadget, widget", app_module)
-        self.assertIn("extensions = [widget, gadget]", app_module)
+        self.assertIn("extensions = [stk.notification, widget, gadget]", app_module)
 
     def test_new_starts_the_app_lineage_after_stk(self):
         (revision,) = (self.app / "acme" / "migrations").glob("*.py")

@@ -1,4 +1,8 @@
-"""Stored, per-user notifications. The row is the truth; the socket push is a nudge."""
+"""Stored, per-user notifications. The row is the truth; the socket push is a nudge.
+
+Opt in with `extensions=[stk.notification, ...]` for the `/api/notifications`
+routes and the layout's bell; `notify()` stores rows either way.
+"""
 
 import stk.extensions as ext
 from stk.notification.models import Notification
@@ -27,3 +31,11 @@ async def notify(user_id, title, link=None, kind=None, body=None):
         await db.commit()
     await broadcast({"type": "notification", **row.to_dict()}, user_id)
     return row
+
+
+def init_app(app):
+    from stk.notification.views import bp_notification
+
+    app.extensions["stk.notification"] = True
+    app.jinja_env.globals["stk_notifications"] = True
+    app.register_blueprint(bp_notification)
