@@ -14,6 +14,7 @@ import httpx2
 
 from stk.agent_login import create_agent_login_token
 from stk.cli.base import cli_app, run_async
+from stk.cli.copy_rules import ROWS_JS, VISIBLE_TEXT_JS, copy_findings
 
 SMOKE_EMAIL = "smoke@example.com"
 SMOKE_PASSWORD = "SmokePassword123!"
@@ -102,7 +103,7 @@ def discover_smoke_paths(routes, skip=frozenset()):
     )
 
 
-def build_smoke_report(pages, dashboard_screenshot):
+def build_smoke_report(pages, dashboard_screenshot, copy_allow=()):
     """Return a browser smoke report with per-page failure reasons."""
     page_reports = []
     for page in pages:
@@ -128,6 +129,10 @@ def build_smoke_report(pages, dashboard_screenshot):
                 f'invisible text: "{finding["label"]}" contrast {finding["ratio"]}:1'
             )
 
+        copy = copy_findings(page.get("text", ""), page.get("rows", ()), copy_allow)
+        for finding in copy:
+            problems.append(f'reads badly ({finding["rule"]}): "{finding["text"]}"')
+
         page_reports.append(
             {
                 "name": page["name"],
@@ -137,6 +142,7 @@ def build_smoke_report(pages, dashboard_screenshot):
                 "console": page.get("console", []),
                 "failed_requests": page.get("failed_requests", []),
                 "low_contrast": page.get("low_contrast", []),
+                "copy": copy,
                 "problems": problems,
             }
         )
@@ -298,6 +304,8 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
     page.on("requestfailed", _record_failed_request)
     response = await page.goto(f"{base_url}{path}", wait_until="networkidle")
     low_contrast = await page.evaluate(CONTRAST_JS)
+    text = await page.evaluate(VISIBLE_TEXT_JS)
+    rows = await page.evaluate(ROWS_JS)
     if screenshot_path is not None:
         screenshot_path.parent.mkdir(parents=True, exist_ok=True)
         await page.screenshot(path=str(screenshot_path), full_page=True)
@@ -309,10 +317,12 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
         "console": console_entries,
         "failed_requests": failed_requests,
         "low_contrast": low_contrast,
+        "text": text,
+        "rows": rows,
     }
 
 
-async def _run_playwright_smoke(base_url, token, extra_paths):
+async def _run_playwright_smoke(base_url, token, extra_paths, copy_allow):
     try:
         from playwright.async_api import Error as PlaywrightError
         from playwright.async_api import async_playwright
@@ -358,7 +368,7 @@ async def _run_playwright_smoke(base_url, token, extra_paths):
     for page in pages:
         if page["name"] == "agent-login":
             page["path"] = "/_test/login?token=<redacted>"
-    return build_smoke_report(pages, SMOKE_SCREENSHOT)
+    return build_smoke_report(pages, SMOKE_SCREENSHOT, copy_allow)
 
 
 def run_smoke():
@@ -371,12 +381,15 @@ def run_smoke():
         _run_smoke_setup(env)
 
         token, extra_paths = _prepare_smoke(app, env["SECRET_KEY"])
+        copy_allow = app.config.get("STK_SMOKE_COPY_ALLOW", ())
         port = _free_localhost_port()
         base_url = f"http://127.0.0.1:{port}"
         server = _start_smoke_server(port, env)
         try:
             _wait_for_smoke_server(base_url, server)
-            return asyncio.run(_run_playwright_smoke(base_url, token, extra_paths))
+            return asyncio.run(
+                _run_playwright_smoke(base_url, token, extra_paths, copy_allow)
+            )
         finally:
             _stop_smoke_server(server)
 
@@ -391,6 +404,8 @@ def print_smoke_report(report):
             click.echo(f"  console {entry['type']}: {entry['text']}")
         for finding in page.get("low_contrast", []):
             click.echo(f"  invisible text: {finding['label']!r} {finding['ratio']}:1")
+        for finding in page.get("copy", []):
+            click.echo(f"  reads badly: {finding['rule']} {finding['text']!r}")
         for request in page["failed_requests"]:
             click.echo(
                 f"  request failed: {request['url']} {request.get('failure') or ''}"
