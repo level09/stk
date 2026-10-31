@@ -125,7 +125,7 @@ def create(email, password):
     async def _run():
         async with ext.async_session_factory() as session:
             existing = (
-                await session.execute(select(User).where(User.email == email))
+                await session.execute(select(User).where(User.email_is(email)))
             ).scalar_one_or_none()
             if existing is not None:
                 console.print("[yellow]User already exists![/]")
@@ -153,7 +153,7 @@ def add_role(email, role):
 
         async with ext.async_session_factory() as session:
             u = (
-                await session.execute(select(User).where(User.email == email))
+                await session.execute(select(User).where(User.email_is(email)))
             ).scalar_one_or_none()
 
             if u is None:
@@ -196,7 +196,7 @@ def reset(email, password):
         async def _run():
             async with ext.async_session_factory() as session:
                 u = (
-                    await session.execute(select(User).where(User.email == email))
+                    await session.execute(select(User).where(User.email_is(email)))
                 ).scalar_one_or_none()
                 if not u:
                     console.print(f'[red]User with email "{email}" not found.[/]')

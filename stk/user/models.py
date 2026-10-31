@@ -19,9 +19,10 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     delete,
+    func,
     select,
 )
-from sqlalchemy.orm import declared_attr, relationship
+from sqlalchemy.orm import declared_attr, relationship, validates
 
 from stk.extensions import Base
 
@@ -67,6 +68,17 @@ class User(Base, UserMixin):
     password = Column(String(255), nullable=False)
     password_set = Column(Boolean, default=True, nullable=False)
     active = Column(Boolean, default=False, nullable=True)
+
+    @validates("email")
+    def _normalize_email(self, key, value):
+        # Login lowercases what it is given; store the same form so one address
+        # cannot become two accounts that differ only by case.
+        return value.strip().lower() if value is not None else value
+
+    @classmethod
+    def email_is(cls, email):
+        """Match an email regardless of case, including rows stored before 17.2.1."""
+        return func.lower(cls.email) == email.strip().lower()
 
     roles = relationship(
         "Role", secondary=roles_users, backref="users", lazy="selectin"

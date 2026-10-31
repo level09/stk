@@ -69,7 +69,7 @@ async def agent_login():
         return "", 403
 
     user = (
-        await g.db_session.execute(select(User).where(User.email == email))
+        await g.db_session.execute(select(User).where(User.email_is(email)))
     ).scalar_one_or_none()
     if user is None or not user.active:
         return "", 403

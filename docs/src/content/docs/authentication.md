@@ -20,6 +20,8 @@ uv run stk add-role -e user@example.com -r editor
 uv run stk reset -e user@example.com        # prompts for a new password
 ```
 
+Emails are stored trimmed and lowercased, and login, the CLI and OAuth match them regardless of case, so `Ada@Example.com` and `ada@example.com` are one account. Rows stored with capitals before 17.2.1 still sign in; if two of them differ only by case, login fails until you merge or rename one.
+
 New passwords are hashed with Argon2id and must be at least 12 characters. Legacy hashes still verify and are upgraded on login. Password creation and reset also check the password against the Have I Been Pwned breach service; if that service is unreachable the password is accepted, so monitor for those failures.
 
 After 5 failed logins an account is locked for 15 minutes (quart-security's `SECURITY_LOGIN_MAX_ATTEMPTS` and `SECURITY_LOCKOUT_MINUTES` defaults).

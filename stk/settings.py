@@ -58,7 +58,6 @@ class Config:
     SECURITY_API_ENABLED_METHODS = ["session"]
 
     SECURITY_FRESHNESS = timedelta(minutes=60)
-    SECURITY_FRESHNESS_GRACE_PERIOD = timedelta(minutes=60)
     SECURITY_PASSWORD_LENGTH_MIN = 12
 
     SECURITY_TOTP_ISSUER = "stk"

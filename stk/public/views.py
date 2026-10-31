@@ -126,7 +126,7 @@ async def handle_oauth_callback(provider_name, token, user_info):
         user = account.user
     else:
         # Email ownership at an IdP does not authorize linking local credentials.
-        existing = await g.db_session.scalar(select(User).where(User.email == email))
+        existing = await g.db_session.scalar(select(User).where(User.email_is(email)))
         if existing:
             return await authentication_failed()
         user = create_oauth_user(

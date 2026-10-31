@@ -5,7 +5,7 @@ import unittest
 import pyotp
 from quart import g
 from quart_security import hash_password
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 import stk.extensions as ext
 from stk.app import Stk
@@ -51,6 +51,34 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 302)
         async with client.session_transaction() as cookie:
             return dict(cookie)
+
+    async def test_emails_are_stored_lowercase_and_matched_regardless_of_case(self):
+        self.assertEqual(User(email="  New@Example.COM ").email, "new@example.com")
+        # A row stored before normalization keeps its case; lookups still find it.
+        async with ext.async_session_factory() as db:
+            await db.execute(
+                update(User)
+                .where(User.id == self.user_id)
+                .values(email="User@Example.com")
+            )
+            await db.commit()
+            found = await db.scalar(
+                select(User).where(User.email_is(" USER@example.COM"))
+            )
+            self.assertEqual(found.id, self.user_id)
+        client = self.app.test_client()
+        await client.get("/login")
+        async with client.session_transaction() as cookie:
+            csrf = cookie["_csrf_token"]
+        response = await client.post(
+            "/login",
+            form={
+                "email": " user@EXAMPLE.com ",
+                "password": "TestPassword123!",
+                "csrf_token": csrf,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
 
     async def test_startup_validates_state_table_without_request(self):
         async with self.app.test_app():
