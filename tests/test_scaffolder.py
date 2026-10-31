@@ -15,7 +15,10 @@ import tomllib
 import unittest
 from pathlib import Path
 
+from alembic.script import ScriptDirectory
+
 import stk
+from stk.migrations import CORE_LABEL, SCRIPT_DIR
 from stk.scaffold.generator import RESERVED, _add_extension, validate_name
 from stk.scaffold.templates import (
     plural,
@@ -328,7 +331,8 @@ class InitAndNewTests(unittest.TestCase):
             if isinstance(node, ast.Assign)
         }
         self.assertEqual(assigned["branch_labels"], ("acme",))
-        self.assertEqual(assigned["depends_on"], "stk_0002")
+        stk_head = ScriptDirectory(str(SCRIPT_DIR)).get_revision(f"{CORE_LABEL}@head")
+        self.assertEqual(assigned["depends_on"], stk_head.revision)
         # Formatted by the app's ruff config.
         self.assertIn('op.create_table(\n        "widget",', revision.read_text())
 
