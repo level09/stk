@@ -1,5 +1,17 @@
 # Changelog
 
+## v17.2.4 (2026-10-31)
+
+No migration required.
+
+- Notifications are opt-in, like uploads and MCP: add `stk.notification` to the app's extensions for the `/api/notifications` routes and the layout's bell. From 17.2.0 to 17.2.3 stk registered those routes in every app, and because the first matching route answers, an app's own `/api/notifications` was silently never reached. `notify()` still stores rows without it (Background Work).
+- `stk verify` fails when two endpoints register the same path and method, naming both, so a shadowed route can no longer ship silently.
+- Apps made by `stk init`, and the example app, list `stk.notification`.
+
+### Upgrade considerations
+
+- An app that uses stk's bell adds `import stk.notification` and puts `stk.notification` in its `extensions` list, or the bell disappears and `/api/notifications` returns 404.
+
 ## v17.2.3 (2026-10-31)
 
 Run `uv run stk db upgrade`.
