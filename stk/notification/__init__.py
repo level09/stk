@@ -12,8 +12,11 @@ async def notify(user_id, title, link=None, kind=None, body=None):
     after your own commit. `link` must be a same-origin path such as `/exports/3`.
     """
     # The bell navigates to `link`; a `javascript:` or off-site URL would run there.
+    # Browsers strip tabs and newlines from URLs, so "/\t/evil" becomes "//evil".
     if link is not None and (
-        not link.startswith("/") or link.startswith(("//", "/\\"))
+        not link.startswith("/")
+        or link.startswith(("//", "/\\"))
+        or any(c.isspace() or ord(c) < 0x20 or ord(c) == 0x7F for c in link)
     ):
         raise ValueError(f"link must be a same-origin path, got {link!r}")
     async with ext.async_session_factory() as db:

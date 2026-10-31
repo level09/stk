@@ -96,7 +96,13 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await client.get(path)).status_code, 302)
 
     async def test_link_must_be_same_origin(self):
-        for link in ("javascript:alert(1)", "https://evil.example", "//evil.example"):
+        for link in (
+            "javascript:alert(1)",
+            "https://evil.example",
+            "//evil.example",
+            "/\t/evil.example",
+            "/\n/evil.example",
+        ):
             with self.assertRaises(ValueError):
                 await notify(self.alice, "Bad", link=link)
 
