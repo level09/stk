@@ -1,11 +1,12 @@
-"""Starting an app and serving it locally."""
+"""Starting an app, serving it locally, and running its durable jobs."""
 
+import asyncio
 from pathlib import Path
 
 import click
 
 import stk
-from stk.cli.base import app_root, app_spec, cli_app, console
+from stk.cli.base import app_root, app_spec, cli_app, console, run_async
 
 
 @click.command("init")
@@ -61,3 +62,21 @@ def run(host, port, reload):
         app_dir=str(app_root()),
         timeout_graceful_shutdown=3,
     )
+
+
+@click.command("worker")
+@click.option(
+    "--timeout",
+    default=3600,
+    help="Seconds a job may run before it is cancelled and retried.",
+)
+def worker(timeout):
+    """Run queued durable jobs until stopped (SIGTERM or Ctrl-C)."""
+    from stk.tasks import work
+
+    cli_app()
+    console.print("[green]Worker started[/]")
+    try:
+        run_async(work(timeout))
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        console.print("Worker stopped")

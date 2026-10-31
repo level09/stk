@@ -16,6 +16,7 @@ from quart_security import (
 from sqlalchemy import func, select
 
 from stk.security import check_password_policy
+from stk.tasks.models import Job
 from stk.user.models import Activity, Role, Session, User
 
 log = logging.getLogger(__name__)
@@ -264,6 +265,33 @@ async def api_activities():
                 "created_at": activity.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             }
         )
+
+    response_data = {"items": items, "total": total, "perPage": per_page}
+    return Response(json.dumps(response_data), content_type="application/json")
+
+
+@bp_user.route("/jobs/")
+async def jobs():
+    return await render_template("cms/jobs.html")
+
+
+@bp_user.route("/api/jobs")
+async def api_jobs():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", PER_PAGE, type=int)
+    status = request.args.get("status")
+
+    query = select(Job)
+    if status:
+        query = query.where(Job.status == status)
+    total = (
+        await g.db_session.execute(select(func.count()).select_from(query.subquery()))
+    ).scalar()
+
+    result = await g.db_session.execute(
+        query.order_by(Job.id.desc()).offset((page - 1) * per_page).limit(per_page)
+    )
+    items = [job.to_dict() for job in result.scalars().all()]
 
     response_data = {"items": items, "total": total, "perPage": per_page}
     return Response(json.dumps(response_data), content_type="application/json")

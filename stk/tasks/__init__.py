@@ -1,16 +1,32 @@
-"""Async background tasks.
+"""Async background tasks, and durable jobs that survive a restart.
 
 Usage:
-    from stk.tasks import run_in_background
+    from stk.tasks import enqueue, job, run_in_background
 
-    async def my_handler():
-        await run_in_background(send_welcome_email(user_id=123))
+    await run_in_background(send_welcome_email(user_id=123))  # this process only
+
+    @job
+    async def send_report(session, user_id): ...
+
+    await enqueue("send_report", user_id=123)  # `stk worker` runs it
 """
 
 import asyncio
 import logging
+import signal
+import traceback
+from datetime import datetime, timedelta
+
+from sqlalchemy import select, update
+
+import stk.extensions as ext
+from stk.tasks.models import Job
 
 logger = logging.getLogger(__name__)
+
+JOBS = {}
+TIMEOUT = 3600
+POLL_SECONDS = 2
 
 
 async def run_in_background(coro):
@@ -76,3 +92,121 @@ async def cleanup_expired_sessions():
         await session.execute(delete(Session).where(Session.created_at < delete_cutoff))
         await session.commit()
         logger.info("Session cleanup complete")
+
+
+def job(fn):
+    """Register an async `fn(session, **payload)` as a durable job named `fn.__name__`."""
+    if fn.__name__ in JOBS:
+        raise ValueError(f"job {fn.__name__!r} is already registered")
+    JOBS[fn.__name__] = fn
+    return fn
+
+
+async def enqueue(name, **payload):
+    """Store a job for `stk worker` and return its id. The payload must be JSON."""
+    if name not in JOBS:
+        raise ValueError(f"no job named {name!r}: register it with @job")
+    async with ext.async_session_factory() as session:
+        row = Job(name=name, payload=payload)
+        session.add(row)
+        await session.commit()
+        return row.id
+
+
+async def _set(job_id, **values):
+    async with ext.async_session_factory() as session:
+        await session.execute(update(Job).where(Job.id == job_id).values(**values))
+        await session.commit()
+
+
+async def run_next(timeout=TIMEOUT):
+    """Claim the next due job and run it; False when none is due.
+
+    The job's writes and its `done` mark commit together. A failure rolls the
+    job back, records the traceback, and retries after 30s, 60s, ... until
+    `max_attempts`, then leaves it `failed`.
+    """
+    now = datetime.now()
+    due = (
+        select(Job.id)
+        .where(Job.status == "queued", Job.run_after <= now)
+        .order_by(Job.run_after)
+        .limit(1)
+        # ponytail: SQLite drops FOR UPDATE; its single write lock keeps the claim
+        # atomic but serializes workers. Run one worker there, PostgreSQL for more.
+        .with_for_update(skip_locked=True)
+        .scalar_subquery()
+    )
+    claim = (
+        update(Job)
+        .where(Job.id == due)
+        .values(status="running", attempts=Job.attempts + 1, locked_at=now)
+        .returning(Job.id, Job.name, Job.payload, Job.attempts, Job.max_attempts)
+        .execution_options(synchronize_session=False)
+    )
+    async with ext.async_session_factory() as session:
+        claimed = (await session.execute(claim)).one_or_none()
+        await session.commit()
+    if claimed is None:
+        return False
+
+    job_id, name, payload, attempts, max_attempts = claimed
+    async with ext.async_session_factory() as session:
+        try:
+            async with asyncio.timeout(timeout):
+                await JOBS[name](session, **payload)
+            await session.execute(
+                update(Job)
+                .where(Job.id == job_id)
+                .values(status="done", locked_at=None, last_error=None)
+            )
+            await session.commit()
+        except asyncio.CancelledError:
+            # Stopped by SIGTERM or Ctrl-C: hand it back without spending an attempt.
+            await session.rollback()
+            await _set(job_id, status="queued", locked_at=None, attempts=attempts - 1)
+            raise
+        except Exception:
+            await session.rollback()
+            logger.exception("Job %s (%s) failed", job_id, name)
+            retry = attempts < max_attempts
+            await _set(
+                job_id,
+                status="queued" if retry else "failed",
+                run_after=datetime.now() + timedelta(seconds=30 * 2 ** (attempts - 1)),
+                locked_at=None,
+                last_error=traceback.format_exc(),
+            )
+    return True
+
+
+async def recover(timeout=TIMEOUT):
+    """Requeue jobs left `running` by a worker that died, or fail them at the cap."""
+    # A live worker cancels its job at `timeout`; the minute covers recording that.
+    cutoff = datetime.now() - timedelta(seconds=timeout + 60)
+    stale = (Job.status == "running", Job.locked_at < cutoff)
+    lost = f"worker lost: still running after {timeout}s"
+    async with ext.async_session_factory() as session:
+        await session.execute(
+            update(Job)
+            .where(*stale, Job.attempts >= Job.max_attempts)
+            .values(status="failed", locked_at=None, last_error=lost)
+        )
+        await session.execute(
+            update(Job)
+            .where(*stale)
+            .values(status="queued", locked_at=None, last_error=lost)
+        )
+        await session.commit()
+
+
+async def work(timeout=TIMEOUT):
+    """Run due jobs one at a time until SIGTERM or Ctrl-C."""
+    asyncio.get_running_loop().add_signal_handler(
+        signal.SIGTERM, asyncio.current_task().cancel
+    )
+    while True:
+        await recover(timeout)
+        while await run_next(timeout):
+            pass
+        await asyncio.sleep(POLL_SECONDS)

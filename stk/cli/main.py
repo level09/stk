@@ -16,7 +16,7 @@ import stk.cli as cli
 from stk.cli.base import load_app
 
 SECTIONS = [
-    ("Develop", ["init", "run", "shell", "new", "routes"]),
+    ("Develop", ["init", "run", "worker", "shell", "new", "routes"]),
     ("Database", ["db", "create-db"]),
     ("Verify", ["doctor", "verify", "smoke", "inspect", "report"]),
     (
