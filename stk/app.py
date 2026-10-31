@@ -18,6 +18,7 @@ from quart import (
     send_from_directory,
     url_for,
 )
+from quart import session as quart_session
 from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -253,11 +254,15 @@ def register_static_versioning(app):
     @app.after_request
     async def _cache_static(response):
         if request.path.startswith(f"{app.static_url_path}/"):
-            response.headers["Cache-Control"] = (
-                "public, max-age=31536000, immutable"
-                if request.args.get("v")
-                else "no-cache"
-            )
+            if quart_session.modified:
+                # This response sets or clears a session cookie; a shared cache
+                # must never replay it to someone else.
+                policy = "private, no-store"
+            elif request.args.get("v") and response.status_code == 200:
+                policy = "public, max-age=31536000, immutable"
+            else:
+                policy = "no-cache"
+            response.headers["Cache-Control"] = policy
         return response
 
     def import_map():
