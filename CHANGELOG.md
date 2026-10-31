@@ -1,5 +1,14 @@
 # Changelog
 
+## v17.2.7 (2026-10-31)
+
+No migration required. Requires quart-security 2.0.6.
+
+- Registration no longer reveals which emails have an account: an existing email gets the same answer as a new one and nothing is created. With `MAIL_SERVER` set, the owner is emailed in the background that someone tried; its link comes from `STK_PUBLIC_URL`, never the request's Host header (Authentication).
+- After login, users land back on the page that sent them to `/login`, including through 2FA and passkeys (Authentication).
+- `stk.files` refuses to start when `STK_UPLOAD_MAX_BYTES` does not fit under Quart's `MAX_CONTENT_LENGTH`. Before, any limit above about 16 MiB was silently capped with a generic 413 (Configuration).
+- `stk doctor` warns when `STK_PUBLIC_URL` is unset outside development, since any Host header is then accepted.
+
 ## v17.2.6 (2026-10-31)
 
 No migration required.
