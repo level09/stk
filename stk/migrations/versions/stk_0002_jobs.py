@@ -19,7 +19,7 @@ def upgrade() -> None:
         sa.Column("attempts", sa.Integer(), nullable=False),
         sa.Column("max_attempts", sa.Integer(), nullable=False),
         sa.Column("run_after", sa.DateTime(), nullable=False),
-        sa.Column("locked_at", sa.DateTime(), nullable=True),
+        sa.Column("locked_until", sa.DateTime(), nullable=True),
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),

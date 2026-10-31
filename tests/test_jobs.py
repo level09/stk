@@ -32,6 +32,17 @@ async def jobs_test_explode(session, user_id):
 
 
 @job
+async def jobs_test_stolen(session, user_id):
+    session.add(Activity(user_id=user_id, action="lost race"))
+    # As if recovery requeued it and another worker claimed it meanwhile.
+    await session.execute(
+        update(Job)
+        .where(Job.status == "running")
+        .values(locked_until=datetime.now() + timedelta(days=1))
+    )
+
+
+@job
 async def jobs_test_slow(session):
     await asyncio.sleep(5)
 
@@ -80,7 +91,9 @@ class JobTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await run_next())
 
         row = await self.get(job_id)
-        self.assertEqual((row.status, row.attempts, row.locked_at), ("done", 1, None))
+        self.assertEqual(
+            (row.status, row.attempts, row.locked_until), ("done", 1, None)
+        )
         self.assertEqual(calls, ["sent"])
         self.assertIn("sent", await self.activities())
 
@@ -138,27 +151,37 @@ class JobTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         row = await self.get(job_id)
-        self.assertEqual((row.status, row.attempts, row.locked_at), ("queued", 0, None))
+        self.assertEqual(
+            (row.status, row.attempts, row.locked_until), ("queued", 0, None)
+        )
+
+    async def test_worker_that_lost_its_claim_discards_its_writes(self):
+        job_id = await enqueue("jobs_test_stolen", user_id=self.user_id)
+        self.assertTrue(await run_next())
+        row = await self.get(job_id)
+        # The other claimant still owns it; this run left no trace.
+        self.assertEqual(row.status, "running")
+        self.assertNotIn("lost race", await self.activities())
 
     async def test_recovers_job_left_running_by_a_dead_worker(self):
         lost = await enqueue("jobs_test_record", user_id=self.user_id, action="lost")
         spent = await enqueue("jobs_test_record", user_id=self.user_id, action="spent")
         alive = await enqueue("jobs_test_record", user_id=self.user_id, action="alive")
-        stale = datetime.now() - timedelta(hours=2)
+        expired = datetime.now() - timedelta(minutes=1)
         async with ext.async_session_factory() as db:
-            for job_id, attempts, locked_at in [
-                (lost, 1, stale),
-                (spent, 3, stale),
-                (alive, 1, datetime.now()),
+            for job_id, attempts, lease in [
+                (lost, 1, expired),
+                (spent, 3, expired),
+                (alive, 1, datetime.now() + timedelta(hours=1)),
             ]:
                 await db.execute(
                     update(Job)
                     .where(Job.id == job_id)
-                    .values(status="running", attempts=attempts, locked_at=locked_at)
+                    .values(status="running", attempts=attempts, locked_until=lease)
                 )
             await db.commit()
 
-        await recover(timeout=3600)
+        await recover()
 
         self.assertEqual((await self.get(lost)).status, "queued")
         self.assertIn("worker lost", (await self.get(lost)).last_error)

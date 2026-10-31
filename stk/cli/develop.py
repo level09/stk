@@ -74,9 +74,15 @@ def worker(timeout):
     """Run queued durable jobs until stopped (SIGTERM or Ctrl-C)."""
     from stk.tasks import work
 
-    cli_app()
+    app = cli_app()
+
+    async def run():
+        # Jobs use current_app (mail, file store, config) like a request does.
+        async with app.app_context():
+            await work(timeout)
+
     console.print("[green]Worker started[/]")
     try:
-        run_async(work(timeout))
+        run_async(run())
     except (KeyboardInterrupt, asyncio.CancelledError):
         console.print("Worker stopped")

@@ -18,7 +18,8 @@ class Job(Base):
     attempts = Column(Integer, default=0, nullable=False)
     max_attempts = Column(Integer, default=3, nullable=False)
     run_after = Column(DateTime, default=datetime.now, nullable=False)
-    locked_at = Column(DateTime, nullable=True)
+    # Claim deadline: the claimant's timeout plus a grace; past it, `recover` requeues.
+    locked_until = Column(DateTime, nullable=True)
     last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(

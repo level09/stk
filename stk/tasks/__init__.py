@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 JOBS = {}
 TIMEOUT = 3600
 POLL_SECONDS = 2
+RECOVER_SECONDS = 60
+# A live worker cancels its job at its timeout; the grace covers recording that.
+LEASE_GRACE = timedelta(seconds=60)
 
 
 async def run_in_background(coro):
@@ -113,9 +116,16 @@ async def enqueue(name, **payload):
         return row.id
 
 
-async def _set(job_id, **values):
+def _owned(job_id, lease):
+    """The job, only while this worker's claim on it still stands."""
+    return update(Job).where(
+        Job.id == job_id, Job.status == "running", Job.locked_until == lease
+    )
+
+
+async def _release(job_id, lease, **values):
     async with ext.async_session_factory() as session:
-        await session.execute(update(Job).where(Job.id == job_id).values(**values))
+        await session.execute(_owned(job_id, lease).values(locked_until=None, **values))
         await session.commit()
 
 
@@ -127,6 +137,7 @@ async def run_next(timeout=TIMEOUT):
     `max_attempts`, then leaves it `failed`.
     """
     now = datetime.now()
+    lease = now + timedelta(seconds=timeout) + LEASE_GRACE
     due = (
         select(Job.id)
         .where(Job.status == "queued", Job.run_after <= now)
@@ -140,7 +151,7 @@ async def run_next(timeout=TIMEOUT):
     claim = (
         update(Job)
         .where(Job.id == due)
-        .values(status="running", attempts=Job.attempts + 1, locked_at=now)
+        .values(status="running", attempts=Job.attempts + 1, locked_until=lease)
         .returning(Job.id, Job.name, Job.payload, Job.attempts, Job.max_attempts)
         .execution_options(synchronize_session=False)
     )
@@ -155,47 +166,50 @@ async def run_next(timeout=TIMEOUT):
         try:
             async with asyncio.timeout(timeout):
                 await JOBS[name](session, **payload)
-            await session.execute(
-                update(Job)
-                .where(Job.id == job_id)
-                .values(status="done", locked_at=None, last_error=None)
+            done = await session.execute(
+                _owned(job_id, lease).values(
+                    status="done", locked_until=None, last_error=None
+                )
             )
+            if done.rowcount != 1:
+                # Recovered and handed to another worker meanwhile: its run wins.
+                await session.rollback()
+                logger.warning("Job %s (%s) lost its claim; discarded", job_id, name)
+                return True
             await session.commit()
         except asyncio.CancelledError:
             # Stopped by SIGTERM or Ctrl-C: hand it back without spending an attempt.
             await session.rollback()
-            await _set(job_id, status="queued", locked_at=None, attempts=attempts - 1)
+            await _release(job_id, lease, status="queued", attempts=attempts - 1)
             raise
         except Exception:
             await session.rollback()
             logger.exception("Job %s (%s) failed", job_id, name)
             retry = attempts < max_attempts
-            await _set(
+            await _release(
                 job_id,
+                lease,
                 status="queued" if retry else "failed",
                 run_after=datetime.now() + timedelta(seconds=30 * 2 ** (attempts - 1)),
-                locked_at=None,
                 last_error=traceback.format_exc(),
             )
     return True
 
 
-async def recover(timeout=TIMEOUT):
-    """Requeue jobs left `running` by a worker that died, or fail them at the cap."""
-    # A live worker cancels its job at `timeout`; the minute covers recording that.
-    cutoff = datetime.now() - timedelta(seconds=timeout + 60)
-    stale = (Job.status == "running", Job.locked_at < cutoff)
-    lost = f"worker lost: still running after {timeout}s"
+async def recover():
+    """Requeue jobs whose worker died (their lease ran out), or fail them at the cap."""
+    stale = (Job.status == "running", Job.locked_until < datetime.now())
+    lost = "worker lost: its claim expired before the job finished"
     async with ext.async_session_factory() as session:
         await session.execute(
             update(Job)
             .where(*stale, Job.attempts >= Job.max_attempts)
-            .values(status="failed", locked_at=None, last_error=lost)
+            .values(status="failed", locked_until=None, last_error=lost)
         )
         await session.execute(
             update(Job)
             .where(*stale)
-            .values(status="queued", locked_at=None, last_error=lost)
+            .values(status="queued", locked_until=None, last_error=lost)
         )
         await session.commit()
 
@@ -205,8 +219,13 @@ async def work(timeout=TIMEOUT):
     asyncio.get_running_loop().add_signal_handler(
         signal.SIGTERM, asyncio.current_task().cancel
     )
+    recovered = None
     while True:
-        await recover(timeout)
-        while await run_next(timeout):
-            pass
-        await asyncio.sleep(POLL_SECONDS)
+        # Also between jobs, so a queue that never empties still recovers.
+        if recovered is None or datetime.now() - recovered >= timedelta(
+            seconds=RECOVER_SECONDS
+        ):
+            await recover()
+            recovered = datetime.now()
+        if not await run_next(timeout):
+            await asyncio.sleep(POLL_SECONDS)
