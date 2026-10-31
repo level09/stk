@@ -63,6 +63,16 @@ Async REPL with the app, a live DB session, and all models loaded.
 |---|---|
 | `-c, --command` | Run code and exit. |
 
+### `stk worker`
+
+`stk worker [OPTIONS]`
+
+Run queued durable jobs until stopped (SIGTERM or Ctrl-C).
+
+| Option | Description |
+|---|---|
+| `--timeout` | Seconds a job may run before it is cancelled and retried. |
+
 ## Database
 
 ### `stk create-db`
