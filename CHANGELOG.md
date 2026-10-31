@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.3.1 (2026-10-31)
+
+No migration required.
+
+- Versioned static responses were marked public and immutable for a year even when they were a 404 or carried a session cookie change, such as clearing a stale login. A shared cache could then replay them to other visitors. Only a 200 with no cookie change is cached publicly now; a response that changes the session is `private, no-store`.
+- `stk smoke`'s raw-score rule could take tens of seconds on a page with a long run of blanks after the word "score", from two adjacent optional-blank patterns backtracking. It is linear now (Build Loop).
+
 ## v17.3.0 (2026-10-31)
 
 Run `uv run stk db upgrade`: `stk_0007` marks every existing account confirmed. Requires quart-security 2.1.0.
