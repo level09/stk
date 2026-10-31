@@ -15,7 +15,10 @@ import tomllib
 import unittest
 from pathlib import Path
 
+from alembic.script import ScriptDirectory
+
 import stk
+from stk.migrations import build_alembic_config
 from stk.scaffold.generator import RESERVED, _add_extension, validate_name
 from stk.scaffold.templates import (
     plural,
@@ -328,7 +331,8 @@ class InitAndNewTests(unittest.TestCase):
             if isinstance(node, ast.Assign)
         }
         self.assertEqual(assigned["branch_labels"], ("acme",))
-        self.assertEqual(assigned["depends_on"], "stk_0001")
+        core = ScriptDirectory.from_config(build_alembic_config(url="sqlite://"))
+        self.assertEqual(assigned["depends_on"], core.get_revision("stk@head").revision)
         # Formatted by the app's ruff config.
         self.assertIn('op.create_table(\n        "widget",', revision.read_text())
 
