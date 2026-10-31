@@ -68,6 +68,9 @@ def cli_app():
 
 def run_async(coro):
     """Run an async function in sync context (for CLI commands)."""
+    # The engine and session factory exist only once the app is built; loading it
+    # here means no command can reach the database without it.
+    cli_app()
 
     async def _wrapper():
         try:

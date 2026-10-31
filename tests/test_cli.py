@@ -61,3 +61,20 @@ class DowngradeArgumentTest(unittest.TestCase):
             result = CliRunner().invoke(main, ["db", "downgrade", "-1"])
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertEqual(run.call_args.args[-1], "-1")
+
+
+class DatabaseCommandTest(unittest.TestCase):
+    def test_run_async_builds_the_app_before_touching_the_database(self):
+        """`add-role` and `cleanup-sessions` crashed: nothing had built the engine."""
+        with (
+            patch("stk.cli.base.cli_app") as load,
+            patch("stk.tasks.cleanup_expired_sessions") as cleanup,
+        ):
+            cleanup.side_effect = lambda: _done()
+            result = CliRunner().invoke(main, ["cleanup-sessions"])
+        self.assertEqual(result.exit_code, 0, result.output)
+        load.assert_called()
+
+
+async def _done():
+    return None
