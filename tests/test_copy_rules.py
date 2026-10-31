@@ -31,9 +31,11 @@ class CopyRuleTests(unittest.TestCase):
     def test_hex_id(self):
         self.assertRule(
             hex_id,
-            ["Request 1fbaac41 failed", "texteb148f8f"],
+            ["Request 1fbaac41 failed", "texteb148f8f", "Build 1FBAAC41"],
             [
                 "SHA-256: 9f86d081884c7d65",
+                "Every run gets a fresh Ed25519 key",
+                "a facade from a decade ago",
                 "Total 1234567",
                 "Accepted",
                 "Owner 3f2b8c1e-9a4d-4e2f-8b1c-0d9e7f6a5b4c",

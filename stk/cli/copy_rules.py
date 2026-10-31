@@ -83,13 +83,16 @@ def uuid(text):
 
 
 def hex_id(text):
-    """6+ hex characters with at least two digits and a letter, alone or glued to a
-    word: 'Request 1fbaac41'. Uuids are their own rule."""
+    """6+ hex characters in one case with at least two digits and a letter, alone
+    or glued to a word: 'Request 1fbaac41'. Uuids are their own rule. Mixed case
+    is a name, not an id: 'Ed25519'."""
     text = UUID.sub(" ", text)
     out = []
     for m in HEX.finditer(text):
         token = m.group()
         if sum(c.isdigit() for c in token) < 2 or token.isdigit():
+            continue
+        if token not in (token.lower(), token.upper()):
             continue
         if HASH_LABEL.search(text[max(0, m.start() - 20) : m.start()]):
             continue

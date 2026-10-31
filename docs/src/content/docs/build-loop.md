@@ -106,7 +106,7 @@ blocks) and flags:
 | Rule | Catches |
 |---|---|
 | `uuid` | A uuid where a name belongs |
-| `hex-id` | A raw id or hash fragment, such as `Request 1fbaac41`; a run labelled `SHA-256:` or `hash` passes |
+| `hex-id` | A raw id or hash fragment, such as `Request 1fbaac41`; a run labelled `SHA-256:` or `hash` passes, and so does a mixed-case name such as `Ed25519` |
 | `snake-case` | A storage token such as `pending_review` instead of words |
 | `raw-score` | A decimal after score, similarity, confidence, distance, or cosine |
 | `one-plural` | A count of 1 with a plural noun, such as `1 items` |
