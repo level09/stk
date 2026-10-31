@@ -1,6 +1,6 @@
 ---
 title: "JSON APIs"
-description: "List and mutation endpoints, error conventions, CSRF, and webhooks"
+description: "List and mutation endpoints, error conventions, CSRF, webhooks, and fetching user-supplied URLs"
 ---
 
 `uv run stk new <module>` writes a complete, working set of these endpoints in `myapp/<module>/views.py`. Start from that file; this page explains its conventions.
@@ -85,3 +85,29 @@ async def before_request():
 ## CSRF and webhooks
 
 Every mutation requires a CSRF token, which Axios sends from the shared layout token. A third-party webhook without a session opts out with `@csrf_exempt` from `stk.security`, placed under the route decorator, and must authenticate the caller itself, for example by checking an HMAC signature. See [Authentication](/authentication).
+
+## Fetching user-supplied URLs
+
+Never pass a URL a user or client typed to `httpx2` directly: it can point at `localhost`, the database host, or the cloud metadata service at `169.254.169.254`. Use `fetch` from `stk.utils.netguard`:
+
+```python
+import httpx2
+
+from stk.utils.netguard import Blocked, fetch
+
+
+@bp.post("/api/preview")
+async def preview():
+    url = (await request.json).get("item", {}).get("url", "")
+    try:
+        response, final_url = await fetch(url, timeout=5, max_bytes=500_000)
+    except Blocked as exc:
+        return {"message": str(exc)}, 400
+    except (TimeoutError, httpx2.HTTPError):
+        return {"message": "URL could not be fetched"}, 412
+    return {"status": response.status_code, "url": final_url}
+```
+
+`fetch` sends a GET and returns the response with its body read, plus the URL after redirects. It resolves the host once, refuses it unless every address is public, and connects to that exact address while TLS still verifies the hostname, so DNS rebinding cannot swap in an internal address after the check. Every redirect hop is checked the same way, and `Authorization` and `Cookie` headers are dropped once a redirect leaves the original host.
+
+It raises `Blocked` for anything other than `http` or `https`, credentials in the URL, decimal, octal or hex IP literals (`2130706433`, `0x7f.1`), loopback, private, link-local, CGNAT, multicast, reserved and unspecified addresses (IPv4 and IPv6, including IPv4-mapped and NAT64 forms), more than `max_redirects` redirects (default 5), and a body over `max_bytes` after decompression (default 1 MiB). `timeout` (default 10 seconds) bounds the whole fetch and raises `TimeoutError`. Environment proxies are ignored, since a proxy would resolve the name itself. In tests, pass `transport=httpx2.MockTransport(handler)`.
