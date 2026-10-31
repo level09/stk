@@ -1,5 +1,14 @@
 # Changelog
 
+## v17.2.2 (2026-10-31)
+
+No migration required.
+
+- `stk add-role` and `stk cleanup-sessions` crashed with `TypeError: 'NoneType' object is not callable` because they used the database before the app was built. Every command that runs async work now builds the app first. Run `cleanup-sessions` from cron again if you had stopped it.
+- `stk worker` stops on SIGTERM or Ctrl-C at a safe point: it cancels only the running job, hands it back, and exits without a traceback.
+- The home page describes stk as running on Quart, not Flask.
+- Requires quart-security 2.0.5: login takes the same time whether or not an email has an account, and passkey registration refuses a credential ID another user already holds (Authentication).
+
 ## v17.2.1 (2026-10-31)
 
 No migration required.
