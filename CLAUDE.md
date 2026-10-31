@@ -28,7 +28,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 | Models, queries, migrations, SQLite traps | `docs/src/content/docs/models.md` |
 | JSON endpoints, error conventions, webhooks | `docs/src/content/docs/api.md` |
 | Vue/Vuetify pages, components, navigation | `docs/src/content/docs/frontend.md` |
-| Background tasks, WebSocket push | `docs/src/content/docs/background-work.md` |
+| Background tasks, notifications, WebSocket push | `docs/src/content/docs/background-work.md` |
 | Auth, 2FA, passkeys, OAuth, CSRF, rate limits | `docs/src/content/docs/authentication.md` |
 | Renaming the product | `docs/src/content/docs/branding.md` |
 | How agents work in stk | `docs/src/content/docs/ai-coding.md` |

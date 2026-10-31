@@ -1,6 +1,6 @@
 ---
 title: "Background Work"
-description: "Fire-and-forget tasks without Celery, and pushing messages over WebSockets"
+description: "Fire-and-forget tasks without Celery, in-app notifications, and pushing messages over WebSockets"
 ---
 
 ## Background tasks
@@ -34,19 +34,40 @@ Tasks live only as long as the process. Work that must survive a restart belongs
 
 `uv run stk cleanup-sessions` deactivates expired sessions and deletes rows older than 30 days. Run it from cron or a systemd timer.
 
+## Notifications
+
+`notify` stores a notification for one user in `stk_notification`, then pushes it to that user's open sockets, where it lands in the bell in the app bar:
+
+```python
+from stk.notification import notify
+
+await notify(user.id, "Export ready", link="/exports/3", kind="export", body="March invoices")
+```
+
+Only `user_id` and `title` are required. `link` must be a same-origin path (`/exports/3`); anything else raises `ValueError`, because the bell navigates to it. `kind` is a free label for your own filtering. `notify` commits on its own session, so a later rollback in the caller does not undo it: call it after your own commit. It works the same from a request, a background task, or `stk shell`, though only a call inside the server process reaches open sockets; the others show up on the next page load.
+
+The signed-in user reads and clears their own notifications; no endpoint returns another user's:
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/notifications?page=&per_page=` | `{items, total, perPage}`, newest first, 20 per page, at most 100 |
+| `GET /api/notifications/unread` | `{count}` |
+| `POST /api/notifications/<id>/read` | marks one read; 404 if it is not yours |
+| `POST /api/notifications/read` | marks all read |
+
+Items are `{id, kind, title, body, link, created_at, read_at}`. The POSTs need CSRF and a JSON object body (`{}`), like every `/api/` mutation.
+
 ## WebSockets
 
-Signed-in pages connect to `/ws` automatically through `layoutMixin`. Push a message to one user with `broadcast`:
+Signed-in pages connect to `/ws` automatically through `layoutMixin`. Push a message that is not stored to one user with `broadcast`:
 
 ```python
 from stk.websocket import broadcast
 
-await broadcast(
-    {"type": "notification", "title": "Export ready", "to": "/exports"}, user_id=user.id
-)
+await broadcast({"type": "progress", "done": 40}, user_id=user.id)
 ```
 
-There is no broadcast-to-everyone: every message names its recipient. `{type: 'notification'}` messages land in the notification bell; extend `_onWsMessage` in `layout.html` for your own types. `Activity.register()` stores audit events and does not broadcast.
+There is no broadcast-to-everyone: every message names its recipient. `{type: 'notification'}` messages go to the bell; override `_onWsMessage(msg)` in your page's methods for your own types. `Activity.register()` stores audit events and does not broadcast.
 
 The endpoint enforces:
 

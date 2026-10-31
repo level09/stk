@@ -27,6 +27,7 @@ from werkzeug.security import safe_join
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
+from stk.notification.views import bp_notification
 from stk.portal.views import portal
 from stk.public.views import public
 from stk.settings import Config
@@ -205,6 +206,7 @@ def register_blueprints(app):
     app.register_blueprint(bp_user)
     app.register_blueprint(public)
     app.register_blueprint(portal)
+    app.register_blueprint(bp_notification)
     app.register_blueprint(ws_bp)
     if agent_login_enabled(app):
         app.register_blueprint(bp_agent_login)
