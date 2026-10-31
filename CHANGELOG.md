@@ -1,5 +1,24 @@
 # Changelog
 
+## v17.2.0 (2026-10-31)
+
+Run `uv run stk db upgrade`: four new core tables (`stk_job`, `stk_file`, `stk_notification`, `mcp_token`).
+
+- Durable jobs that survive a restart. Register an async function with `@job`, queue it with `await enqueue(name, **payload)`, and run `uv run stk worker`. A job's writes commit together with its `done` mark; a failure rolls back, keeps the traceback, and retries after 30 and 60 seconds before staying `failed`. Each claim holds a lease of the worker's `--timeout` plus a minute, so a crashed worker's job is requeued and a worker that lost its claim discards its writes. Admins see jobs at `/jobs/` (Background Work).
+- In-app notifications. `await notify(user_id, title, link=..., kind=..., body=...)` stores one and pushes it over the user's open sockets; the layout's bell shows the unread count and marks items read. `link` must be a same-origin path. JSON endpoints under `/api/notifications` list, count and mark the current user's notifications (Background Work).
+- File uploads, opt-in: add `stk.files` to the app's extensions. `POST /files/` stores bytes once by their sha256 under `STK_UPLOAD_DIR`, detects the type from the bytes, enforces `STK_UPLOAD_MAX_BYTES` and `STK_UPLOAD_TYPES`, and makes WebP thumbnails for images. Downloads go to the uploader or an admin unless the app sets `app.file_access` (JSON APIs).
+- Agent tools over MCP. Register a function with `@tool(name, description, schema, role=...)` from `stk.mcp`, and agents call it at `/mcp` with a personal token created at `/tokens/`. Tokens are stored as a hash, expire after 90 days, are limited to the user's current roles on every call, and stop working when the user's password changes. Every call is logged as an activity without its arguments. No OAuth sign-in yet: clients send the token as a header (JSON APIs).
+- `fetch` from `stk.utils.netguard` fetches a URL a user supplied without reaching internal addresses: it refuses private, loopback, link-local, metadata and other non-public addresses, pins the checked IP against DNS rebinding, re-checks every redirect, and drops `Authorization` and `Cookie` when a redirect changes origin (JSON APIs).
+- `stk smoke` fails on screens that work but read badly: uuids, raw hex ids, snake_case, raw scores, "1 items", `undefined`/`null`/`NaN`/`[object Object]`, and rows repeated three or more times. Allow deliberate text with `STK_SMOKE_COPY_ALLOW` (Build Loop).
+- `stk verify`, `stk doctor` and `stk smoke` keep every failure's reason; `stk verify --json` lists each sanity check with its status and detail (Build Loop).
+- New dependency: `jsonschema`, which validates MCP tool arguments.
+
+### Upgrade considerations
+
+- The layout's bell is now backed by stk. `layoutMixin` no longer has `notifications`, `handleNotificationClick`, `markNotificationRead`, `markAllNotificationsRead` or `removeNotification`. A page that used them, or that broadcasts `{"type": "notification", ...}` itself, calls `notify()` instead. Layouts that do not extend `stk/layout.html` are unaffected.
+- stk now has a built-in `worker` command. An app command named `worker` is shadowed by it; rename the app's command.
+- `enqueue()` and `notify()` commit on their own session, so a request that later rolls back still keeps the job or notification. Call them after your own commit.
+
 ## v17.1.1 (2026-10-28)
 
 No migration required.
