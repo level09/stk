@@ -92,6 +92,7 @@ Some limits are app config only, with no environment variable. Set them on your 
 | `STK_AUTH_ATTEMPT_LIMIT` | `10` | Login attempts per IP per minute. |
 | `STK_AUTH_REQUEST_LIMIT` | `120` | Auth requests per IP per minute. |
 | `STK_SMOKE_SKIP` | `()` | Parameterless GET paths `stk smoke` must not visit, such as a link that needs a secret key. WebSockets and `@csrf_exempt` webhooks are skipped already. |
+| `STK_SMOKE_COPY_ALLOW` | `()` | Regexes for deliberate text `stk smoke` would flag as reading badly. A finding whose text matches one passes. See [Build Loop](/build-loop#4-prove-it-in-a-real-browser). |
 | `STK_CLI_SECTIONS` | `()` | Your commands' groups in `stk --help`, as `[("Runs", ["worker", "enrich"])]`, listed after stk's. Commands in no group appear under Other. |
 | `STK_WS_ALLOWED_ORIGINS` | `STK_PUBLIC_URL` | WebSocket origins to accept. |
 | `STK_WS_CONNECTIONS_PER_USER` | `5` | Open sockets per user. |

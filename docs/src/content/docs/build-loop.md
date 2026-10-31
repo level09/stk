@@ -99,6 +99,30 @@ below 3:1 contrast with its background. That last one catches the class of bug n
 console error ever reports. The dashboard screenshot lands in
 `.stk/smoke/dashboard.png`; `--json` emits the per-page report.
 
+Smoke also fails on a page that works but reads badly. It reads the visible text of
+each page (not scripts, styles, hidden elements, input values, or `code` and `pre`
+blocks) and flags:
+
+| Rule | Catches |
+|---|---|
+| `uuid` | A uuid where a name belongs |
+| `hex-id` | A raw id or hash fragment, such as `Request 1fbaac41`; a run labelled `SHA-256:` or `hash` passes |
+| `snake-case` | A storage token such as `pending_review` instead of words |
+| `raw-score` | A decimal after score, similarity, confidence, distance, or cosine |
+| `one-plural` | A count of 1 with a plural noun, such as `1 items` |
+| `broken-value` | `undefined`, `null`, `NaN`, or `[object Object]` printed as a value |
+| `repeated-row` | The same row three or more times in one list |
+
+Each finding prints as `reads badly: <rule> '<text>'` under its page, and `--json`
+lists them in the page's `copy` array as `{rule, text}`. When the text is deliberate,
+add a regex for it to `STK_SMOKE_COPY_ALLOW` on your app's `Config`; a finding whose
+text matches any entry passes:
+
+```python
+class Config(stk.Config):
+    STK_SMOKE_COPY_ALLOW = (r"Ed25519",)
+```
+
 Smoke needs Playwright's Chromium. `stk doctor` tells you if it is missing.
 
 ## 5. Ship
