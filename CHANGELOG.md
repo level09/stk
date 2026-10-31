@@ -1,5 +1,17 @@
 # Changelog
 
+## v17.2.1 (2026-10-31)
+
+No migration required.
+
+- Emails are stored trimmed and lowercased, and the CLI, agent login and OAuth look users up regardless of case, matching what the login form does. Before, a user created as `Ada@Example.com` from the admin page or `stk create` could not sign in, because login lowercases what it is given (Authentication).
+- Requires quart-security 2.0.4, which matches login emails regardless of case and drops the unused `remember` login field and `SECURITY_FRESHNESS_GRACE_PERIOD` setting. stk's own `SECURITY_FRESHNESS_GRACE_PERIOD` is removed with it.
+
+### Upgrade considerations
+
+- Existing rows keep their stored case and still sign in. Two rows whose emails differ only by case make login for that address fail: merge or rename one. To find them: `uv run stk shell -c "await sql('select lower(email), count(*) from \"user\" group by 1 having count(*) > 1')"`.
+- A custom login template that renders `form.remember` must drop it.
+
 ## v17.2.0 (2026-10-31)
 
 Run `uv run stk db upgrade`: four new core tables (`stk_job`, `stk_file`, `stk_notification`, `mcp_token`).
