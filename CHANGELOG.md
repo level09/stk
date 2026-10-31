@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.2.5 (2026-10-31)
+
+No migration required.
+
+- `stk smoke` crashed on any page with three or more like SVG shapes side by side, such as a chart's paths or an icon's circles: the repeated-row rule read `innerText`, which SVG elements lack. The rule now looks at HTML elements only. A page smoke cannot read now fails that page with the reason, instead of stopping the whole run (Build Loop).
+
 ## v17.2.4 (2026-10-31)
 
 No migration required.
