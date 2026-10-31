@@ -25,6 +25,7 @@ from stk.tasks.models import Job
 logger = logging.getLogger(__name__)
 
 JOBS = {}
+_running = None  # the job task `stk worker` is awaiting, for a clean shutdown
 TIMEOUT = 3600
 POLL_SECONDS = 2
 RECOVER_SECONDS = 60
@@ -164,8 +165,13 @@ async def run_next(timeout=TIMEOUT):
     job_id, name, payload, attempts, max_attempts = claimed
     async with ext.async_session_factory() as session:
         try:
-            async with asyncio.timeout(timeout):
-                await JOBS[name](session, **payload)
+            global _running
+            _running = asyncio.create_task(JOBS[name](session, **payload))
+            try:
+                # wait_for cancels the job itself on timeout or when this is cancelled.
+                await asyncio.wait_for(_running, timeout)
+            finally:
+                _running = None
             done = await session.execute(
                 _owned(job_id, lease).values(
                     status="done", locked_until=None, last_error=None
@@ -216,11 +222,28 @@ async def recover():
 
 async def work(timeout=TIMEOUT):
     """Run due jobs one at a time until SIGTERM or Ctrl-C."""
-    asyncio.get_running_loop().add_signal_handler(
-        signal.SIGTERM, asyncio.current_task().cancel
-    )
+    stop = asyncio.Event()
+
+    def shutdown():
+        # Cancel only the job, never the worker mid-query: it hands the job back
+        # and the loop ends at its next check.
+        stop.set()
+        if _running is not None:
+            _running.cancel()
+
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, shutdown)
+    try:
+        await _drain(timeout, stop)
+    except asyncio.CancelledError:
+        if not stop.is_set():
+            raise
+
+
+async def _drain(timeout, stop):
     recovered = None
-    while True:
+    while not stop.is_set():
         # Also between jobs, so a queue that never empties still recovers.
         if recovered is None or datetime.now() - recovered >= timedelta(
             seconds=RECOVER_SECONDS
@@ -228,4 +251,7 @@ async def work(timeout=TIMEOUT):
             await recover()
             recovered = datetime.now()
         if not await run_next(timeout):
-            await asyncio.sleep(POLL_SECONDS)
+            try:
+                await asyncio.wait_for(stop.wait(), POLL_SECONDS)
+            except TimeoutError:
+                pass

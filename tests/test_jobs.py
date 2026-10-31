@@ -1,6 +1,8 @@
 """Durable jobs: enqueue, claim, retry, failure, and recovery of a dead worker's job."""
 
 import asyncio
+import os
+import signal
 import unittest
 from datetime import datetime, timedelta
 
@@ -11,7 +13,7 @@ from sqlalchemy import select, update
 import stk.extensions as ext
 from stk.app import Stk
 from stk.settings import TestingConfig
-from stk.tasks import enqueue, job, recover, run_next
+from stk.tasks import enqueue, job, recover, run_next, work
 from stk.tasks.models import Job
 from stk.user.models import Activity, Base, User
 from stk.user.views import api_jobs
@@ -162,6 +164,20 @@ class JobTests(unittest.IsolatedAsyncioTestCase):
         # The other claimant still owns it; this run left no trace.
         self.assertEqual(row.status, "running")
         self.assertNotIn("lost race", await self.activities())
+
+    async def test_sigterm_hands_back_the_running_job_and_stops_cleanly(self):
+        job_id = await enqueue("jobs_test_slow")
+        worker = asyncio.create_task(work())
+        for _ in range(50):
+            await asyncio.sleep(0.05)
+            if (await self.get(job_id)).status == "running":
+                break
+        os.kill(os.getpid(), signal.SIGTERM)
+        await asyncio.wait_for(worker, 5)  # returns, not CancelledError
+        row = await self.get(job_id)
+        self.assertEqual(
+            (row.status, row.attempts, row.locked_until), ("queued", 0, None)
+        )
 
     async def test_recovers_job_left_running_by_a_dead_worker(self):
         lost = await enqueue("jobs_test_record", user_id=self.user_id, action="lost")

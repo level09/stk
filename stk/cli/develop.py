@@ -1,6 +1,5 @@
 """Starting an app, serving it locally, and running its durable jobs."""
 
-import asyncio
 from pathlib import Path
 
 import click
@@ -82,7 +81,5 @@ def worker(timeout):
             await work(timeout)
 
     console.print("[green]Worker started[/]")
-    try:
-        run_async(run())
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        console.print("Worker stopped")
+    run_async(run())
+    console.print("Worker stopped")
