@@ -26,7 +26,7 @@ idea -> scoped plan -> generated app surface -> inspect -> verify -> review -> s
 | Async REPL against the real app | `docs/src/content/docs/shell.md` |
 | App package, extensions, overrides, blueprints, request lifecycle | `docs/src/content/docs/architecture.md` |
 | Models, queries, migrations, SQLite traps | `docs/src/content/docs/models.md` |
-| JSON endpoints, error conventions, webhooks | `docs/src/content/docs/api.md` |
+| JSON endpoints, error conventions, webhooks, MCP tools | `docs/src/content/docs/api.md` |
 | Vue/Vuetify pages, components, navigation | `docs/src/content/docs/frontend.md` |
 | Background tasks, durable jobs, notifications, WebSocket push | `docs/src/content/docs/background-work.md` |
 | Auth, 2FA, passkeys, OAuth, CSRF, rate limits | `docs/src/content/docs/authentication.md` |

@@ -27,6 +27,7 @@ from werkzeug.security import safe_join
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
+from stk.mcp.views import bp_mcp
 from stk.notification.views import bp_notification
 from stk.portal.views import portal
 from stk.public.views import public
@@ -208,6 +209,7 @@ def register_blueprints(app):
     app.register_blueprint(portal)
     app.register_blueprint(bp_notification)
     app.register_blueprint(ws_bp)
+    app.register_blueprint(bp_mcp)
     if agent_login_enabled(app):
         app.register_blueprint(bp_agent_login)
     return None
@@ -273,6 +275,7 @@ CORE_NAVIGATION_END = [
     {"title": "Change Password", "icon": "ti ti-key", "to": "/change"},
     {"title": "Two-Factor Auth", "icon": "ti ti-shield-lock", "to": "/tf-setup"},
     {"title": "Recovery Codes", "icon": "ti ti-lifebuoy", "to": "/mf-recovery-codes"},
+    {"title": "Agent Tokens", "icon": "ti ti-robot", "to": "/tokens/"},
     {"heading": "Administration"},
     {
         "title": "User Management",

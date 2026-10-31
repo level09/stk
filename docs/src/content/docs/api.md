@@ -1,6 +1,6 @@
 ---
 title: "JSON APIs"
-description: "List and mutation endpoints, error conventions, CSRF, webhooks, fetching user-supplied URLs, and file uploads"
+description: "List and mutation endpoints, error conventions, CSRF, webhooks, fetching user-supplied URLs, file uploads, and MCP tools for agents"
 ---
 
 `uv run stk new <module>` writes a complete, working set of these endpoints in `myapp/<module>/views.py`. Start from that file; this page explains its conventions.
@@ -146,3 +146,52 @@ app.file_access = file_access
 ```
 
 Bytes are content-addressed on local disk at `<STK_UPLOAD_DIR>/<sha[:2]>/<sha>`, written to a temp file and renamed, so equal bytes are stored once and a crash never leaves half a file. `stk.files.store` gives tasks and commands the same store: `save(data)` returns the sha256, `open(sha)`, `path(sha)`, `exists(sha)`, `delete(sha)`. Keys must be 64 lowercase hex characters, so no key reaches outside the directory. Rows share bytes, so delete bytes only once no `File` names them. In Docker, point `STK_UPLOAD_DIR` at a mounted volume; the default under `instance/` does not survive a rebuilt container. One machine's disk is the ceiling: move to object storage when a second app server needs the files.
+
+## Agent tools (MCP)
+
+An app can expose its own functions to AI agents. stk serves them at `POST /mcp` as a stateless MCP server: MCP `2026-07-28` with `server/discover`, plus `initialize` and `ping` for clients on `2025-11-25`, `2025-06-18`, and `2025-03-26`. Every reply is one JSON object; there are no sessions and no SSE.
+
+Register a tool with `@tool` from `stk.mcp`, in any module your extension imports:
+
+```python
+from quart import g
+from quart_security import current_user
+from sqlalchemy import select
+from stk.mcp import ToolError, tool
+
+
+@tool(
+    "notes.search",
+    "Search the caller's notes by title.",
+    {
+        "type": "object",
+        "properties": {"query": {"type": "string", "minLength": 1}},
+        "required": ["query"],
+        "additionalProperties": False,
+    },
+    role="editor",
+)
+async def search_notes(arguments):
+    rows = await g.db_session.scalars(
+        select(Note).where(
+            Note.user_id == current_user.id,
+            Note.title.ilike(f"%{arguments['query']}%"),
+        )
+    )
+    notes = [n.to_dict() for n in rows]
+    if not notes:
+        raise ToolError("No notes match; try a shorter query")
+    return {"notes": notes}
+```
+
+The tool receives arguments already validated against its JSON Schema, and runs as the token's user: `current_user` and `g.db_session` work as in a handler, so apply the same ownership checks a route would. A returned object becomes `structuredContent`; raise `ToolError` for a message the agent can act on. stk commits after the tool returns and rolls back on any error, then logs one `MCP Tool Call` activity naming the tool and token, never the arguments.
+
+Each user creates and revokes tokens at `/tokens/` (Account → Agent Tokens). A token is shown once, stored only as its sha256, and expires after 90 days. Its scopes are roles the user holds; a tool with `role="editor"` needs a token scoped to `editor` and a user who still holds that role, checked on every call. A tool without a role is open to any valid token. `tools/list` shows each token only the tools it can call.
+
+An agent sends the token as `Authorization: Bearer <token>`. For Claude Code:
+
+```bash
+claude mcp add --transport http myapp https://myapp.example.com/mcp --header "Authorization: Bearer stk_mcp_..."
+```
+
+The endpoint is exempt from CSRF because a session cookie never authenticates it, refuses a foreign `Origin`, and allows 120 requests per token per minute (`STK_MCP_REQUEST_LIMIT`). There is no OAuth authorization server yet, so clients that only support MCP's OAuth discovery cannot connect; give them a header instead.
