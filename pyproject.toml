@@ -1,6 +1,6 @@
 [project]
 name = "stkit"
-version = "17.1.1"
+version = "17.2.0"
 description = "An async Quart framework optimized for AI-assisted development workflows"
 authors = [
     {name = "Level09", email = "hello@level09.com"}
