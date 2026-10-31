@@ -1,20 +1,103 @@
 name: Publish
 
+# Bumping `version` in pyproject.toml on master is the release. That push runs
+# the whole gate (stk's checks with their dependency audit, and the apps built on stk
+# tested against this commit); only if all pass is it published, tagged and
+# released. Nobody tags by hand, and a red commit cannot ship.
 on:
-  release:
-    types: [published]
+  push:
+    branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      new: ${{ steps.v.outputs.new }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v9.0.0
+      - id: v
+        run: |
+          version=$(uv version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "new=true" >> "$GITHUB_OUTPUT"
+          # Checked before anything runs, so a missing entry never half-ships.
+          awk -v h="## v$version" '$0 == h || index($0, h " ") == 1 {f=1; next} /^## /{if (f) exit} f' CHANGELOG.md \
+            | sed '/./,$!d' > notes.md
+          test -s notes.md || { echo "::error::CHANGELOG.md has no '## v$version' entry"; exit 1; }
+      - if: steps.v.outputs.new == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: notes
+          path: notes.md
+
+  checks:
+    needs: version
+    if: needs.version.outputs.new == 'true'
+    uses: ./.github/workflows/checks.yml
+
+  # Each app runs its own CI against this commit: it knows its own services.
+  downstream:
+    needs: version
+    if: needs.version.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { repo: level09/sealbook, branch: master }
+          - { repo: level09/salescontrol, branch: main }
+    env:
+      GH_TOKEN: ${{ secrets.DOWNSTREAM_TOKEN }}
+      REPO: ${{ matrix.app.repo }}
+      BRANCH: ${{ matrix.app.branch }}
+    steps:
+      - name: Test ${{ matrix.app.repo }} against this commit
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::DOWNSTREAM_TOKEN is not set; $REPO was not tested"
+            exit 0
+          fi
+          # A red app is red already; its result says nothing about this commit.
+          last=$(gh run list -R "$REPO" -w checks.yml -b "$BRANCH" -e push -L 1 --json conclusion -q '.[0].conclusion')
+          if [ "$last" != "success" ]; then
+            echo "::warning::$REPO $BRANCH is '$last' before this release; skipped"
+            exit 0
+          fi
+          title="stk $GITHUB_SHA"
+          gh workflow run checks.yml -R "$REPO" --ref "$BRANCH" \
+            -f run_title="$title" \
+            -f test_with="stkit[full] @ git+https://github.com/$GITHUB_REPOSITORY@$GITHUB_SHA"
+          for _ in $(seq 30); do
+            id=$(gh run list -R "$REPO" -w checks.yml -e workflow_dispatch -L 20 --json databaseId,displayTitle \
+              -q "map(select(.displayTitle == \"$title\"))[0].databaseId")
+            [ -n "$id" ] && break
+            sleep 10
+          done
+          [ -n "$id" ] || { echo "::error::$REPO run did not start"; exit 1; }
+          gh run watch "$id" -R "$REPO" --exit-status --interval 30
+
   build:
+    needs: [version, checks, downstream]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v9.0.0
-      - name: Tag matches package version
-        run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
       - run: uv build
       - uses: actions/upload-artifact@v7
         with:
@@ -37,3 +120,18 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    needs: [version, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: notes
+      - name: Tag and release with the CHANGELOG entry as notes
+        run: gh release create "v$VERSION" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md
