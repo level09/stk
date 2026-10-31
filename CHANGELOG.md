@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.2.6 (2026-10-31)
+
+No migration required.
+
+- `stk smoke`'s `hex-id` rule no longer flags mixed-case names such as `Ed25519`. Ids are printed in one case, so `1fbaac41` and `1FBAAC41` still fail (Build Loop).
+
 ## v17.2.5 (2026-10-31)
 
 No migration required.
