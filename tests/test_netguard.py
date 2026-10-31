@@ -7,7 +7,7 @@ from unittest import mock
 import httpx2
 
 from stk.utils import netguard
-from stk.utils.netguard import Blocked, fetch
+from stk.utils.netguard import Blocked, fetch, pin, stream
 
 PUBLIC = "93.184.215.14"
 
@@ -195,6 +195,64 @@ class NetguardTests(unittest.IsolatedAsyncioTestCase):
         with mock.patch.object(netguard, "_resolve", slow):
             with self.assertRaises(TimeoutError):
                 await fetch("https://slow.example.com/", timeout=0.05)
+
+    async def test_pin_is_public_for_vetting_urls_another_client_opens(self):
+        with resolver({"site.example.com": [PUBLIC], "inside.test": ["10.0.0.2"]}):
+            self.assertEqual(
+                await pin("https://site.example.com/a?b=1"),
+                (f"https://{PUBLIC}/a?b=1", "site.example.com", "site.example.com"),
+            )
+            with self.assertRaises(Blocked):
+                await pin("https://inside.test/")
+
+    async def test_stream_yields_the_body_unread_and_caps_streamed_bytes(self):
+        async def body():
+            for _ in range(10):
+                yield b"x" * 1_000
+
+        def handler(request):
+            return httpx2.Response(200, content=body())
+
+        with resolver({"big.example.com": [PUBLIC]}):
+            async with stream(
+                "https://big.example.com/",
+                max_bytes=5_000,
+                transport=httpx2.MockTransport(handler),
+            ) as (response, final):
+                self.assertEqual(final, "https://big.example.com/")
+                with self.assertRaisesRegex(Blocked, "larger than"):
+                    async for _ in response.aiter_bytes():
+                        pass
+
+    async def test_stream_can_return_a_redirect_instead_of_following_it(self):
+        def handler(request):
+            return httpx2.Response(302, headers={"location": "https://b.example.com/"})
+
+        with resolver({"a.example.com": [PUBLIC]}):
+            async with stream(
+                "https://a.example.com/",
+                follow_redirects=False,
+                transport=httpx2.MockTransport(handler),
+            ) as (response, final):
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(final, "https://a.example.com/")
+
+    async def test_cookies_are_not_carried_across_redirects(self):
+        seen = []
+
+        def handler(request):
+            seen.append(request)
+            if len(seen) == 1:
+                return httpx2.Response(
+                    302, headers={"location": "/next", "set-cookie": "s=1; Path=/"}
+                )
+            return httpx2.Response(200, text="done")
+
+        with resolver({"a.example.com": [PUBLIC]}):
+            await fetch(
+                "https://a.example.com/", transport=httpx2.MockTransport(handler)
+            )
+        self.assertNotIn("cookie", seen[1].headers)
 
 
 if __name__ == "__main__":

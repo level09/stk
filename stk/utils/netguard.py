@@ -6,6 +6,8 @@ address between the check and the connection. Every redirect hop is re-checked."
 import asyncio
 import ipaddress
 import socket
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx2
@@ -35,7 +37,7 @@ def _public(addr: str) -> bool:
 
 
 def _origin(url: str) -> tuple:
-    """(scheme, host, port) with the default port filled in; `_pin` rejects bad ones."""
+    """(scheme, host, port) with the default port filled in; `pin` rejects bad ones."""
     parts = urlsplit(url)
     try:
         port = parts.port
@@ -48,8 +50,14 @@ def _origin(url: str) -> tuple:
     )
 
 
-async def _pin(url: str) -> tuple[str, str, str]:
-    """Return (url with the checked IP, Host header, TLS server name)."""
+async def pin(url: str) -> tuple[str, str, str]:
+    """Check a URL and return (url with the checked IP, Host header, TLS server name).
+
+    Raise Blocked unless it is http(s), carries no credentials, and every address
+    its host resolves to is public. Connect to the returned URL, send the Host
+    header, and use the server name for SNI, so the connection goes to the
+    address that was checked. Use it alone to vet a URL another client (a
+    headless browser) will open."""
     parts = urlsplit(url)
     host = parts.hostname
     if parts.scheme not in ("http", "https") or not host:
@@ -84,21 +92,45 @@ async def _pin(url: str) -> tuple[str, str, str]:
     return target, host_header, host
 
 
-async def fetch(
+def _capped(response: httpx2.Response, max_bytes: int) -> None:
+    """Make every read of the body (aread, aiter_bytes/text/lines, .content after
+    aread) raise Blocked past `max_bytes` decoded bytes."""
+    if int(response.headers.get("content-length") or 0) > max_bytes:
+        raise Blocked(f"response is larger than {max_bytes} bytes")
+    read = response.aiter_bytes
+
+    async def aiter_bytes(chunk_size=None):
+        seen = 0
+        async for chunk in read(chunk_size):
+            seen += len(chunk)
+            if seen > max_bytes:
+                raise Blocked(f"response is larger than {max_bytes} bytes")
+            yield chunk
+
+    # aread, aiter_text and aiter_lines all read through self.aiter_bytes.
+    response.aiter_bytes = aiter_bytes
+
+
+@asynccontextmanager
+async def stream(
     url: str,
     *,
     headers: dict | None = None,
     timeout: float = 10,
-    max_bytes: int = 1_048_576,
+    max_bytes: int | None = None,
     max_redirects: int = 5,
+    follow_redirects: bool = True,
     transport: httpx2.AsyncBaseTransport | None = None,
-) -> tuple[httpx2.Response, str]:
-    """GET a user-supplied URL. Return (response with its body read, final url).
+) -> AsyncIterator[tuple[httpx2.Response, str]]:
+    """GET a user-supplied URL; yield (response with its body unread, final url).
 
-    Raise Blocked when the URL, any resolved address, a redirect or the decoded
-    body size is refused, TimeoutError when the whole fetch outlasts `timeout`,
-    and httpx2.HTTPError for transport failures. Environment proxies are ignored:
-    a proxy would resolve the name itself and undo the pin."""
+    `timeout` bounds the whole fetch, including reading the body inside the
+    block. With `max_bytes`, reading more decoded bytes than that raises
+    Blocked. With `follow_redirects=False` a redirect is yielded as is. Raise
+    Blocked when the URL, an address or a redirect is refused or there are more
+    than `max_redirects`, TimeoutError past `timeout`, and httpx2.HTTPError for
+    transport failures. Environment proxies are ignored: a proxy would resolve
+    the name itself and undo the pin."""
     headers = dict(headers or {})
     origin = _origin(url)
     async with (
@@ -108,7 +140,7 @@ async def fetch(
         ) as client,
     ):
         for _ in range(max_redirects + 1):
-            target, host_header, server_name = await _pin(url)
+            target, host_header, server_name = await pin(url)
             if _origin(url) != origin:
                 # Never hand the caller's credentials to an origin it did not name,
                 # including the same host over plain HTTP or another port.
@@ -128,19 +160,41 @@ async def fetch(
             # them across hops.
             client.cookies.clear()
             try:
-                if response.has_redirect_location:
+                if follow_redirects and response.has_redirect_location:
                     url = urljoin(url, response.headers["location"])
                     continue
-                if int(response.headers.get("content-length") or 0) > max_bytes:
-                    raise Blocked(f"response is larger than {max_bytes} bytes")
-                body = bytearray()
-                async for chunk in response.aiter_bytes():
-                    body += chunk
-                    if len(body) > max_bytes:
-                        raise Blocked(f"response is larger than {max_bytes} bytes")
-                # What aread() stores; .content, .text and .json() then work.
-                response._content = bytes(body)
-                return response, url
+                if max_bytes is not None:
+                    _capped(response, max_bytes)
+                yield response, url
+                return
             finally:
                 await response.aclose()
         raise Blocked("too many redirects")
+
+
+async def fetch(
+    url: str,
+    *,
+    headers: dict | None = None,
+    timeout: float = 10,
+    max_bytes: int = 1_048_576,
+    max_redirects: int = 5,
+    transport: httpx2.AsyncBaseTransport | None = None,
+) -> tuple[httpx2.Response, str]:
+    """GET a user-supplied URL. Return (response with its body read, final url).
+
+    Same checks and errors as `stream`, with the body read and capped at
+    `max_bytes` decoded bytes (default 1 MiB)."""
+    async with stream(
+        url,
+        headers=headers,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        max_redirects=max_redirects,
+        transport=transport,
+    ) as (response, final_url):
+        # A body the transport already loaded (a test's MockTransport) skips the
+        # streaming guard; check what was read.
+        if len(await response.aread()) > max_bytes:
+            raise Blocked(f"response is larger than {max_bytes} bytes")
+    return response, final_url

@@ -110,7 +110,21 @@ async def preview():
 
 `fetch` sends a GET and returns the response with its body read, plus the URL after redirects. It resolves the host once, refuses it unless every address is public, and connects to that exact address while TLS still verifies the hostname, so DNS rebinding cannot swap in an internal address after the check. Every redirect hop is checked the same way, and `Authorization` and `Cookie` headers are dropped once a redirect leaves the original host.
 
-It raises `Blocked` for anything other than `http` or `https`, credentials in the URL, decimal, octal or hex IP literals (`2130706433`, `0x7f.1`), loopback, private, link-local, CGNAT, multicast, reserved and unspecified addresses (IPv4 and IPv6, including IPv4-mapped and NAT64 forms), more than `max_redirects` redirects (default 5), and a body over `max_bytes` after decompression (default 1 MiB). `timeout` (default 10 seconds) bounds the whole fetch and raises `TimeoutError`. Environment proxies are ignored, since a proxy would resolve the name itself. In tests, pass `transport=httpx2.MockTransport(handler)`.
+It raises `Blocked` for anything other than `http` or `https`, credentials in the URL, decimal, octal or hex IP literals (`2130706433`, `0x7f.1`), loopback, private, link-local, CGNAT, multicast, reserved and unspecified addresses (IPv4 and IPv6, including IPv4-mapped and NAT64 forms), more than `max_redirects` redirects (default 5), and a body over `max_bytes` after decompression (default 1 MiB). `timeout` (default 10 seconds) bounds the whole fetch and raises `TimeoutError`. Environment proxies are ignored, since a proxy would resolve the name itself. Cookies are never carried from one hop to the next. In tests, pass `transport=httpx2.MockTransport(handler)`.
+
+For a large download, `stream` takes the same arguments plus `follow_redirects` and yields the response with its body unread:
+
+```python
+from stk.utils.netguard import stream
+
+async with stream(url, timeout=60, max_bytes=50_000_000) as (response, final_url):
+    async for chunk in response.aiter_bytes():
+        out.write(chunk)
+```
+
+`timeout` covers reading the body inside the block too. `max_bytes` (no cap by default) makes any read raise `Blocked` once more decoded bytes than that arrive. With `follow_redirects=False` a redirect is yielded as is instead of followed.
+
+`pin(url)` runs the same checks without fetching and returns `(url with the checked IP, Host header, TLS server name)`. Use it to vet a URL that another client, such as a headless browser, is about to open.
 
 ## File uploads
 
