@@ -48,12 +48,14 @@ An app depends on stk like any package, so an upgrade touches no app file except
 
 ```bash
 # for a new major version, first raise the stkit range in pyproject.toml dependencies
-uv lock --upgrade-package stkit
+uv lock --no-cache --upgrade-package stkit --upgrade-package quart-security
 uv sync
 uv run stk db upgrade     # stk's new migrations, then the app's, in one command
 uv run stk verify
 uv run stk smoke
 ```
+
+Upgrade quart-security in the same step: stk releases often require a newer one. `--no-cache` matters right after a release, when uv's cached copy of the package index can lag PyPI by several minutes and report that the new version does not exist.
 
 stk's migrations and the app's are separate lineages in one version table, so a release that adds core migrations needs no merge revision. Templates the app overrides keep winning; templates it does not override pick up the release's changes.
 
