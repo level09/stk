@@ -295,6 +295,28 @@ def check_admin_reset_route(app):
     )
 
 
+@check("No route is registered twice")
+def check_unique_routes(app):
+    # Werkzeug answers with the first matching rule, so an app route that repeats
+    # a core one (or another extension's) is never reached, with no error at all.
+    owners = {}
+    for rule in app.url_map.iter_rules():
+        # stk's own blueprints share /static on purpose: one folder, one answer.
+        if rule.endpoint == "static" or rule.endpoint.endswith(".static"):
+            continue
+        for method in rule.methods - {"HEAD", "OPTIONS"}:
+            owners.setdefault((method, rule.rule), []).append(rule.endpoint)
+    clashes = [
+        f"{method} {path}: {' and '.join(endpoints)}"
+        for (method, path), endpoints in sorted(owners.items())
+        if len(endpoints) > 1
+    ]
+    assert not clashes, (
+        "only the first endpoint ever answers; rename one route or drop the"
+        " extension that adds it:\n    " + "\n    ".join(clashes)
+    )
+
+
 @check("GET / answers 200, after any redirects")
 async def check_http_index(app):
     # An app may send / to its sign-in or home page; what it lands on must work.
