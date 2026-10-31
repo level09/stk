@@ -1,6 +1,6 @@
 ---
 title: "JSON APIs"
-description: "List and mutation endpoints, error conventions, CSRF, and webhooks"
+description: "List and mutation endpoints, error conventions, CSRF, webhooks, and file uploads"
 ---
 
 `uv run stk new <module>` writes a complete, working set of these endpoints in `myapp/<module>/views.py`. Start from that file; this page explains its conventions.
@@ -85,3 +85,38 @@ async def before_request():
 ## CSRF and webhooks
 
 Every mutation requires a CSRF token, which Axios sends from the shared layout token. A third-party webhook without a session opts out with `@csrf_exempt` from `stk.security`, placed under the route decorator, and must authenticate the caller itself, for example by checking an HMAC signature. See [Authentication](/authentication).
+
+## File uploads
+
+`stk.files` is opt-in: add it to the app's extensions, `Stk(__name__, config=Config, extensions=[stk.files, ...])` with `import stk.files`. Its table, `stk_file`, comes with `uv run stk db upgrade` either way.
+
+| Route | Does |
+|---|---|
+| `POST /files/` | Multipart upload of one field named `file`, login required. Returns `{"item": {id, filename, size, content_type, sha256, url, thumb_url, user_id, created_at}}`. |
+| `GET /files/<id>` | The bytes, if `app.file_access` allows. |
+| `GET /files/<id>/thumb` | A WebP no larger than 480px on its long side, for images. |
+
+```js
+const form = new FormData();
+form.append("file", file);
+const { data } = await axios.post("/files/", form);
+```
+
+The content type comes from the file's leading bytes, never from the client: PNG, JPEG, GIF, WebP, and PDF are recognized, anything else is refused with 415, and a file over `STK_UPLOAD_MAX_BYTES` with 413. Send the CSRF token in the `X-CSRFToken` header (Axios does); a token inside the form makes the body parse under Quart's `MAX_CONTENT_LENGTH` instead of the upload limit. An image is decoded once at upload to make its thumbnail, so bytes that only look like an image are refused with 400. The same user uploading the same bytes again gets the existing row back.
+
+Downloads send `X-Content-Type-Options: nosniff`, a sandboxing `Content-Security-Policy`, and `Cache-Control: private, no-store`. Images display inline; every other type downloads as an attachment under its original name. A file the user may not read answers 404, so ids reveal nothing.
+
+By default only the uploader and admins may read a file. Replace the check after building the app with an async function of the user and the `File` row:
+
+```python
+from stk.files.views import can_read
+
+
+async def file_access(user, file):
+    return await can_read(user, file) or await is_shared_with(user, file)
+
+
+app.file_access = file_access
+```
+
+Bytes are content-addressed on local disk at `<STK_UPLOAD_DIR>/<sha[:2]>/<sha>`, written to a temp file and renamed, so equal bytes are stored once and a crash never leaves half a file. `stk.files.store` gives tasks and commands the same store: `save(data)` returns the sha256, `open(sha)`, `path(sha)`, `exists(sha)`, `delete(sha)`. Keys must be 64 lowercase hex characters, so no key reaches outside the directory. Rows share bytes, so delete bytes only once no `File` names them. In Docker, point `STK_UPLOAD_DIR` at a mounted volume; the default under `instance/` does not survive a rebuilt container. One machine's disk is the ceiling: move to object storage when a second app server needs the files.
