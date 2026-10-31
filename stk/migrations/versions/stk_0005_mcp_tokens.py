@@ -16,6 +16,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=80), nullable=False),
         sa.Column("token_hash", sa.String(length=64), nullable=False),
+        sa.Column("user_uniquifier", sa.String(length=255), nullable=False),
         sa.Column("scopes", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("expires_at", sa.DateTime(), nullable=False),

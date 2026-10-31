@@ -35,7 +35,7 @@ async def authenticate(header):
     if token is None or token.expires_at <= datetime.now():
         return None
     user = await db.get(User, token.user_id)
-    if user is None or not user.active:
+    if user is None or not user.active or user.fs_uniquifier != token.user_uniquifier:
         return None
     token.last_used_at = datetime.now()
     await db.commit()
@@ -101,7 +101,7 @@ async def create_token():
     own = {role.name for role in current_user.roles}
     if not isinstance(scopes, list) or not all(s in own for s in scopes):
         return {"message": "Scopes must be roles you hold"}, 400
-    row, secret = McpToken.issue(current_user.id, name.strip(), sorted(set(scopes)))
+    row, secret = McpToken.issue(current_user, name.strip(), sorted(set(scopes)))
     g.db_session.add(row)
     await g.db_session.flush()
     await Activity.register(current_user.id, "MCP Token Create", row.to_dict())

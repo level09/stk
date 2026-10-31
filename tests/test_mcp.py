@@ -2,6 +2,7 @@
 
 import unittest
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 from quart import g
 from quart_security import current_user, hash_password
@@ -150,6 +151,15 @@ class McpTests(unittest.IsolatedAsyncioTestCase):
         async with ext.async_session_factory() as db:
             row = await db.scalar(select(McpToken))
             row.expires_at = datetime.now() - timedelta(seconds=1)
+            await db.commit()
+        self.assertEqual((await self.call(secret, rpc("tools/list"))).status_code, 401)
+
+    async def test_password_change_revokes_tokens(self):
+        secret = await self.token()
+        self.assertEqual((await self.call(secret, rpc("tools/list"))).status_code, 200)
+        async with ext.async_session_factory() as db:
+            user = await db.get(User, self.admin_id)
+            user.fs_uniquifier = uuid4().hex
             await db.commit()
         self.assertEqual((await self.call(secret, rpc("tools/list"))).status_code, 401)
 

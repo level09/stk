@@ -186,7 +186,7 @@ async def search_notes(arguments):
 
 The tool receives arguments already validated against its JSON Schema, and runs as the token's user: `current_user` and `g.db_session` work as in a handler, so apply the same ownership checks a route would. A returned object becomes `structuredContent`; raise `ToolError` for a message the agent can act on. stk commits after the tool returns and rolls back on any error, then logs one `MCP Tool Call` activity naming the tool and token, never the arguments.
 
-Each user creates and revokes tokens at `/tokens/` (Account → Agent Tokens). A token is shown once, stored only as its sha256, and expires after 90 days. Its scopes are roles the user holds; a tool with `role="editor"` needs a token scoped to `editor` and a user who still holds that role, checked on every call. A tool without a role is open to any valid token. `tools/list` shows each token only the tools it can call.
+Each user creates and revokes tokens at `/tokens/` (Account → Agent Tokens). A token is shown once, stored only as its sha256, and expires after 90 days. A password change or "log out everywhere" revokes every token the user holds. Its scopes are roles the user holds; a tool with `role="editor"` needs a token scoped to `editor` and a user who still holds that role, checked on every call. A tool without a role is open to any valid token. `tools/list` shows each token only the tools it can call.
 
 An agent sends the token as `Authorization: Bearer <token>`. For Claude Code:
 

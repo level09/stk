@@ -24,6 +24,9 @@ class McpToken(Base):
     )
     name = Column(String(80), nullable=False)
     token_hash = Column(String(64), nullable=False, unique=True)
+    # The user's fs_uniquifier at issue; a password change or "log out
+    # everywhere" rotates it, which revokes the token too.
+    user_uniquifier = Column(String(255), nullable=False)
     # Role names the token may use; each call also needs the user to hold the role.
     scopes = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
@@ -36,11 +39,12 @@ class McpToken(Base):
         return hashlib.sha256(token.encode()).hexdigest()
 
     @classmethod
-    def issue(cls, user_id, name, scopes):
+    def issue(cls, user, name, scopes):
         """A new row and its secret, which is never stored and cannot be shown again."""
         token = PREFIX + secrets.token_urlsafe(32)
         row = cls(
-            user_id=user_id,
+            user_id=user.id,
+            user_uniquifier=user.fs_uniquifier,
             name=name,
             token_hash=cls.digest(token),
             scopes=scopes,
