@@ -18,7 +18,7 @@ from quart import (
     send_from_directory,
     url_for,
 )
-from quart_security import Security, SQLAlchemyUserDatastore
+from quart_security import Security, SQLAlchemyUserDatastore, user_register_conflict
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from werkzeug.exceptions import HTTPException, NotFound
@@ -172,7 +172,7 @@ def register_extensions(app):
         except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
-    from stk.security import register_security_controls
+    from stk.security import notify_register_conflict, register_security_controls
     from stk.utils.ratelimit import register_rate_limits
 
     register_rate_limits(app)
@@ -184,6 +184,7 @@ def register_extensions(app):
         register_form=ExtendedRegisterForm,
         change_password_form=OAuthAwareChangePasswordForm,
     )
+    user_register_conflict.connect(notify_register_conflict, sender=app, weak=False)
     # The library resets its session before loading the user. Share that session
     # so signals and application routes participate in the same transaction.
     app.before_request(_open_session)

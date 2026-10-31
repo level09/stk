@@ -11,7 +11,7 @@ stk builds authentication on quart-security: session auth, roles, TOTP two-facto
 
 ## Accounts and passwords
 
-Public password registration is disabled by default. Set `SECURITY_REGISTERABLE=true` only if your app needs it. Create users from the CLI instead:
+Public password registration is disabled by default. Set `SECURITY_REGISTERABLE=true` only if your app needs it. Registering an email that already has an account looks exactly like a successful sign-up, so the form cannot be used to find accounts; nothing is created, and with `MAIL_SERVER` set the owner gets an email, sent in the background, saying someone tried. Its sign-in link comes from `STK_PUBLIC_URL`, never the request's Host header. Create users from the CLI instead:
 
 ```bash
 uv run stk install                          # admin user with the admin role
@@ -22,7 +22,9 @@ uv run stk reset -e user@example.com        # prompts for a new password
 
 Emails are stored trimmed and lowercased, and login, the CLI and OAuth match them regardless of case, so `Ada@Example.com` and `ada@example.com` are one account. Rows stored with capitals before 17.2.1 still sign in; if two of them differ only by case, login fails until you merge or rename one.
 
-New passwords are hashed with Argon2id and must be at least 12 characters. Legacy hashes still verify and are upgraded on login. Password creation and reset also check the password against the Have I Been Pwned breach service; if that service is unreachable the password is accepted, so monitor for those failures.
+New passwords are hashed with Argon2id and must be at least 12 characters. Legacy hashes still verify and are upgraded on login. Until a legacy hash is upgraded, a failed login for that account takes a different time than one for an unknown email, so if you import hashes from another system, make those users reset their passwords. Password creation and reset also check the password against the Have I Been Pwned breach service; if that service is unreachable the password is accepted, so monitor for those failures.
+
+A page that requires login sends the visitor to `/login?next=<page>`, and they land back on that page after signing in, including through 2FA and passkeys. Only same-site paths are followed.
 
 After 5 failed logins an account is locked for 15 minutes (quart-security's `SECURITY_LOGIN_MAX_ATTEMPTS` and `SECURITY_LOCKOUT_MINUTES` defaults).
 

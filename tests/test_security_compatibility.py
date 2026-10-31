@@ -146,5 +146,34 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotEqual((await second.get("/dashboard/")).status_code, 200)
 
+    async def test_registering_an_existing_email_mails_the_owner_in_background(self):
+        self.app.config.update(
+            SECURITY_REGISTERABLE=True,
+            MAIL_SERVER="smtp.example.com",
+            STK_PUBLIC_URL="http://localhost",
+        )
+        queued = []
+        self.app.add_background_task = lambda func, *args: queued.append(args)
+        client = self.app.test_client()
+        await client.get("/login")
+        async with client.session_transaction() as cookie:
+            csrf = cookie["_csrf_token"]
+        form = {
+            "email": "USER@example.com",
+            "password": "AnotherPassword123!",
+            "password_confirm": "AnotherPassword123!",
+            "csrf_token": csrf,
+        }
+        response = await client.post("/register", form=form)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(queued), 1)
+        subject, recipient, body = queued[0]
+        self.assertEqual(recipient, "user@example.com")
+        self.assertIn("http://localhost/login", body)
+        # A forged Host header never reaches the mail's links.
+        self.app.config["STK_PUBLIC_URL"] = None
+        await client.post("/register", form=form, headers={"Host": "evil.example"})
+        self.assertNotIn("evil.example", queued[1][2])
+
     def test_cookie_setting_preserves_local_http_support(self):
         self.assertFalse(self.app.config["SESSION_COOKIE_SECURE"])

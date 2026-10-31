@@ -124,6 +124,31 @@ def register_security_controls(app):
         return response
 
 
+async def notify_register_conflict(app, user):
+    """Tell an account's owner that someone tried to register with their email.
+
+    Registration answers as if it succeeded, so this mail is the owner's only
+    sign. It goes out in the background: waiting on SMTP would make this one
+    response slower and reveal the account. Links come from STK_PUBLIC_URL,
+    never the request's Host header, which the sender controls."""
+    if not app.config.get("MAIL_SERVER"):
+        app.logger.warning("Sign-up attempt for an existing account: no MAIL_SERVER")
+        return
+    from stk.utils.email import send_email
+
+    public_url = app.config.get("STK_PUBLIC_URL")
+    where = f" at {public_url}" if public_url else ""
+    sign_in = f"\n\nSign in at {public_url.rstrip('/')}/login" if public_url else ""
+    body = (
+        f"Someone tried to create a {app.config['APP_NAME']} account{where} with"
+        " this email address. You already have one, so nothing changed."
+        f"{sign_in}\n\nIf it was not you, you can ignore this email."
+    )
+    app.add_background_task(
+        send_email, "Sign-up attempt with your email", user.email, body
+    )
+
+
 async def check_password_policy(password):
     from quart import current_app
 
