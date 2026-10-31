@@ -303,9 +303,18 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
     page.on("pageerror", _record_page_error)
     page.on("requestfailed", _record_failed_request)
     response = await page.goto(f"{base_url}{path}", wait_until="networkidle")
-    low_contrast = await page.evaluate(CONTRAST_JS)
-    text = await page.evaluate(VISIBLE_TEXT_JS)
-    rows = await page.evaluate(ROWS_JS)
+    from playwright.async_api import Error as PlaywrightError
+
+    try:
+        low_contrast = await page.evaluate(CONTRAST_JS)
+        text = await page.evaluate(VISIBLE_TEXT_JS)
+        rows = await page.evaluate(ROWS_JS)
+    except PlaywrightError as exc:
+        # One page smoke cannot read fails that page, not the whole run.
+        console_entries.append(
+            {"type": "pageerror", "text": f"smoke could not read the page: {exc}"}
+        )
+        low_contrast, text, rows = [], "", []
     if screenshot_path is not None:
         screenshot_path.parent.mkdir(parents=True, exist_ok=True)
         await page.screenshot(path=str(screenshot_path), full_page=True)

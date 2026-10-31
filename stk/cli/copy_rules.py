@@ -15,8 +15,10 @@ VISIBLE_TEXT_JS = """() => {
 }"""
 
 # Visible texts of sibling elements that share a tag and classes: rows of a list.
+# Only HTML elements: SVG shapes (a chart's paths, an icon's circles) repeat by
+# design and have no innerText.
 ROWS_JS = """() => {
-  const shown = el => el.getClientRects().length > 0;
+  const shown = el => el instanceof HTMLElement && el.getClientRects().length > 0;
   const sig = k => k.tagName + '.' + [...k.classList]
     .filter(c => !/active|selected|hover|focus|open|current/.test(c)).sort().join('.');
   const out = [];

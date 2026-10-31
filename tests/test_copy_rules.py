@@ -1,6 +1,7 @@
 import unittest
 
 from stk.cli.copy_rules import (
+    ROWS_JS,
     broken_value,
     copy_findings,
     hex_id,
@@ -110,3 +111,28 @@ class SmokeCopyReportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RowsInBrowserTest(unittest.IsolatedAsyncioTestCase):
+    """ROWS_JS runs in a real page: SVG shapes have no innerText."""
+
+    async def test_repeated_svg_shapes_are_skipped_and_html_rows_kept(self):
+        try:
+            from playwright.async_api import async_playwright
+
+            playwright = await async_playwright().start()
+            browser = await playwright.chromium.launch()
+        except Exception as exc:  # no Playwright or no browser installed
+            self.skipTest(f"chromium unavailable: {exc}")
+        try:
+            page = await browser.new_page()
+            await page.set_content(
+                "<svg width='90' height='30'><circle cx='10' cy='10' r='5'/>"
+                "<circle cx='30' cy='10' r='5'/><circle cx='50' cy='10' r='5'/></svg>"
+                "<ul><li>Alpha</li><li>Beta</li><li>Gamma</li></ul>"
+            )
+            rows = await page.evaluate(ROWS_JS)
+        finally:
+            await browser.close()
+            await playwright.stop()
+        self.assertEqual(rows, [["Alpha", "Beta", "Gamma"]])
