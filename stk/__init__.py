@@ -3,7 +3,7 @@ stk Framework
 A modern Python web framework optimized for AI-assisted development.
 """
 
-__version__ = "17.2.7"
+__version__ = "17.3.0"
 
 
 def __getattr__(name):

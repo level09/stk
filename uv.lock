@@ -1626,7 +1626,7 @@ wheels = [
 
 [[package]]
 name = "quart-security"
-version = "2.0.6"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiosmtplib" },
@@ -1645,9 +1645,9 @@ dependencies = [
     { name = "webauthn" },
     { name = "wtforms" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/95/6e5ec7956de6697f849f120c12cedb51a0b36fc8d2a02ec047b304507ecf/quart_security-2.0.6.tar.gz", hash = "sha256:b0249da24dafcd4ae1417b86d9a002237e1f8e793c19a94842eb89777122ab8c", size = 37574, upload-time = "2026-10-31T17:42:37.056Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/c8/e6866fd4c47580392ad5b938c922feb28aa566c6575a5ccd7a152d587596/quart_security-2.1.0.tar.gz", hash = "sha256:feac78f60628d32c32fe857e4cc058cbc9a0d5ef58dfcd86a78fd9a4ba481754", size = 44256, upload-time = "2026-10-31T18:36:20.669Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/38/957016f20ff094f3266e32547e46a1b77323a981e70c1c2a83fd1e33b8f1/quart_security-2.0.6-py3-none-any.whl", hash = "sha256:4af67431c0e3f33e9b9fdd24d271bd3b6849ac973b6aa1a8bf65e6199da6fd51", size = 43451, upload-time = "2026-10-31T17:42:35.468Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/ef/ca026d315a0626d4145a27cdd9cce04e4d83d3f433392f2215fa2dc9ae0b/quart_security-2.1.0-py3-none-any.whl", hash = "sha256:d22066564fb5712e684b3753354094f0c5c3b9bc31bcc46adbb33864e3da3aef", size = 51803, upload-time = "2026-10-31T18:36:19.264Z" },
 ]
 
 [[package]]
@@ -1948,7 +1948,7 @@ asyncio = [
 
 [[package]]
 name = "stkit"
-version = "17.2.7"
+version = "17.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosmtplib" },
@@ -2023,7 +2023,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "quart", specifier = ">=0.20.0" },
-    { name = "quart-security", specifier = ">=2.0.6,<3" },
+    { name = "quart-security", specifier = ">=2.1.0,<3" },
     { name = "quart-session", specifier = ">=3.0.0" },
     { name = "redis", marker = "extra == 'full'", specifier = ">=7.1.0" },
     { name = "rich", specifier = ">=14.0.0" },

@@ -1,5 +1,16 @@
 # Changelog
 
+## v17.3.0 (2026-10-31)
+
+Run `uv run stk db upgrade`: `stk_0007` marks every existing account confirmed. Requires quart-security 2.1.0.
+
+- Password reset by email at `/reset`, on by default once `MAIL_SERVER` and `STK_PUBLIC_URL` are both set (`SECURITY_RECOVERABLE` overrides). Links work once, for one hour, and die if the email or password changes. A reset signs out every session, revokes MCP tokens and clears a lockout (Authentication).
+- Public sign-up now requires email confirmation (`SECURITY_CONFIRMABLE`, default on). An unconfirmed account fails login exactly like a wrong password, which closes the last way to find accounts through sign-up. With `SECURITY_REGISTERABLE=true`, startup fails without `MAIL_SERVER`; set `SECURITY_CONFIRMABLE=false` to keep unconfirmed sign-up (Authentication).
+- Users created by code, the CLI, admins or OAuth start confirmed: `User()` sets `confirmed_at` unless given one.
+- A locked account now fails login with the same message as a wrong password.
+- Auth mail links come from `STK_PUBLIC_URL` (as `SECURITY_PUBLIC_URL`), never the Host header. The 17.2.7 sign-up notice now comes from quart-security.
+- The reset, resend and confirm pages use the current auth layout.
+
 ## v17.2.7 (2026-10-31)
 
 No migration required. Requires quart-security 2.0.6.
