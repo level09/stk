@@ -49,13 +49,7 @@
             <theme-switcher></theme-switcher>
 
             <!-- Notifications -->
-            <notification-dropdown
-                :notifications="notifications"
-                @click="handleNotificationClick"
-                @mark-read="markNotificationRead"
-                @mark-all-read="markAllNotificationsRead"
-                @remove="removeNotification"
-            ></notification-dropdown>
+            <notification-dropdown ref="notifications"></notification-dropdown>
 
             <!-- Connection Status -->
             <v-tooltip :text="wsConnected ? 'Real-time connected' : 'Reconnecting...'" location="bottom">
@@ -222,7 +216,6 @@
                 isNavCollapsed: false,
                 isMobile: window.innerWidth < 960,
                 navItems: typeof stkNavigation !== 'undefined' ? stkNavigation : [],
-                notifications: [],
                 wsConnected: false,
                 _ws: null,
                 _wsRetry: 1000,
@@ -248,27 +241,6 @@
                     this.isNavCollapsed = false;
                 }
             },
-            // Notification methods
-            handleNotificationClick(notification) {
-                if (notification.to) {
-                    window.location.href = notification.to;
-                }
-            },
-            markNotificationRead(id) {
-                const notification = this.notifications.find(n => n.id === id);
-                if (notification) {
-                    notification.isSeen = true;
-                }
-            },
-            markAllNotificationsRead() {
-                this.notifications.forEach(n => n.isSeen = true);
-            },
-            removeNotification(id) {
-                const index = this.notifications.findIndex(n => n.id === id);
-                if (index > -1) {
-                    this.notifications.splice(index, 1);
-                }
-            },
             _connectWs() {
                 const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const ws = new WebSocket(`${proto}//${location.host}/ws`);
@@ -278,13 +250,14 @@
                     this.wsConnected = false;
                     setTimeout(() => this._connectWs(), Math.min(this._wsRetry *= 1.5, 30000));
                 };
-                ws.onmessage = (e) => { this._onWsMessage(JSON.parse(e.data)); };
+                ws.onmessage = (e) => {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'notification') this.$refs.notifications?.receive(msg);
+                    this._onWsMessage(msg);
+                };
             },
             _onWsMessage(msg) {
-                // Handle incoming messages — extend this for notifications, live updates, etc.
-                if (msg.type === 'notification') {
-                    this.notifications.unshift(msg);
-                }
+                // Override for your own message types; notifications already reach the bell.
             }
         },
         mounted() {

@@ -248,15 +248,6 @@
   background-color: rgba(var(--v-theme-primary), 0.04);
 }
 
-.notification-item .visible-on-hover {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.notification-item:hover .visible-on-hover {
-  opacity: 1;
-}
-
 /* ===== Scrollbar Styling ===== */
 .nav-items::-webkit-scrollbar {
   width: 6px;

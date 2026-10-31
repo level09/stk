@@ -23,7 +23,7 @@ const {createVuetify} = Vuetify;
 const vuetify = createVuetify(config.vuetifyConfig);  // stk/static/js/config.js
 
 window.app = createApp({
-  mixins: [layoutMixin],          // drawer, nav, WebSocket, notifications
+  mixins: [layoutMixin],          // drawer, nav, WebSocket
   delimiters: config.delimiters,  // ['${', '}'], so Jinja keeps {{ }}
   data() {
     return {
@@ -121,10 +121,10 @@ Templates and static files resolve app first, then each extension's, then stk's,
 
 Defined in `stk/templates/layout.html`. Every page gets:
 
-- **data:** `drawer`, `isNavCollapsed`, `isMobile`, `navItems`, `notifications`, `wsConnected`
+- **data:** `drawer`, `isNavCollapsed`, `isMobile`, `navItems`, `wsConnected`
 - **computed:** `filteredNavItems` (nav filtered by the user's roles)
-- **methods:** `logout()`, `toggleNavCollapse()` (persisted in localStorage), `handleNotificationClick(n)`, `markNotificationRead(id)`, `markAllNotificationsRead()`, `removeNotification(id)`
-- **mounted:** restores nav state and, for signed-in users, connects the `/ws` WebSocket with backoff. Messages of `{type: 'notification'}` are prepended to `notifications`; extend `_onWsMessage` for your own types. See [Background Work](/background-work).
+- **methods:** `logout()`, `toggleNavCollapse()` (persisted in localStorage)
+- **mounted:** restores nav state and, for signed-in users, connects the `/ws` WebSocket with backoff. Messages of `{type: 'notification'}` go to the bell; override `_onWsMessage(msg)` for your own types. See [Background Work](/background-work).
 
 ## Icons
 
@@ -240,7 +240,7 @@ Registered by `registerStkComponents(app)`:
 |---|---|
 | `<vertical-nav-link>`, `<vertical-nav-group>`, `<vertical-nav-section-title>` | Sidebar entries |
 | `<transition-expand>` | Animated height for nav groups |
-| `<notification-dropdown>` | Bell with the notification list; emits `click`, `mark-read`, `mark-all-read`, `remove` |
+| `<notification-dropdown>` | The signed-in user's bell: unread badge, list, mark read. Loads `/api/notifications` itself and takes live ones from the socket |
 | `<theme-switcher>` | Light/dark toggle, persisted in localStorage |
 
-Notification objects look like `{id, title, subtitle, time, icon, img, color, isSeen, to}`.
+Create notifications on the server with `notify()`; see [Background Work](/background-work#notifications).
