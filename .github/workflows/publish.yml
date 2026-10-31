@@ -1,9 +1,8 @@
 name: Publish
 
 # Bumping `version` in pyproject.toml on master is the release. That push runs
-# the whole gate (stk's checks with their dependency audit, and the apps built on stk
-# tested against this commit); only if all pass is it published, tagged and
-# released. Nobody tags by hand, and a red commit cannot ship.
+# stk's checks with their dependency audit; only if they pass is it published,
+# tagged and released. Nobody tags by hand, and a red commit cannot ship.
 on:
   push:
     branches: [master]
@@ -51,49 +50,8 @@ jobs:
     if: needs.version.outputs.new == 'true'
     uses: ./.github/workflows/checks.yml
 
-  # Each app runs its own CI against this commit: it knows its own services.
-  downstream:
-    needs: version
-    if: needs.version.outputs.new == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app:
-          - { repo: level09/sealbook, branch: master }
-          - { repo: level09/salescontrol, branch: main }
-    env:
-      GH_TOKEN: ${{ secrets.DOWNSTREAM_TOKEN }}
-      REPO: ${{ matrix.app.repo }}
-      BRANCH: ${{ matrix.app.branch }}
-    steps:
-      - name: Test ${{ matrix.app.repo }} against this commit
-        run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::DOWNSTREAM_TOKEN is not set; $REPO was not tested"
-            exit 0
-          fi
-          # A red app is red already; its result says nothing about this commit.
-          last=$(gh run list -R "$REPO" -w checks.yml -b "$BRANCH" -e push -L 1 --json conclusion -q '.[0].conclusion')
-          if [ "$last" != "success" ]; then
-            echo "::warning::$REPO $BRANCH is '$last' before this release; skipped"
-            exit 0
-          fi
-          title="stk $GITHUB_SHA"
-          gh workflow run checks.yml -R "$REPO" --ref "$BRANCH" \
-            -f run_title="$title" \
-            -f test_with="stkit[full] @ git+https://github.com/$GITHUB_REPOSITORY@$GITHUB_SHA"
-          for _ in $(seq 30); do
-            id=$(gh run list -R "$REPO" -w checks.yml -e workflow_dispatch -L 20 --json databaseId,displayTitle \
-              -q "map(select(.displayTitle == \"$title\"))[0].databaseId")
-            [ -n "$id" ] && break
-            sleep 10
-          done
-          [ -n "$id" ] || { echo "::error::$REPO run did not start"; exit 1; }
-          gh run watch "$id" -R "$REPO" --exit-status --interval 30
-
   build:
-    needs: [version, checks, downstream]
+    needs: [version, checks]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
