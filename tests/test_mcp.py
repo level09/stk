@@ -9,6 +9,7 @@ from quart_security import current_user, hash_password
 from sqlalchemy import func, select
 
 import stk.extensions as ext
+import stk.mcp
 from stk.app import Stk
 from stk.mcp import ToolError, tool
 from stk.mcp.models import McpToken
@@ -53,7 +54,7 @@ def rpc(method, params=None, rid=1):
 
 class McpTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.app = Stk(__name__, config=McpConfig)
+        self.app = Stk(__name__, config=McpConfig, extensions=[stk.mcp])
         async with ext.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         async with ext.async_session_factory() as db:
@@ -303,6 +304,20 @@ class McpTests(unittest.IsolatedAsyncioTestCase):
             tool("has space", "Bad name.", {"type": "object"})
         with self.assertRaises(ValueError):
             tool("test.array", "Not an object.", {"type": "array"})
+
+
+class McpOptInTests(unittest.IsolatedAsyncioTestCase):
+    async def test_an_app_without_stk_mcp_has_no_mcp_routes_or_menu(self):
+        """An app may serve its own /mcp; stk must not claim it uninvited."""
+        app = Stk(__name__, config=McpConfig)
+        self.assertNotIn("mcp", app.blueprints)
+        self.assertNotIn("/mcp", {r.rule for r in app.url_map.iter_rules()})
+        menu = [e.get("to") for e in app.jinja_env.globals["stk_navigation"]()]
+        self.assertNotIn("/tokens/", menu)
+        with_mcp = Stk(__name__, config=McpConfig, extensions=[stk.mcp])
+        menu = [e.get("to") for e in with_mcp.jinja_env.globals["stk_navigation"]()]
+        self.assertIn("/tokens/", menu)
+        await ext.engine.dispose()
 
 
 if __name__ == "__main__":

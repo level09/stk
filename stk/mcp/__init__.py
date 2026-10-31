@@ -1,5 +1,8 @@
 """Expose an app's own functions to AI agents over MCP at `/mcp`.
 
+Opt in with `extensions=[stk.mcp, ...]`; without it there is no `/mcp`, no
+`/tokens/` page, and an app is free to serve its own MCP endpoint.
+
 A tool is an async function taking the validated arguments dict. It runs as the
 token's user: `current_user` and `g.db_session` work as in a request handler.
 """
@@ -51,3 +54,10 @@ def tool(name, description, schema, *, role=None):
         return fn
 
     return decorator
+
+
+def init_app(app):
+    from stk.mcp.views import bp_mcp
+
+    app.extensions["stk.mcp"] = True
+    app.register_blueprint(bp_mcp)

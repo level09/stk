@@ -13,7 +13,7 @@ LIFETIME = timedelta(days=90)
 
 
 class McpToken(Base):
-    __tablename__ = "mcp_token"
+    __tablename__ = "stk_mcp_token"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(

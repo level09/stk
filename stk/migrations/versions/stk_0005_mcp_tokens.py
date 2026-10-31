@@ -1,4 +1,7 @@
-"""MCP bearer tokens: one row per token, storing only its sha256."""
+"""MCP bearer tokens: one row per token, storing only its sha256.
+
+Until 17.2.3 this created `mcp_token`, a name an app may already use for its own
+table; stk_0006 moves such an stk table to `stk_mcp_token`."""
 
 import sqlalchemy as sa
 from alembic import op
@@ -11,7 +14,7 @@ depends_on = None
 
 def upgrade() -> None:
     op.create_table(
-        "mcp_token",
+        "stk_mcp_token",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=80), nullable=False),
@@ -24,19 +27,19 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["user.id"],
-            name=op.f("fk_mcp_token_user_id"),
+            name=op.f("fk_stk_mcp_token_user_id"),
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_mcp_token")),
-        sa.UniqueConstraint("token_hash", name=op.f("uq_mcp_token_token_hash")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_stk_mcp_token")),
+        sa.UniqueConstraint("token_hash", name=op.f("uq_stk_mcp_token_token_hash")),
     )
-    with op.batch_alter_table("mcp_token", schema=None) as batch_op:
+    with op.batch_alter_table("stk_mcp_token", schema=None) as batch_op:
         batch_op.create_index(
-            batch_op.f("ix_mcp_token_user_id"), ["user_id"], unique=False
+            batch_op.f("ix_stk_mcp_token_user_id"), ["user_id"], unique=False
         )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("mcp_token", schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f("ix_mcp_token_user_id"))
-    op.drop_table("mcp_token")
+    with op.batch_alter_table("stk_mcp_token", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_stk_mcp_token_user_id"))
+    op.drop_table("stk_mcp_token")

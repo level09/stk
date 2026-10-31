@@ -149,7 +149,7 @@ Bytes are content-addressed on local disk at `<STK_UPLOAD_DIR>/<sha[:2]>/<sha>`,
 
 ## Agent tools (MCP)
 
-An app can expose its own functions to AI agents. stk serves them at `POST /mcp` as a stateless MCP server: MCP `2026-07-28` with `server/discover`, plus `initialize` and `ping` for clients on `2025-11-25`, `2025-06-18`, and `2025-03-26`. Every reply is one JSON object; there are no sessions and no SSE.
+An app can expose its own functions to AI agents. Opt in by adding `stk.mcp` to the app's extensions (`import stk.mcp`, then `extensions=[stk.mcp, ...]`); without it stk registers no `/mcp` and no `/tokens/` page, so an app is free to serve its own MCP endpoint. stk serves the tools at `POST /mcp` as a stateless MCP server: MCP `2026-07-28` with `server/discover`, plus `initialize` and `ping` for clients on `2025-11-25`, `2025-06-18`, and `2025-03-26`. Every reply is one JSON object; there are no sessions and no SSE.
 
 Register a tool with `@tool` from `stk.mcp`, in any module your extension imports:
 

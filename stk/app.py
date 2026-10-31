@@ -27,7 +27,6 @@ from werkzeug.security import safe_join
 import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
-from stk.mcp.views import bp_mcp
 from stk.notification.views import bp_notification
 from stk.portal.views import portal
 from stk.public.views import public
@@ -209,7 +208,6 @@ def register_blueprints(app):
     app.register_blueprint(portal)
     app.register_blueprint(bp_notification)
     app.register_blueprint(ws_bp)
-    app.register_blueprint(bp_mcp)
     if agent_login_enabled(app):
         app.register_blueprint(bp_agent_login)
     return None
@@ -300,7 +298,12 @@ def register_navigation(app):
     app.jinja_env.globals["stk_navigation"] = lambda: [
         *CORE_NAVIGATION_START,
         *app.navigation,
-        *CORE_NAVIGATION_END,
+        *(
+            entry
+            for entry in CORE_NAVIGATION_END
+            # Agent Tokens only for apps that opted in with `stk.mcp`.
+            if entry.get("to") != "/tokens/" or "stk.mcp" in app.extensions
+        ),
     ]
     # The app's entries alone, for a layout that draws its own sidebar.
     app.jinja_env.globals["app_navigation"] = lambda: app.navigation
