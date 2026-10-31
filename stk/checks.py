@@ -141,10 +141,11 @@ async def check_all_models(app):
     from sqlalchemy import select
 
     import stk.extensions as ext
+    from stk.tasks.models import Job
     from stk.user.models import Activity, OAuth, Session, WebAuthn
 
     async with ext.async_session_factory() as session:
-        for model in [Activity, Session, OAuth, WebAuthn]:
+        for model in [Activity, Session, OAuth, WebAuthn, Job]:
             await session.execute(select(model).limit(1))
 
 
@@ -155,9 +156,11 @@ def check_admin_routes(app):
         "/users/",
         "/roles/",
         "/activities/",
+        "/jobs/",
         "/api/users",
         "/api/roles",
         "/api/activities",
+        "/api/jobs",
     ]
     for route in admin_routes:
         assert route in rules, f"Missing admin route: {route}"
@@ -217,6 +220,7 @@ def check_templates(app):
         "cms/users.html",
         "cms/roles.html",
         "cms/activities.html",
+        "cms/jobs.html",
     ]
     for tpl in required:
         app.jinja_env.get_template(tpl)

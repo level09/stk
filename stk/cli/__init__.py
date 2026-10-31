@@ -14,7 +14,7 @@ from stk.cli.database import (
     create_db,
     db,
 )
-from stk.cli.develop import init, run
+from stk.cli.develop import init, run, worker
 from stk.cli.users import (
     add_role,
     browser_token,
@@ -46,4 +46,5 @@ __all__ = [
     "shell",
     "smoke",
     "verify",
+    "worker",
 ]

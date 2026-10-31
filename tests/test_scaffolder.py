@@ -328,7 +328,7 @@ class InitAndNewTests(unittest.TestCase):
             if isinstance(node, ast.Assign)
         }
         self.assertEqual(assigned["branch_labels"], ("acme",))
-        self.assertEqual(assigned["depends_on"], "stk_0001")
+        self.assertEqual(assigned["depends_on"], "stk_0002")
         # Formatted by the app's ruff config.
         self.assertIn('op.create_table(\n        "widget",', revision.read_text())
 

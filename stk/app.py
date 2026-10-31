@@ -287,6 +287,7 @@ CORE_NAVIGATION_END = [
         "to": "/activities",
         "role": "admin",
     },
+    {"title": "Jobs", "icon": "ti ti-list-check", "to": "/jobs", "role": "admin"},
 ]
 
 

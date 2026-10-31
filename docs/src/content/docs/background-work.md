@@ -1,6 +1,6 @@
 ---
 title: "Background Work"
-description: "Fire-and-forget tasks without Celery, and pushing messages over WebSockets"
+description: "Fire-and-forget tasks, durable jobs that survive a restart, and pushing messages over WebSockets"
 ---
 
 ## Background tasks
@@ -30,7 +30,32 @@ async def cleanup_old_records(session):
 await run_with_session(cleanup_old_records)
 ```
 
-Tasks live only as long as the process. Work that must survive a restart belongs in a table that a scheduled job drains, not in `run_in_background`.
+Tasks live only as long as the process. Work that must survive a restart is a durable job.
+
+## Durable jobs
+
+A durable job is a row in the `stk_job` table, so it survives restarts and deploys. Register an async function with `@job`; it receives a DB session and the payload as keyword arguments. Enqueue it by name from anywhere, and run `uv run stk worker` beside the web server to drain the table:
+
+```python
+from stk.tasks import enqueue, job
+
+
+@job
+async def send_report(session, user_id):
+    user = await session.get(User, user_id)
+    ...
+
+
+await enqueue("send_report", user_id=user.id)
+```
+
+The job is named after its function, so renaming the function strands rows already queued under the old name. The payload is stored as JSON: pass ids, not model instances. `enqueue` commits in its own session, so a request that rolls back afterwards still leaves the job queued.
+
+The worker runs one job at a time and commits the job's writes together with marking it `done`. A job that raises is rolled back, its traceback is stored, and it is retried after 30 seconds, then 60, until its third attempt fails and it stays `failed`. Write jobs to be safe to run twice: a worker that dies mid-job leaves it `running`, and the next worker requeues it once it has been running longer than `--timeout` (3600 seconds) plus a minute. A job still running at `--timeout` is cancelled and counts as a failed attempt. Stopping the worker with SIGTERM or Ctrl-C hands the current job back without spending an attempt.
+
+On PostgreSQL, run as many workers as you like: each claim uses `FOR UPDATE SKIP LOCKED`. SQLite has one writer at a time, so run a single worker there.
+
+Admins see every job, its payload, and its last error at `/jobs`. Done jobs stay in the table; delete old rows yourself if they pile up. In tests, `await run_next()` runs one due job and returns `False` when none is due.
 
 `uv run stk cleanup-sessions` deactivates expired sessions and deletes rows older than 30 days. Run it from cron or a systemd timer.
 
