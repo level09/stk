@@ -34,6 +34,20 @@ def _public(addr: str) -> bool:
     return ip.is_global and not ip.is_multicast
 
 
+def _origin(url: str) -> tuple:
+    """(scheme, host, port) with the default port filled in; `_pin` rejects bad ones."""
+    parts = urlsplit(url)
+    try:
+        port = parts.port
+    except ValueError:
+        port = None
+    return (
+        parts.scheme,
+        parts.hostname,
+        port or (443 if parts.scheme == "https" else 80),
+    )
+
+
 async def _pin(url: str) -> tuple[str, str, str]:
     """Return (url with the checked IP, Host header, TLS server name)."""
     parts = urlsplit(url)
@@ -86,7 +100,7 @@ async def fetch(
     and httpx2.HTTPError for transport failures. Environment proxies are ignored:
     a proxy would resolve the name itself and undo the pin."""
     headers = dict(headers or {})
-    origin = urlsplit(url).hostname
+    origin = _origin(url)
     async with (
         asyncio.timeout(timeout),
         httpx2.AsyncClient(
@@ -95,8 +109,9 @@ async def fetch(
     ):
         for _ in range(max_redirects + 1):
             target, host_header, server_name = await _pin(url)
-            if server_name != origin:
-                # Never hand the caller's credentials to a host it did not name.
+            if _origin(url) != origin:
+                # Never hand the caller's credentials to an origin it did not name,
+                # including the same host over plain HTTP or another port.
                 headers = {
                     k: v
                     for k, v in headers.items()

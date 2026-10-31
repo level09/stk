@@ -129,6 +129,25 @@ class NetguardTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("authorization", seen[1].headers)
         self.assertEqual(seen[1].headers["accept"], "text/plain")
 
+    async def test_credentials_dropped_on_scheme_or_port_change(self):
+        for target in ("http://a.example.com/x", "https://a.example.com:8443/x"):
+            seen = []
+
+            def handler(request, target=target, seen=seen):
+                seen.append(request)
+                if len(seen) == 1:
+                    return httpx2.Response(302, headers={"location": target})
+                return httpx2.Response(200, text="done")
+
+            with self.subTest(target), resolver({"a.example.com": [PUBLIC]}):
+                await fetch(
+                    "https://a.example.com/",
+                    headers={"Authorization": "Bearer t", "Cookie": "s=1"},
+                    transport=httpx2.MockTransport(handler),
+                )
+                self.assertNotIn("authorization", seen[1].headers)
+                self.assertNotIn("cookie", seen[1].headers)
+
     async def test_redirect_limit(self):
         def handler(request):
             return httpx2.Response(302, headers={"location": "/again"})
