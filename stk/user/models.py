@@ -69,6 +69,13 @@ class User(Base, UserMixin):
     password_set = Column(Boolean, default=True, nullable=False)
     active = Column(Boolean, default=False, nullable=True)
 
+    def __init__(self, **kwargs):
+        # Accounts made by code, the CLI, admins or OAuth start confirmed. Only
+        # self-registration sets None afterwards, until the emailed link is
+        # opened; a column default would refill that None at insert.
+        kwargs.setdefault("confirmed_at", datetime.now())
+        super().__init__(**kwargs)
+
     @validates("email")
     def _normalize_email(self, key, value):
         # Login lowercases what it is given; store the same form so one address

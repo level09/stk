@@ -1,44 +1,30 @@
-{% extends 'layout.html' %}
+{% extends 'login-layout.html' %}
 
 {% block content %}
-    <v-app id="app" class="justify-center align-center min-vh-100 d-flex">
-        <v-container class="d-flex align-center justify-center">
-            <div class="main">
-                <h2>Thank for your registration</h2>
-                <p>
-                    Please confirm your Email to continue.
-                </p>
-            </div>
-        </v-container>
-        <v-snackbar absolute button v-model="snackBar">
-            ${snackMessage}
-            <v-btn text color="primary" @click.native="value = false">Close</v-btn>
-        </v-snackbar>
-    </v-app>
+<v-main class="d-flex flex-column align-center justify-center" style="min-height: 100vh; background: rgb(var(--v-theme-background));">
+    <v-card class="mx-auto pa-8 w-100" rounded="lg" style="max-width: 424px;">
+        <div class="text-center mb-6">
+            <div class="mb-4">{% include "_brand.html" %}</div>
+            <div class="text-headline-small font-weight-bold">Confirm your email</div>
+            <div class="text-body-medium text-medium-emphasis">Confirm only if you created this account. If you did not, close this page.</div>
+        </div>
+
+        <form action="{{ url_for_security('confirm_email', token=confirm_email_token) }}" method="POST">
+            {{ confirm_email_form.hidden_tag() }}
+            {% include "security/_messages.html" %}
+            <v-btn type="submit" color="primary" size="large" block class="mb-4">Confirm my email</v-btn>
+        </form>
+    </v-card>
+</v-main>
 {% endblock %}
 
 {% block js %}
-    <script>
-        const {createApp} = Vue;
-        const {createVuetify} = Vuetify;
-        const vuetify = createVuetify(config.vuetifyConfig);
+<script>
+    const { createApp } = Vue;
+    const { createVuetify } = Vuetify;
+    const vuetify = createVuetify(vuetifyConfig);
 
-        const app = createApp({
-            data() {
-                return {
-                    snackBar: false,
-                    snackMessage: '',
-                };
-            },
-            methods: {
-                showSnack(message) {
-                    this.snackMessage = message;
-                    this.snackBar = true;
-                },
-            },
-            delimiters: ['${', '}']
-        });
-
-        app.use(vuetify).mount('#app');
-    </script>
+    const app = createApp({ delimiters: delimiters });
+    app.use(vuetify).mount('#app');
+</script>
 {% endblock %}

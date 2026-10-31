@@ -48,6 +48,8 @@ See [Renaming Your App](/branding).
 | Variable | Default | Purpose |
 |---|---|---|
 | `SECURITY_REGISTERABLE` | `False` | Public password sign-up. Keep it off unless the app needs it. |
+| `SECURITY_CONFIRMABLE` | `True` | Self-registered accounts sign in only after opening the emailed link. With sign-up on, startup fails without `MAIL_SERVER` and `STK_PUBLIC_URL`. |
+| `SECURITY_RECOVERABLE` | auto | Password reset by email at `/reset`. Unset, it is on once `MAIL_SERVER` and `STK_PUBLIC_URL` are both set. |
 | `SECURITY_TOTP_ENCRYPTION_KEYS` | unset | Comma-separated Fernet keys, newest first, for TOTP seeds. Rotate with `stk protect-mfa`. |
 | `SECURITY_WAN_RP_ID` | unset | Passkey relying party: your bare DNS name. |
 | `SECURITY_WAN_EXPECTED_ORIGIN` | unset | Passkey origin: your HTTPS origin. |

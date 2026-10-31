@@ -157,6 +157,11 @@
                                 <span class="text-medium-emphasis">New to {{ config.APP_NAME }}? </span>
                                 <a href="{{ url_for_security('register') }}" class="text-decoration-none">Sign up</a>
                             </div>
+                            {% if security.confirmable %}
+                            <div class="text-center mt-2">
+                                <a href="{{ url_for_security('send_confirmation') }}" class="text-decoration-none text-body-small">Resend confirmation link</a>
+                            </div>
+                            {% endif %}
                             {% endif %}
                         </v-card-text>
                     </v-card>

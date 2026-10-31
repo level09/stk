@@ -18,7 +18,7 @@ from quart import (
     send_from_directory,
     url_for,
 )
-from quart_security import Security, SQLAlchemyUserDatastore, user_register_conflict
+from quart_security import Security, SQLAlchemyUserDatastore
 from quart_security.views import _ensure_csrf_token
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from werkzeug.exceptions import HTTPException, NotFound
@@ -172,19 +172,37 @@ def register_extensions(app):
         except TimeoutError:
             app.logger.warning("Timed out while disposing SQLAlchemy engine")
 
-    from stk.security import notify_register_conflict, register_security_controls
+    from stk.security import register_security_controls
+    from stk.utils.email import send_email
     from stk.utils.ratelimit import register_rate_limits
 
     register_rate_limits(app)
     register_security_controls(app)
+
+    config = app.config
+    # Links in auth email come from the public URL, never the Host header.
+    config.setdefault("SECURITY_PUBLIC_URL", config.get("STK_PUBLIC_URL"))
+    if config.get("SECURITY_RECOVERABLE") is None:
+        config["SECURITY_RECOVERABLE"] = bool(
+            config.get("MAIL_SERVER") and config["SECURITY_PUBLIC_URL"]
+        )
+    if (
+        config.get("SECURITY_REGISTERABLE")
+        and config.get("SECURITY_CONFIRMABLE", True)
+        and not config.get("MAIL_SERVER")
+    ):
+        raise RuntimeError(
+            "SECURITY_REGISTERABLE needs MAIL_SERVER to send confirmation links;"
+            " set it, or set SECURITY_CONFIRMABLE=false to allow unconfirmed sign-up"
+        )
 
     Security(
         app,
         user_datastore,
         register_form=ExtendedRegisterForm,
         change_password_form=OAuthAwareChangePasswordForm,
+        send_mail=send_email,
     )
-    user_register_conflict.connect(notify_register_conflict, sender=app, weak=False)
     # The library resets its session before loading the user. Share that session
     # so signals and application routes participate in the same transaction.
     app.before_request(_open_session)

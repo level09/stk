@@ -36,8 +36,10 @@ class Config:
     SECURITY_REGISTERABLE = (
         os.environ.get("SECURITY_REGISTERABLE", "False").lower() == "true"
     )
-    SECURITY_RECOVERABLE = False
-    SECURITY_CONFIRMABLE = False
+    # Self-registered accounts sign in only after confirming their email.
+    SECURITY_CONFIRMABLE = (
+        os.environ.get("SECURITY_CONFIRMABLE", "True").lower() == "true"
+    )
     SECURITY_CHANGEABLE = True
     SECURITY_TRACKABLE = True
     SECURITY_PASSWORD_HASH = "argon2"
@@ -106,6 +108,12 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     SECURITY_EMAIL_SENDER = os.environ.get("SECURITY_EMAIL_SENDER", "info@domain.com")
+    # Password reset by email. Unset: on once MAIL_SERVER and STK_PUBLIC_URL are.
+    SECURITY_RECOVERABLE = (
+        os.environ["SECURITY_RECOVERABLE"].lower() == "true"
+        if "SECURITY_RECOVERABLE" in os.environ
+        else None
+    )
     SECURITY_SEND_PASSWORD_CHANGE_EMAIL = False
 
     # Google OAuth Settings
@@ -142,5 +150,6 @@ class TestingConfig(Config):
     DISABLE_MULTIPLE_SESSIONS = False
     STK_ENABLE_AGENT_LOGIN = False
     MAIL_SERVER = None
+    SECURITY_RECOVERABLE = False
     GOOGLE_AUTH_ENABLED = False
     GITHUB_AUTH_ENABLED = False

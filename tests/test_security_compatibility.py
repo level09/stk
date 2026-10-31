@@ -1,5 +1,7 @@
 """Exercise stk's authentication integration with quart-security 2."""
 
+import asyncio
+import re
 import unittest
 
 import pyotp
@@ -146,34 +148,105 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotEqual((await second.get("/dashboard/")).status_code, 200)
 
-    async def test_registering_an_existing_email_mails_the_owner_in_background(self):
+    def mailbox(self):
+        """Turn on sign-up and reset with mail; collect what would be sent."""
         self.app.config.update(
             SECURITY_REGISTERABLE=True,
+            SECURITY_RECOVERABLE=True,
             MAIL_SERVER="smtp.example.com",
-            STK_PUBLIC_URL="http://localhost",
+            SECURITY_PUBLIC_URL="http://localhost",
         )
-        queued = []
-        self.app.add_background_task = lambda func, *args: queued.append(args)
-        client = self.app.test_client()
+        sent = []
+
+        async def send_mail(subject, recipient, body):
+            sent.append((subject, recipient, body))
+
+        self.app.extensions["security"].send_mail = send_mail
+        return sent
+
+    async def post(self, client, path, **form):
         await client.get("/login")
         async with client.session_transaction() as cookie:
-            csrf = cookie["_csrf_token"]
-        form = {
-            "email": "USER@example.com",
-            "password": "AnotherPassword123!",
-            "password_confirm": "AnotherPassword123!",
-            "csrf_token": csrf,
-        }
-        response = await client.post("/register", form=form)
+            form["csrf_token"] = cookie["_csrf_token"]
+        response = await client.post(path, form=form)
+        # Auth mail and account lookups run after the response; wait for them.
+        while self.app.background_tasks:
+            await asyncio.gather(*list(self.app.background_tasks))
+        return response
+
+    @staticmethod
+    def link(message):
+        return re.search(r"http://localhost(/\S+)", message[2]).group(1)
+
+    async def test_sign_up_waits_for_the_email_and_hides_existing_accounts(self):
+        sent = self.mailbox()
+        client = self.app.test_client()
+        password = "AnotherPassword123!"
+        for email in ("new@example.com", "USER@example.com"):
+            response = await self.post(
+                client,
+                "/register",
+                email=email,
+                password=password,
+                password_confirm=password,
+            )
+            self.assertEqual(response.status_code, 302)
+        self.assertEqual([m[1] for m in sent], ["new@example.com", "user@example.com"])
+
+        login = {"email": "new@example.com", "password": password}
+        self.assertNotIn("_user_id", await self.login_as(login))
+        # Opening the link confirms nothing; the button on that page does.
+        self.assertEqual((await client.get(self.link(sent[0]))).status_code, 200)
+        self.assertNotIn("_user_id", await self.login_as(login))
+        await self.post(client, self.link(sent[0]))
+        self.assertIn("_user_id", await self.login_as(login))
+
+        # A forged Host header never reaches the links in the mail.
+        await self.post(
+            client,
+            "/register",
+            email="user@example.com",
+            password=password,
+            password_confirm=password,
+        )
+        self.assertNotIn("evil.example", sent[-1][2])
+
+    async def login_as(self, form):
+        client = self.app.test_client()
+        await self.post(client, "/login", **form)
+        async with client.session_transaction() as cookie:
+            return dict(cookie)
+
+    async def test_password_reset_replaces_the_password_and_logs_activity(self):
+        sent = self.mailbox()
+        signed_in = self.app.test_client()
+        await self.login(signed_in)
+        client = self.app.test_client()
+        page = await client.get("/reset")
+        self.assertEqual(page.status_code, 200)
+        await self.post(client, "/reset", email="user@example.com")
+        path = self.link(sent[0])
+        self.assertEqual((await client.get(path)).status_code, 200)
+        new = "ReplacementPass123!"
+        response = await self.post(client, path, password=new, password_confirm=new)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(len(queued), 1)
-        subject, recipient, body = queued[0]
-        self.assertEqual(recipient, "user@example.com")
-        self.assertIn("http://localhost/login", body)
-        # A forged Host header never reaches the mail's links.
-        self.app.config["STK_PUBLIC_URL"] = None
-        await client.post("/register", form=form, headers={"Host": "evil.example"})
-        self.assertNotIn("evil.example", queued[1][2])
+        self.assertIn(
+            "_user_id",
+            await self.login_as({"email": "user@example.com", "password": new}),
+        )
+        self.assertNotEqual((await signed_in.get("/dashboard/")).status_code, 200)
+
+    def test_sign_up_without_mail_refuses_to_start(self):
+        class Config(SecurityConfig):
+            SECURITY_REGISTERABLE = True
+
+        with self.assertRaisesRegex(RuntimeError, "MAIL_SERVER"):
+            Stk(__name__, config=Config)
+
+        class Unconfirmed(Config):
+            SECURITY_CONFIRMABLE = False
+
+        Stk(__name__, config=Unconfirmed)
 
     def test_cookie_setting_preserves_local_http_support(self):
         self.assertFalse(self.app.config["SESSION_COOKIE_SECURE"])

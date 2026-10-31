@@ -11,7 +11,7 @@ stk builds authentication on quart-security: session auth, roles, TOTP two-facto
 
 ## Accounts and passwords
 
-Public password registration is disabled by default. Set `SECURITY_REGISTERABLE=true` only if your app needs it. Registering an email that already has an account looks exactly like a successful sign-up, so the form cannot be used to find accounts; nothing is created, and with `MAIL_SERVER` set the owner gets an email, sent in the background, saying someone tried. Its sign-in link comes from `STK_PUBLIC_URL`, never the request's Host header. Create users from the CLI instead:
+Public password registration is disabled by default. Set `SECURITY_REGISTERABLE=true` only if your app needs it; it then needs `MAIL_SERVER` and `STK_PUBLIC_URL`, because each new account signs in only after its owner confirms through the emailed link (24 hours, single use). The link opens a page with a confirm button, so a mail scanner opening it confirms nothing. Until then a login fails with the same message as a wrong password, and registering an email that already has an account looks exactly like a new sign-up, so neither form reveals which emails have accounts. The existing owner gets an email saying someone tried. `SECURITY_CONFIRMABLE=false` allows sign-up without confirmation, which gives up that protection. Create users from the CLI instead:
 
 ```bash
 uv run stk install                          # admin user with the admin role
@@ -26,7 +26,9 @@ New passwords are hashed with Argon2id and must be at least 12 characters. Legac
 
 A page that requires login sends the visitor to `/login?next=<page>`, and they land back on that page after signing in, including through 2FA and passkeys. Only same-site paths are followed.
 
-After 5 failed logins an account is locked for 15 minutes (quart-security's `SECURITY_LOGIN_MAX_ATTEMPTS` and `SECURITY_LOCKOUT_MINUTES` defaults).
+With `MAIL_SERVER` and `STK_PUBLIC_URL` set, users can reset a forgotten password at `/reset`. The form answers the same whether or not the email has an account, and the link goes to the address stored on the account. It works once, for one hour, and stops working if the password changes in the meantime; opening it does not use it up, so mail scanners cannot spend it. A reset signs out every session, revokes MCP tokens, unlocks the account, confirms its email and sends a notice. Links in these emails come from `STK_PUBLIC_URL`, never the request's Host header. Accounts made by the CLI, the admin pages, OAuth or code count as confirmed, and upgrading to 17.3 marks every existing account confirmed (`stk_0007`).
+
+After 5 failed logins an account is locked for 15 minutes (quart-security's `SECURITY_LOGIN_MAX_ATTEMPTS` and `SECURITY_LOCKOUT_MINUTES` defaults). A locked account gets the same login error as a wrong password, so the lock does not reveal that the account exists; a password reset clears it.
 
 ## Two-factor and passkeys
 
