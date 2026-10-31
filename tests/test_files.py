@@ -82,6 +82,19 @@ class FilesTests(unittest.IsolatedAsyncioTestCase):
     def stored(self):
         return sorted(p.name for p in Path(self.dir.name).rglob("*") if p.is_file())
 
+    def test_upload_limit_above_the_body_limit_refuses_to_start(self):
+        class Config(TestingConfig):
+            STK_UPLOAD_DIR = self.dir.name
+            STK_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
+
+        with self.assertRaisesRegex(ValueError, "MAX_CONTENT_LENGTH"):
+            Stk(__name__, config=Config, extensions=[stk.files])
+
+        class Raised(Config):
+            MAX_CONTENT_LENGTH = 21 * 1024 * 1024
+
+        Stk(__name__, config=Raised, extensions=[stk.files])
+
     async def test_same_bytes_are_stored_once(self):
         alice, bob = await self.client(), await self.client("bob@example.com")
         data = png()

@@ -8,10 +8,22 @@ from pathlib import Path
 
 
 def init_app(app):
-    from stk.files.views import SNIFFED, bp, can_read
+    from stk.files.views import MULTIPART_SLACK, SNIFFED, bp, can_read
 
     app.config.setdefault("STK_UPLOAD_DIR", str(Path(app.instance_path) / "files"))
     app.config.setdefault("STK_UPLOAD_MAX_BYTES", 10 * 1024 * 1024)
+    # Quart caps every request body at MAX_CONTENT_LENGTH before a view runs, so
+    # a larger upload limit would never take effect.
+    limit, body_max = (
+        app.config["STK_UPLOAD_MAX_BYTES"],
+        app.config["MAX_CONTENT_LENGTH"],
+    )
+    if body_max is not None and limit + MULTIPART_SLACK > body_max:
+        raise ValueError(
+            f"STK_UPLOAD_MAX_BYTES ({limit}) plus {MULTIPART_SLACK} bytes of"
+            f" multipart framing exceeds MAX_CONTENT_LENGTH ({body_max}): raise"
+            " MAX_CONTENT_LENGTH or lower STK_UPLOAD_MAX_BYTES"
+        )
     app.config.setdefault(
         "STK_UPLOAD_TYPES",
         ("image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"),

@@ -103,5 +103,5 @@ Some limits are app config only, with no environment variable. Set them on your 
 | `STK_WS_QUEUE_SIZE` | `32` | Outgoing messages buffered before a slow client is dropped. |
 | `STK_WS_AUTH_INTERVAL` | `5` | Seconds between session rechecks on an open socket. |
 | `STK_UPLOAD_DIR` | `instance/files` | Where `stk.files` keeps uploaded bytes. See [File uploads](/api#file-uploads). |
-| `STK_UPLOAD_MAX_BYTES` | `10485760` | Largest upload, 10 MiB. Uploads are read into memory. |
+| `STK_UPLOAD_MAX_BYTES` | `10485760` | Largest upload, 10 MiB. Uploads are read into memory. Above about 16 MiB, raise Quart's `MAX_CONTENT_LENGTH` too; startup fails if it is too small. |
 | `STK_UPLOAD_TYPES` | PNG, JPEG, GIF, WebP, PDF | Allowed sniffed types, a subset of those. Startup fails on any other. |
