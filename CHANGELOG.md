@@ -1,5 +1,17 @@
 # Changelog
 
+## v17.2.3 (2026-10-31)
+
+Run `uv run stk db upgrade`.
+
+- MCP is opt-in, like file uploads: add `stk.mcp` to the app's extensions. Without it stk registers no `mcp` blueprint, no `/mcp`, no `/tokens/` page and no Agent Tokens menu entry, so an app can serve its own MCP endpoint. From 17.2.0 to 17.2.2 stk claimed all of them in every app (JSON APIs).
+- stk's MCP token table is `stk_mcp_token`, like every other core table. 17.2.0 to 17.2.2 created `mcp_token`, which failed to migrate in an app that already had a table by that name. Revision `stk_0006` moves stk's own tokens across; an app's own `mcp_token` is recognised by its columns and left alone.
+- `stk.utils.netguard` adds `stream`, which yields the response with its body unread for large downloads and can cap decoded bytes with `max_bytes` or return a redirect with `follow_redirects=False`, and a public `pin(url)` that vets a URL without fetching it, for a client such as a headless browser. `fetch` is built on `stream`. Cookies are never carried across redirect hops (JSON APIs).
+
+### Upgrade considerations
+
+- An app that uses stk's MCP tools adds `stk.mcp` to its extensions, or `/mcp` and `/tokens/` return 404. Existing tokens keep working after `stk db upgrade`.
+
 ## v17.2.2 (2026-10-31)
 
 No migration required.
