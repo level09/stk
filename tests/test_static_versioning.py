@@ -21,6 +21,19 @@ class StaticVersioningTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("immutable", versioned.headers["Cache-Control"])
         bare = await client.get("/static/js/config.js")
         self.assertEqual(bare.headers["Cache-Control"], "no-cache")
+        # Another instance's version: serving these bytes under it must not stick.
+        other = await client.get("/static/js/config.js?v=deadbeef0000")
+        self.assertEqual(other.headers["Cache-Control"], "no-cache")
+
+    async def test_app_route_under_static_path_is_not_versioned(self):
+        app = Stk(__name__, config=TestingConfig)
+
+        @app.get("/static/manifest.json")
+        async def manifest():
+            return {}
+
+        response = await app.test_client().get("/static/manifest.json?v=1")
+        self.assertEqual(response.headers["Cache-Control"], "no-cache")
 
     async def test_errors_and_session_cookies_are_never_cached_publicly(self):
         app = Stk(__name__, config=TestingConfig)

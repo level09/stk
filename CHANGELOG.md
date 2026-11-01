@@ -1,5 +1,16 @@
 # Changelog
 
+## v17.3.2 (2026-11-01)
+
+No migration required. Requires quart-security 2.2.0, which normalizes emails more fully: an account stored with a decomposed Unicode or punycode email must be rewritten with `quart_security.normalize_email` to sign in. ASCII addresses are unaffected.
+
+- When an admin changes a user's email, the user is signed out everywhere and their MCP tokens are revoked, so reset and confirmation links sent to the old address stop working. Retyping the same address in other case is no change (Authentication).
+- Pages behind `auth_required`, which includes every admin page, now come back after login. Before, the user always landed on the dashboard.
+- One mailbox is one account: `josé@` composed and decomposed, or `münchen.de` and its punycode form, no longer make separate users. Passwords match whichever Unicode form they are typed in.
+- Passkey sign-in refuses locked and unconfirmed accounts, like password login.
+- `STK_PUBLIC_URL` with a trailing slash no longer closes every WebSocket with 4003.
+- A static file is cached as immutable only under the version this instance would link to. During a rolling deploy an old instance could pin old bytes under a new URL for a year. An app test that requests a made-up `?v=` and expects `immutable` must build the URL with `url_for('static', ...)` instead.
+
 ## v17.3.1 (2026-10-31)
 
 No migration required.

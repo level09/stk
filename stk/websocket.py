@@ -38,7 +38,7 @@ async def ws_endpoint():
     if db is not None:
         await db.close()
     allowed = current_app.config.get("STK_WS_ALLOWED_ORIGINS") or [
-        current_app.config.get("STK_PUBLIC_URL")
+        (current_app.config.get("STK_PUBLIC_URL") or "").rstrip("/")
         or websocket.host_url.replace("ws://", "http://", 1)
         .replace("wss://", "https://", 1)
         .rstrip("/")

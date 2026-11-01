@@ -251,6 +251,10 @@ def register_static_versioning(app):
                 raise FileNotFoundError(f"no static file {values['filename']}")
             values["v"] = _static_digest(path, path.stat().st_mtime_ns)
 
+    def _digest_of(filename):
+        path = app.static_file(filename)
+        return path and _static_digest(path, path.stat().st_mtime_ns)
+
     @app.after_request
     async def _cache_static(response):
         if request.path.startswith(f"{app.static_url_path}/"):
@@ -258,7 +262,13 @@ def register_static_versioning(app):
                 # This response sets or clears a session cookie; a shared cache
                 # must never replay it to someone else.
                 policy = "private, no-store"
-            elif request.args.get("v") and response.status_code == 200:
+            elif (
+                response.status_code == 200
+                and request.endpoint == "static"
+                and request.args.get("v") == _digest_of(request.view_args["filename"])
+            ):
+                # Only the version this instance would link to: during a rolling
+                # deploy an old instance must not pin old bytes under a new URL.
                 policy = "public, max-age=31536000, immutable"
             else:
                 policy = "no-cache"

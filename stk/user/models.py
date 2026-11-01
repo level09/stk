@@ -5,7 +5,13 @@ from datetime import datetime
 from uuid import uuid4
 
 from quart import g
-from quart_security import RoleMixin, SecurityState, UserMixin, hash_password
+from quart_security import (
+    RoleMixin,
+    SecurityState,
+    UserMixin,
+    hash_password,
+    normalize_email,
+)
 from quart_security.password import hash_password_async
 from sqlalchemy import (
     JSON,
@@ -78,14 +84,14 @@ class User(Base, UserMixin):
 
     @validates("email")
     def _normalize_email(self, key, value):
-        # Login lowercases what it is given; store the same form so one address
-        # cannot become two accounts that differ only by case.
-        return value.strip().lower() if value is not None else value
+        # Login normalizes what it is given; store the same form so one mailbox
+        # cannot become two accounts that differ by case or Unicode form.
+        return normalize_email(value) if value is not None else value
 
     @classmethod
     def email_is(cls, email):
         """Match an email regardless of case, including rows stored before 17.2.1."""
-        return func.lower(cls.email) == email.strip().lower()
+        return func.lower(cls.email) == normalize_email(email)
 
     roles = relationship(
         "Role", secondary=roles_users, backref="users", lazy="selectin"
@@ -135,7 +141,7 @@ class User(Base, UserMixin):
     async def from_dict(self, json_dict):
         self.name = json_dict.get("name", self.name)
         self.username = json_dict.get("username", self.username)
-        email = json_dict.get("email", self.email)
+        email = normalize_email(json_dict.get("email", self.email))
         if email != self.email:
             # Reset and confirmation links sent to the old address stop working.
             self.email = email

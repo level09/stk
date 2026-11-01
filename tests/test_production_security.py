@@ -216,6 +216,15 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual((await attacker.get("/dashboard/")).status_code, 200)
         self.assertFalse(any(c.value == sid for c in victim.cookie_jar))
 
+    async def test_websocket_accepts_public_url_with_trailing_slash(self):
+        self.app.config["STK_PUBLIC_URL"] = "http://localhost/"
+        client = self.app.test_client()
+        await self.login(client)
+        async with client.websocket(
+            "/ws", headers={"Origin": "http://localhost"}
+        ) as ws:
+            await ws.receive()
+
     async def test_websocket_rejects_foreign_origin(self):
         client = self.app.test_client()
         await self.login(client)
@@ -266,6 +275,14 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
         async with ext.async_session_factory() as db:
             after = (await db.get(User, self.user_id)).fs_uniquifier
         self.assertNotEqual(before, after)
+        # Retyping the same address in other case is no change.
+        await client.post(
+            f"/api/user/{self.user_id}",
+            json={"item": {"email": "Moved@Example.com"}},
+            headers={"X-CSRFToken": token},
+        )
+        async with ext.async_session_factory() as db:
+            self.assertEqual((await db.get(User, self.user_id)).fs_uniquifier, after)
 
     async def test_invalid_json_mutation_is_client_error(self):
         client = self.app.test_client()
