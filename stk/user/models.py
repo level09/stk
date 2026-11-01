@@ -135,7 +135,11 @@ class User(Base, UserMixin):
     async def from_dict(self, json_dict):
         self.name = json_dict.get("name", self.name)
         self.username = json_dict.get("username", self.username)
-        self.email = json_dict.get("email", self.email)
+        email = json_dict.get("email", self.email)
+        if email != self.email:
+            # Reset and confirmation links sent to the old address stop working.
+            self.email = email
+            self.fs_uniquifier = uuid4().hex
         if "password" in json_dict:
             self.password = await hash_password_async(json_dict["password"])
             self.password_set = True

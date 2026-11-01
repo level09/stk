@@ -251,6 +251,22 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    async def test_admin_email_change_rotates_uniquifier(self):
+        async with ext.async_session_factory() as db:
+            before = (await db.get(User, self.user_id)).fs_uniquifier
+        client = self.app.test_client()
+        await self.login(client)
+        token = await self.csrf(client)
+        response = await client.post(
+            f"/api/user/{self.user_id}",
+            json={"item": {"email": "moved@example.com"}},
+            headers={"X-CSRFToken": token},
+        )
+        self.assertEqual(response.status_code, 200)
+        async with ext.async_session_factory() as db:
+            after = (await db.get(User, self.user_id)).fs_uniquifier
+        self.assertNotEqual(before, after)
+
     async def test_invalid_json_mutation_is_client_error(self):
         client = self.app.test_client()
         await self.login(client)
