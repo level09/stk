@@ -93,9 +93,9 @@ class User(Base, UserMixin):
         """Match an email regardless of case, including rows stored before 17.2.1."""
         return func.lower(cls.email) == normalize_email(email)
 
-    roles = relationship(
-        "Role", secondary=roles_users, backref="users", lazy="selectin"
-    )
+    # Core refers to its models by class: an app model with the same name would
+    # make a string ambiguous. WebAuthn is defined below, hence the lambda.
+    roles = relationship(Role, secondary=roles_users, backref="users", lazy="selectin")
 
     # account lockout
     failed_login_count = Column(Integer, default=0, nullable=False)
@@ -118,7 +118,7 @@ class User(Base, UserMixin):
     @declared_attr
     def webauthn(cls):
         return relationship(
-            "WebAuthn", backref="users", cascade="all, delete", lazy="selectin"
+            lambda: WebAuthn, backref="users", cascade="all, delete", lazy="selectin"
         )
 
     @property
@@ -230,11 +230,7 @@ class OAuth(Base):
     token = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    user = relationship(
-        "User",
-        backref="oauth_accounts",
-        lazy="selectin",
-    )
+    user = relationship(User, backref="oauth_accounts", lazy="selectin")
 
     __table_args__ = (
         UniqueConstraint("provider", "provider_user_id", name="uq_oauth_provider_user"),
@@ -262,7 +258,7 @@ class Session(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
-    user = relationship("User", backref="sessions", lazy="selectin")
+    user = relationship(User, backref="sessions", lazy="selectin")
 
     session_token = Column(String(255), unique=True, nullable=False)
     last_active = Column(DateTime, default=datetime.now)

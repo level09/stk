@@ -39,6 +39,8 @@ class Post(Base):
 
 `to_dict()` is what list endpoints serialize. `from_dict()` is an async instance method that updates the row in place, so create and update share it.
 
+Apps share stk's `Base`, so a string like `relationship("User")` looks the name up among stk's models too. `User` and `Role` are meant to be referenced that way. stk also defines `Activity`, `File`, `Job`, `McpToken`, `Notification`, `OAuth`, `RateLimitWindow`, `Session` and `WebAuthn`; if your app has a model with one of those names, reference yours by class (`relationship(Notification)`), or the string matches both and every mapper fails at startup. New stk models carry an `Stk` prefix and never clash.
+
 Every relationship must use `lazy="selectin"`. Selectin loads only on query, so reading `post.user` on a row you just `add()`ed raises `MissingGreenlet`. Load it with `await g.db_session.get(Post, post.id)` or a query first.
 
 `Base` sets `eager_defaults`, so columns filled by a `server_default` or a SQL `onupdate` (`func.now()`) are fetched during the flush. A model that sets its own `__mapper_args__` replaces that; keep `"eager_defaults": True` in it, or reading such a column after a flush raises `MissingGreenlet`.
