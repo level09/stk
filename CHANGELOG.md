@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.4.2 (2026-11-02)
+
+No migration required.
+
+- An app model named `User`, `Role`, `WebAuthn` or another core name no longer breaks stk's own mappers: core refers to its models by class, never by string.
+- New core models carry an `Stk` prefix, enforced by a test in stk, so a release can no longer add a generic name the way 17.4.0 added `Message`.
+- Models: if your app reuses a core class name (`Activity`, `File`, `Job`, `McpToken`, `Notification`, `OAuth`, `RateLimitWindow`, `Session`, `WebAuthn`), reference yours by class, not by string.
+
 ## v17.4.1 (2026-11-02)
 
 No migration required.
