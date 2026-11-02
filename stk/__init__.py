@@ -3,7 +3,9 @@ stk Framework
 A modern Python web framework optimized for AI-assisted development.
 """
 
-__version__ = "17.3.1"
+from importlib.metadata import version
+
+__version__ = version("stkit")
 
 
 def __getattr__(name):

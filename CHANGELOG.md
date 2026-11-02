@@ -1,5 +1,16 @@
 # Changelog
 
+## v17.4.0 (2026-11-02)
+
+Run `uv run stk db upgrade`: migration `stk_0008` adds the `stk_message` table.
+
+- `broadcast` reaches a user's sockets from any process: another uvicorn worker, a durable job in `stk worker`, or `stk shell`. Messages go through `stk_message`, which each server process polls while it holds sockets, so delivery lags up to a quarter second. Every call is now a database write, so throttle rapid progress updates. `user_id` must be a numeric user id.
+- `broadcast(..., session=)` and `notify(..., session=)` join the caller's transaction: sent at commit, dropped on rollback.
+- `notify` from a durable job now reaches open pages instead of waiting for the next page load.
+- `stk run` on a port that is already taken exits with the pid holding it, instead of uvicorn's easy-to-miss log line while the old server keeps serving.
+- The dev extra requires Playwright 1.64. Older versions never reach network idle on a page that opens an EventSource, so `stk smoke` timed out there. Apps on an older lock: `uv lock --upgrade-package playwright`.
+- `stk --version`, the MCP server info and `stk init` read the installed package version. 17.3.2 still reported 17.3.1, so apps made with it require `stkit>=17.3.1`.
+
 ## v17.3.2 (2026-11-01)
 
 No migration required. Requires quart-security 2.2.0, which normalizes emails more fully: an account stored with a decomposed Unicode or punycode email must be rewritten with `quart_security.normalize_email` to sign in. ASCII addresses are unaffected.
