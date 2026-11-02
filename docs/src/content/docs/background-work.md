@@ -71,7 +71,7 @@ from stk.notification import notify
 await notify(user.id, "Export ready", link="/exports/3", kind="export", body="March invoices")
 ```
 
-Only `user_id` and `title` are required. `link` must be a same-origin path (`/exports/3`); anything else raises `ValueError`, because the bell navigates to it. `kind` is a free label for your own filtering. `notify` commits on its own session, so a later rollback in the caller does not undo it: call it after your own commit. It works the same from a request, a background task, or `stk shell`, though only a call inside the server process reaches open sockets; the others show up on the next page load.
+Only `user_id` and `title` are required. `link` must be a same-origin path (`/exports/3`); anything else raises `ValueError`, because the bell navigates to it. `kind` is a free label for your own filtering. Pass `session=` to make the notification part of your transaction: it is stored and pushed when you commit, and dropped if you roll back. Without it, `notify` commits on its own session, so call it after your own commit. It reaches open sockets the same way from a request, a durable job in `stk worker`, or `stk shell`.
 
 The signed-in user reads and clears their own notifications; no endpoint returns another user's:
 
@@ -92,6 +92,7 @@ Signed-in pages connect to `/ws` automatically through `layoutMixin`. Push a mes
 from stk.websocket import broadcast
 
 await broadcast({"type": "progress", "done": 40}, user_id=user.id)
+await broadcast({"type": "saved"}, user_id=user.id, session=g.db_session)  # sent at commit
 ```
 
 There is no broadcast-to-everyone: every message names its recipient. `{type: 'notification'}` messages go to the bell; override `_onWsMessage(msg)` in your page's methods for your own types. `Activity.register()` stores audit events and does not broadcast.
@@ -106,4 +107,4 @@ The endpoint enforces:
 
 These are app config values: set them on your `Config` class, not in `.env`.
 
-Connected clients are tracked in process memory, so `broadcast` reaches only sockets held by the same worker. With several uvicorn workers, a message sent from one worker misses users connected to another. Run one worker, or fan out through Redis pub/sub if you need more.
+`broadcast` writes a row to `stk_message`, and every server process polls that table while it holds sockets, so a message reaches the user from any process: another uvicorn worker, `stk worker`, or `stk shell`. Delivery lags up to a quarter second. With `session=`, the message joins that transaction and is not sent on rollback. Rows are deleted after a minute, and a reconnecting socket does not replay earlier messages. Every call is a database write, so throttle progress updates to a few per second.

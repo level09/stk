@@ -128,6 +128,64 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(TimeoutError):
                 await asyncio.wait_for(bob_ws.receive(), 0.2)
 
+    async def test_socket_opened_later_does_not_replay_earlier_pushes(self):
+        alice, bob = (
+            await self.client("alice@example.com"),
+            await self.client("bob@example.com"),
+        )
+        origin = {"Origin": "http://localhost"}
+        async with alice.websocket("/ws", headers=origin) as alice_ws:
+            await alice_ws.receive()
+            await notify(self.bob, "Before Bob connected")
+            await asyncio.sleep(0.5)  # the running poller has passed it
+            async with bob.websocket("/ws", headers=origin) as bob_ws:
+                await bob_ws.receive()
+                with self.assertRaises(TimeoutError):
+                    await asyncio.wait_for(bob_ws.receive(), 0.6)
+
+    async def test_push_from_another_process_reaches_the_socket(self):
+        """`stk worker` and other uvicorn workers are separate processes."""
+        import sys
+        import tempfile
+        from pathlib import Path
+
+        await ext.engine.dispose()
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        uri = f"sqlite+aiosqlite:///{Path(folder.name) / 'shared.db'}"
+        config = type(
+            "SharedConfig", (TestingConfig,), {"SQLALCHEMY_DATABASE_URI": uri}
+        )
+        self.app = Stk(__name__, config=config, extensions=[stk.notification])
+        async with ext.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with ext.async_session_factory() as db:
+            user = User(
+                email="carol@example.com",
+                active=True,
+                password=hash_password("Password123!", app=self.app),
+            )
+            db.add(user)
+            await db.commit()
+        carol = await self.client("carol@example.com")
+        script = (
+            "import asyncio, sys\n"
+            "from stk.app import Stk\n"
+            "from stk.settings import TestingConfig\n"
+            "from stk.websocket import broadcast\n"
+            "C = type('C', (TestingConfig,), {'SQLALCHEMY_DATABASE_URI': sys.argv[1]})\n"
+            "Stk('other', config=C)\n"
+            "asyncio.run(broadcast({'type': 'progress', 'done': 40}, int(sys.argv[2])))\n"
+        )
+        async with carol.websocket("/ws", headers={"Origin": "http://localhost"}) as ws:
+            await ws.receive()
+            other = await asyncio.create_subprocess_exec(
+                sys.executable, "-c", script, uri, str(user.id)
+            )
+            self.assertEqual(await other.wait(), 0)
+            message = json.loads(await asyncio.wait_for(ws.receive(), 2))
+        self.assertEqual(message, {"type": "progress", "done": 40})
+
 
 if __name__ == "__main__":
     unittest.main()

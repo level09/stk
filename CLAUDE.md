@@ -71,7 +71,7 @@ Backend:
 - `User.from_dict()`, `Activity.register()`, `Session.create_session()` and the auth signal handlers are async.
 - Pagination is manual: `offset().limit()` plus `select(func.count())`. List endpoints return `orjson` via `Response(json.dumps(data), content_type="application/json")`.
 - Mutations arrive as `{item: {...}}`: read `json_data.get("item", {})`.
-- `Activity.register()` stores audit events and does not broadcast. `broadcast()` needs an explicit recipient and reaches only sockets on the same worker.
+- `Activity.register()` stores audit events and does not broadcast. `broadcast()` needs an explicit recipient; `session=` sends it at commit.
 - SQLite migrations: DDL is not transactional; a new NOT NULL column needs `server_default` in migration and model; keep the constraint naming convention on `Base.metadata`.
 - `stk verify` blocks drops, renames, retypes, and NOT NULL adds without a default in `upgrade()`. A rename is usually a mistaken drop + add from autogenerate; mark a deliberate one with `# destructive: <reason>`.
 - Tests: subclass `TestingConfig` (`stk/settings.py`), never `Config`; `.env` loads at import. Pin any other env-driven switch a test depends on.
