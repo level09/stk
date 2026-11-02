@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.4.1 (2026-11-02)
+
+No migration required.
+
+- The model behind `stk_message` is now `StkMessage`. In 17.4.0 it was `Message`, which broke every mapper in an app that has its own `Message` model referenced by string, as in `relationship("Message")` ("Multiple classes found for path"). Apps that worked around it by passing the class can keep doing so.
+
 ## v17.4.0 (2026-11-02)
 
 Run `uv run stk db upgrade`: migration `stk_0008` adds the `stk_message` table.
