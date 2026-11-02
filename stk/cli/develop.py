@@ -1,5 +1,8 @@
 """Starting an app, serving it locally, and running its durable jobs."""
 
+import errno
+import socket
+import subprocess
 from pathlib import Path
 
 import click
@@ -47,6 +50,8 @@ def init(name, source):
 def run(host, port, reload):
     """Run a local development server (uvicorn, as in production)."""
     import uvicorn
+
+    _require_free_port(host, port)
     from quart.helpers import get_debug_flag
 
     app = cli_app()
@@ -60,6 +65,33 @@ def run(host, port, reload):
         reload_dirs=[app.root_path, str(Path(stk.__file__).parent)],
         app_dir=str(app_root()),
         timeout_graceful_shutdown=3,
+    )
+
+
+def _require_free_port(host, port):
+    # uvicorn logs EADDRINUSE and exits, easy to miss when backgrounded while
+    # the old server keeps serving stale code.
+    with socket.socket() as probe:
+        # Bind as uvicorn does, so a TIME_WAIT leftover is not a false alarm.
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind((host, port))
+        except OSError as exc:
+            if exc.errno != errno.EADDRINUSE:
+                raise
+        else:
+            return
+    try:
+        pids = subprocess.run(
+            ["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"],
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+    except FileNotFoundError:  # no lsof (slim containers): report without a pid
+        pids = []
+    holder = f" by pid {', '.join(pids)}" if pids else ""
+    raise click.ClickException(
+        f"port {port} is in use{holder}. Stop it or pass --port."
     )
 
 

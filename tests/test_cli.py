@@ -86,5 +86,21 @@ class DatabaseCommandTest(unittest.TestCase):
         load.assert_called()
 
 
+class RunCommandTest(unittest.TestCase):
+    def test_run_on_a_taken_port_names_the_holder(self):
+        import os
+        import socket
+
+        with socket.socket() as held:
+            held.bind(("127.0.0.1", 0))
+            held.listen()
+            port = held.getsockname()[1]
+            result = CliRunner().invoke(main, ["run", "--port", str(port)])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn(f"port {port} is in use", result.output)
+        self.assertIn(f"pid {os.getpid()}", result.output)
+
+
 async def _done():
     return None
