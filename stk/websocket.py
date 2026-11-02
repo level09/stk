@@ -32,7 +32,7 @@ _clients: dict[str, set[asyncio.Queue]] = {}
 _poller: asyncio.Task | None = None
 
 
-class Message(Base):
+class StkMessage(Base):
     __tablename__ = "stk_message"
 
     id = Column(Integer, primary_key=True)
@@ -51,7 +51,7 @@ async def broadcast(message: dict, user_id, session=None):
     With `session`, the message joins that transaction: it goes out at commit and
     not at all on rollback. Without it, it is committed on its own session.
     """
-    row = Message(user_id=int(user_id), payload=json.dumps(message))
+    row = StkMessage(user_id=int(user_id), payload=json.dumps(message))
     if session is not None:
         session.add(row)
         return
@@ -75,7 +75,9 @@ async def _recent_ids(db):
     since = datetime.now() - WINDOW
     return (
         await db.execute(
-            select(Message.id, Message.user_id).where(Message.created_at > since)
+            select(StkMessage.id, StkMessage.user_id).where(
+                StkMessage.created_at > since
+            )
         )
     ).all()
 
@@ -99,12 +101,16 @@ async def _poll():
                 wanted = [row.id for row in fresh if str(row.user_id) in _clients]
                 rows = []
                 if wanted:
-                    query = select(Message.user_id, Message.payload)
-                    query = query.where(Message.id.in_(wanted)).order_by(Message.id)
+                    query = select(StkMessage.user_id, StkMessage.payload)
+                    query = query.where(StkMessage.id.in_(wanted)).order_by(
+                        StkMessage.id
+                    )
                     rows = (await db.execute(query)).all()
                 if now - trimmed > RETENTION.total_seconds():
                     cutoff = datetime.now() - RETENTION
-                    await db.execute(delete(Message).where(Message.created_at < cutoff))
+                    await db.execute(
+                        delete(StkMessage).where(StkMessage.created_at < cutoff)
+                    )
                     await db.commit()
                     trimmed = now
             for row in rows:

@@ -187,5 +187,29 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(message, {"type": "progress", "done": 40})
 
 
+
+class CoreModelNameTest(unittest.TestCase):
+    def test_app_model_named_message_resolves_by_string(self):
+        """relationship("Message") looks the name up across the shared Base."""
+        import subprocess
+        import sys
+
+        script = (
+            "from sqlalchemy import Column, ForeignKey, Integer\n"
+            "from sqlalchemy.orm import configure_mappers, relationship\n"
+            "import stk.websocket\n"
+            "from stk.extensions import Base\n"
+            "class Message(Base):\n"
+            "    __tablename__ = 'app_message'\n"
+            "    id = Column(Integer, primary_key=True)\n"
+            "    parent_id = Column(Integer, ForeignKey('app_message.id'))\n"
+            "    replies = relationship('Message', lazy='selectin')\n"
+            "configure_mappers()\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script], capture_output=True, text=True
+        )
+        self.assertEqual(result.returncode, 0, result.stderr[-500:])
+
 if __name__ == "__main__":
     unittest.main()
