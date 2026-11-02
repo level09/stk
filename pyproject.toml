@@ -56,7 +56,8 @@ full = [
 dev = [
     "ruff",
     "pre-commit",
-    "playwright",
+    # 1.64 stops counting an open EventSource against networkidle; older versions hang smoke.
+    "playwright>=1.64",
     "ptpython>=3.0.30",
 ]
 asgi = [

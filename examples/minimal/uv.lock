@@ -2041,7 +2041,7 @@ requires-dist = [
     { name = "libpass", specifier = ">=1.9.0" },
     { name = "orjson", specifier = ">=3.11.6" },
     { name = "pillow", specifier = ">=13.0.0" },
-    { name = "playwright", marker = "extra == 'dev'" },
+    { name = "playwright", marker = "extra == 'dev'", specifier = ">=1.64" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "ptpython", marker = "extra == 'dev'", specifier = ">=3.0.30" },

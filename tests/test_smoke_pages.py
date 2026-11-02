@@ -90,3 +90,53 @@ class SmokePageErrorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EventStreamPageTest(unittest.IsolatedAsyncioTestCase):
+    """A page that opens an EventSource on load still reaches networkidle."""
+
+    async def test_page_with_open_event_stream_finishes(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        from stk.cli.smoke import _visit_smoke_page
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_GET(self):
+                self.send_response(200)
+                if self.path == "/events":
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.end_headers()
+                    self.wfile.write(b": open\n\n")
+                    self.wfile.flush()
+                    threading.Event().wait(30)  # a live stream never ends
+                    return
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(
+                    b"<p>live</p><script>new EventSource('/events')</script>"
+                )
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server.daemon_threads = True
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.shutdown)
+        try:
+            from playwright.async_api import async_playwright
+
+            playwright = await async_playwright().start()
+            browser = await playwright.chromium.launch()
+        except Exception as exc:  # no Playwright or no browser installed
+            self.skipTest(f"chromium unavailable: {exc}")
+        try:
+            context = await browser.new_context()
+            context.set_default_navigation_timeout(5000)
+            base_url = f"http://127.0.0.1:{server.server_port}"
+            page = await _visit_smoke_page(context, base_url, "live", "/")
+        finally:
+            await browser.close()
+            await playwright.stop()
+        self.assertEqual(page["status"], 200)
