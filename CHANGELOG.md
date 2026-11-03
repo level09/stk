@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.6.0 (2026-11-03)
+
+No migration required.
+
+- `stk smoke` saves a full-page screenshot of every page it visits in `.stk/smoke/`, named after the page (`/monitor/runs` as `monitor-runs.png`), not only the dashboard. With `seed.py` that means a look at every list with rows. `--json` gives each page's `screenshot` path; each run clears the previous run's screenshots.
+
 ## v17.5.0 (2026-11-03)
 
 No migration required.
