@@ -107,6 +107,12 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ValueError):
                 await notify(self.alice, "Bad", link=link)
 
+    async def test_broadcast_names_a_non_numeric_user_id(self):
+        from stk.websocket import broadcast
+
+        with self.assertRaisesRegex(ValueError, "numeric user id.*'fixture-target'"):
+            await broadcast({"type": "x"}, "fixture-target")
+
     async def test_push_reaches_only_the_recipient(self):
         alice, bob = (
             await self.client("alice@example.com"),

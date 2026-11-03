@@ -51,7 +51,13 @@ async def broadcast(message: dict, user_id, session=None):
     With `session`, the message joins that transaction: it goes out at commit and
     not at all on rollback. Without it, it is committed on its own session.
     """
-    row = StkMessage(user_id=int(user_id), payload=json.dumps(message))
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"broadcast needs a numeric user id as user_id, got {user_id!r}"
+        ) from None
+    row = StkMessage(user_id=user_id, payload=json.dumps(message))
     if session is not None:
         session.add(row)
         return
