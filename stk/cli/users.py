@@ -70,7 +70,7 @@ def install(email, password):
 
             admin_user = (
                 await session.execute(
-                    select(User).where(User.roles.any(Role.name == "admin"))
+                    select(User).where(User.roles.any(Role.name == "admin")).limit(1)
                 )
             ).scalar_one_or_none()
             if admin_user:
