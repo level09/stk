@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.6.1 (2026-11-03)
+
+No migration required.
+
+- Navigation badges take their text colour from the theme (`on-primary`, `on-error`, `on-success`, `on-warning`) instead of white, which fell to about 2.6:1 on a light primary.
+- `broadcast` with a non-numeric `user_id` raises a `ValueError` that names the argument and the value, instead of `int()`'s bare message.
+
 ## v17.6.0 (2026-11-03)
 
 No migration required.

@@ -1948,7 +1948,7 @@ asyncio = [
 
 [[package]]
 name = "stkit"
-version = "17.6.0"
+version = "17.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiosmtplib" },
