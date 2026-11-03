@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.5.0 (2026-11-03)
+
+No migration required.
+
+- `seed.py`: an app's `async def run(session)` that adds sample rows. `stk smoke` runs it on its temporary database, so pages render rows instead of empty states and a template that breaks only on a row fails smoke, locally and in CI. `--json` reports `seeded`. `stk db seed` adds the same rows to the dev database, and `stk new` writes `seed.py` for its model when the app has none.
+- `stk install` no longer crashes when the database has more than one admin.
+- `stk smoke` keeps Redis and mail off in its server: it removed those settings, and the server's own `.env` load put them back.
+
 ## v17.4.2 (2026-11-02)
 
 No migration required.
