@@ -349,6 +349,22 @@ class InitAndNewTests(unittest.TestCase):
         rules = {route["rule"] for route in json.loads(result.stdout)}
         self.assertLessEqual({"/widgets/", "/api/widgets", "/gadgets/"}, rules)
 
+    def test_seed_holds_sample_rows_of_the_first_module(self):
+        seed = (self.app / "acme" / "seed.py").read_text()
+        self.assertIn("Widget(name=", seed)
+        self.assertNotIn("Gadget", seed)  # an existing seed.py is the app's own
+        self.assertIn("kept acme/seed.py", self.second.stdout)
+        result = _stk("db", "seed", cwd=self.app)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = _stk(
+            "shell",
+            "-c",
+            "from acme.widget.models import Widget; print(await count(Widget))",
+            cwd=self.app,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip().splitlines()[-1], "3")
+
     def test_new_never_touches_stk(self):
         self.assertEqual(_package_digest(), self.before)
 

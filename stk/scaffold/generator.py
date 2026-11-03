@@ -16,6 +16,7 @@ import stk
 from stk.scaffold.templates import (
     render_init,
     render_models,
+    render_seed,
     render_template_html,
     render_views,
 )
@@ -202,6 +203,15 @@ def generate_module(name: str, app) -> list[str]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
         actions.append(f"created {path.relative_to(project)}")
+
+    seed = root / "seed.py"
+    if seed.exists():
+        actions.append(
+            f"kept {seed.relative_to(project)}: add sample {name} rows to it"
+        )
+    else:
+        seed.write_text(render_seed(name, package))
+        actions.append(f"created {seed.relative_to(project)} with sample {name} rows")
 
     app_module.write_text(_add_extension(app_module.read_text(), package, name))
     actions.append(

@@ -3,7 +3,7 @@
 import click
 from alembic import command
 
-from stk.cli.base import cli_app, console
+from stk.cli.base import cli_app, console, run_async
 from stk.migrations import (
     CORE_LABEL,
     app_label,
@@ -194,6 +194,39 @@ def db_downgrade(revision):
 def db_revision(message, autogenerate, head):
     """Create a migration revision in the app's own lineage."""
     generate_revision(cli_app(), message, autogenerate=autogenerate, head=head)
+
+
+def seed_module(app):
+    """The app's `seed` module name, or None when the app has no seed.py."""
+    import importlib.util
+
+    name = f"{app.import_name.split('.')[0]}.seed"
+    return name if importlib.util.find_spec(name) else None
+
+
+@db.command("seed")
+def db_seed():
+    """Add the app's sample rows from seed.py (`async def run(session)`)."""
+    import importlib
+
+    import stk.extensions as ext
+
+    app = cli_app()
+    name = seed_module(app)
+    if name is None:
+        package = app.import_name.split(".")[0]
+        raise click.ClickException(
+            f"no {package}/seed.py: add one with `async def run(session)`"
+            " that adds sample rows"
+        )
+
+    async def _run():
+        async with app.app_context(), ext.async_session_factory() as session:
+            await importlib.import_module(name).run(session)
+            await session.commit()
+
+    run_async(_run())
+    console.print(f"[green]Seeded[/] from {name}")
 
 
 @db.command("check")

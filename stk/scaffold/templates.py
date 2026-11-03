@@ -51,6 +51,26 @@ def init_app(app):
     )
 
 
+def render_seed(name: str, package: str) -> str:
+    cls = _cls(name)
+    words = name.replace("_", " ")
+    return _t(
+        '''\
+"""Sample rows. `stk db seed` adds them; `stk smoke` renders every page with them."""
+
+
+async def run(session):
+    from $package.$name.models import $cls
+
+    session.add_all($cls(name=f"Sample $words {n}") for n in range(1, 4))
+''',
+        package=package,
+        name=name,
+        cls=cls,
+        words=words,
+    )
+
+
 def render_models(name: str) -> str:
     cls = _cls(name)
     return _t(

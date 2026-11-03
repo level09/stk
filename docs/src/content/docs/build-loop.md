@@ -123,6 +123,28 @@ class Config(stk.Config):
     STK_SMOKE_COPY_ALLOW = (r"Ed25519",)
 ```
 
+### Real rows: seed.py
+
+An empty database renders every list as its empty state, so a template that breaks
+only on a row (a missing method in a `v-for`, a field that is sometimes null) passes.
+Give the app one `seed.py` next to `app.py`:
+
+```python
+async def run(session):
+    from myapp.invoice.models import Invoice
+
+    session.add_all(Invoice(name=f"Sample invoice {n}") for n in range(1, 4))
+```
+
+`stk smoke` runs it on its temporary database after migrations, locally and in CI, so
+every page renders with the same rows each time. `uv run stk db seed` adds the same rows
+to your dev database. It runs inside the app context and commits after `run`; it does
+not clear tables, so run it on a fresh database. `stk new` writes `seed.py` with three
+rows of its model when the app has none, and leaves an existing one to you. Seed every
+state a page branches on (an item waiting for review, an assigned one), since smoke only
+sees what the seed creates. Without `seed.py`, smoke says it ran on an empty database
+and `--json` reports `"seeded": false`.
+
 Smoke needs Playwright's Chromium. `stk doctor` tells you if it is missing.
 
 ## 5. Ship

@@ -181,12 +181,12 @@ def _smoke_env(database_uri):
             "SESSION_COOKIE_SECURE": "False",
         }
     )
-    env.pop("REDIS_URL", None)
-    env.pop("REDIS_SESSION", None)
+    # Empty, not removed: each child reloads .env, which fills in missing keys.
+    env.update({"REDIS_URL": "", "REDIS_SESSION": "", "MAIL_SERVER": ""})
     return env
 
 
-def _run_smoke_setup(env):
+def _run_smoke_setup(env, seed):
     commands = [
         [sys.executable, "-m", "stk", "db", "upgrade"],
         [
@@ -200,6 +200,8 @@ def _run_smoke_setup(env):
             SMOKE_PASSWORD,
         ],
     ]
+    if seed:
+        commands.append([sys.executable, "-m", "stk", "db", "seed"])
     for command_args in commands:
         result = subprocess.run(
             command_args,
@@ -382,12 +384,14 @@ async def _run_playwright_smoke(base_url, token, extra_paths, copy_allow):
 
 def run_smoke():
     """Boot a throwaway app on a free port and drive it with a real browser."""
+    from stk.cli.database import seed_module
     from stk.migrations import throwaway_database_url
 
     app = cli_app()
+    seed = seed_module(app)
     with throwaway_database_url(app.config["SQLALCHEMY_DATABASE_URI"]) as database_uri:
         env = _smoke_env(database_uri)
-        _run_smoke_setup(env)
+        _run_smoke_setup(env, seed)
 
         token, extra_paths = _prepare_smoke(app, env["SECRET_KEY"])
         copy_allow = app.config.get("STK_SMOKE_COPY_ALLOW", ())
@@ -398,13 +402,15 @@ def run_smoke():
             _wait_for_smoke_server(base_url, server)
             return asyncio.run(
                 _run_playwright_smoke(base_url, token, extra_paths, copy_allow)
-            )
+            ) | {"seeded": seed is not None}
         finally:
             _stop_smoke_server(server)
 
 
 def print_smoke_report(report):
     click.echo(f"Smoke status: {report['status']}")
+    if not report.get("seeded"):
+        click.echo("Pages ran on an empty database: add seed.py for real rows")
     click.echo(f"Dashboard screenshot: {report['dashboard_screenshot']}")
     for page in report["pages"]:
         click.echo(f"{page['status'].upper()} {page['name']} {page['path']}")

@@ -117,6 +117,12 @@ Create a migration revision in the app's own lineage.
 | `--autogenerate, --empty` | Autogenerate from model metadata or create an empty revision |
 | `--head` | Extend this head instead of the app's lineage (stk@head for core). |
 
+### `stk db seed`
+
+`stk db seed [OPTIONS]`
+
+Add the app's sample rows from seed.py (`async def run(session)`).
+
 ### `stk db stamp`
 
 `stk db stamp [OPTIONS] [REVISION]`
