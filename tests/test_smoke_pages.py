@@ -140,3 +140,12 @@ class EventStreamPageTest(unittest.IsolatedAsyncioTestCase):
             await browser.close()
             await playwright.stop()
         self.assertEqual(page["status"], 200)
+
+
+class SmokeScreenshotTests(unittest.TestCase):
+    def test_each_page_gets_its_own_screenshot_file(self):
+        from stk.cli.smoke import screenshot_path
+
+        self.assertEqual(screenshot_path("dashboard").name, "dashboard.png")
+        self.assertEqual(screenshot_path("/monitor/runs").name, "monitor-runs.png")
+        self.assertEqual(screenshot_path("/").name, "home.png")

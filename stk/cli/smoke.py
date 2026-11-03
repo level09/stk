@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -18,7 +19,17 @@ from stk.cli.copy_rules import ROWS_JS, VISIBLE_TEXT_JS, copy_findings
 
 SMOKE_EMAIL = "smoke@example.com"
 SMOKE_PASSWORD = "SmokePassword123!"
-SMOKE_SCREENSHOT = Path(".stk/smoke/dashboard.png")
+SMOKE_DIR = Path(".stk/smoke")
+SMOKE_SCREENSHOT = SMOKE_DIR / "dashboard.png"
+
+
+def screenshot_path(name):
+    """One full-page screenshot per page: /monitor/runs -> .stk/smoke/monitor-runs.png."""
+    return (
+        SMOKE_DIR
+        / f"{re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or 'home'}.png"
+    )
+
 
 # Text the same colour as what it sits on renders invisible without raising a
 # console error, so the browser has to measure it. 3:1 is the WCAG floor for
@@ -139,6 +150,7 @@ def build_smoke_report(pages, dashboard_screenshot, copy_allow=()):
                 "path": page["path"],
                 "status_code": status_code,
                 "status": "failed" if problems else "passed",
+                "screenshot": page.get("screenshot"),
                 "console": page.get("console", []),
                 "failed_requests": page.get("failed_requests", []),
                 "low_contrast": page.get("low_contrast", []),
@@ -283,7 +295,7 @@ def _stop_smoke_server(process):
         process.communicate(timeout=5)
 
 
-async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None):
+async def _visit_smoke_page(context, base_url, name, path):
     page = await context.new_page()
     console_entries = []
     failed_requests = []
@@ -317,9 +329,19 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
             {"type": "pageerror", "text": f"smoke could not read the page: {exc}"}
         )
         low_contrast, text, rows = [], "", []
-    if screenshot_path is not None:
-        screenshot_path.parent.mkdir(parents=True, exist_ok=True)
-        await page.screenshot(path=str(screenshot_path), full_page=True)
+    shot = screenshot_path(name)
+    # The folder starts empty each run, so a taken name is another page this run.
+    for n in range(2, 100):
+        if not shot.exists():
+            break
+        shot = screenshot_path(f"{name}-{n}")
+    try:
+        await page.screenshot(path=str(shot), full_page=True)
+    except PlaywrightError as exc:
+        console_entries.append(
+            {"type": "pageerror", "text": f"smoke could not screenshot the page: {exc}"}
+        )
+        shot = None
     await page.close()
     return {
         "name": name,
@@ -330,6 +352,7 @@ async def _visit_smoke_page(context, base_url, name, path, screenshot_path=None)
         "low_contrast": low_contrast,
         "text": text,
         "rows": rows,
+        "screenshot": shot and str(shot),
     }
 
 
@@ -342,6 +365,10 @@ async def _run_playwright_smoke(base_url, token, extra_paths, copy_allow):
             "Playwright is not installed. Run `uv sync --extra dev`."
         ) from exc
 
+    # Last run's pages would pass for this run's.
+    SMOKE_DIR.mkdir(parents=True, exist_ok=True)
+    for old in SMOKE_DIR.glob("*.png"):
+        old.unlink()
     try:
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch()
@@ -355,13 +382,7 @@ async def _run_playwright_smoke(base_url, token, extra_paths, copy_allow):
                     "agent-login",
                     f"/_test/login?token={token}",
                 ),
-                await _visit_smoke_page(
-                    context,
-                    base_url,
-                    "dashboard",
-                    "/dashboard/",
-                    SMOKE_SCREENSHOT,
-                ),
+                await _visit_smoke_page(context, base_url, "dashboard", "/dashboard/"),
                 await _visit_smoke_page(context, base_url, "admin-users", "/users/"),
             ]
             for path in extra_paths:
@@ -414,7 +435,7 @@ def print_smoke_report(report):
     click.echo(f"Dashboard screenshot: {report['dashboard_screenshot']}")
     for page in report["pages"]:
         click.echo(f"{page['status'].upper()} {page['name']} {page['path']}")
-        click.echo(f"  HTTP: {page['status_code']}")
+        click.echo(f"  HTTP: {page['status_code']}  screenshot: {page['screenshot']}")
         for entry in page["console"]:
             click.echo(f"  console {entry['type']}: {entry['text']}")
         for finding in page.get("low_contrast", []):

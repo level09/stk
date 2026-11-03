@@ -96,8 +96,10 @@ through the home page, login, dashboard, and admin users page, then visits every
 GET page that takes no URL arguments. It fails on any of: an HTTP status of 400 or
 above, a console or uncaught error, a failed request, or button, chip, and alert text
 below 3:1 contrast with its background. That last one catches the class of bug no
-console error ever reports. The dashboard screenshot lands in
-`.stk/smoke/dashboard.png`; `--json` emits the per-page report.
+console error ever reports. Each page leaves a full-page screenshot in `.stk/smoke/`,
+named after it (`dashboard.png`, `/monitor/runs` as `monitor-runs.png`), and each run
+clears the last run's. `--json` emits the per-page report, with each page's
+`screenshot` path.
 
 Smoke also fails on a page that works but reads badly. It reads the visible text of
 each page (not scripts, styles, hidden elements, input values, or `code` and `pre`
