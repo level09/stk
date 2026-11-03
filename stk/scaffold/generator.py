@@ -42,6 +42,7 @@ RESERVED = frozenset(
         "portal",
         "websocket",
         "ws",
+        "seed",  # the app's seed.py
         "activity",
         "session",
         "security",

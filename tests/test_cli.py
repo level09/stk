@@ -1,6 +1,9 @@
 """The `stk` command must expose the whole framework without QUART_APP set."""
 
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -104,3 +107,28 @@ class RunCommandTest(unittest.TestCase):
 
 async def _done():
     return None
+
+
+class SeedModuleTest(unittest.TestCase):
+    def test_only_a_seed_file_counts_as_the_seed(self):
+        from types import SimpleNamespace
+
+        from stk.cli.database import seed_module
+
+        with tempfile.TemporaryDirectory() as root:
+            for package, path in (
+                ("seedfile_app", "seed.py"),
+                ("seedpkg_app", "seed/__init__.py"),
+            ):
+                (Path(root) / package / path).parent.mkdir(parents=True)
+                (Path(root) / package / "__init__.py").touch()
+                (Path(root) / package / path).touch()
+            sys.path.insert(0, root)
+            try:
+                app = SimpleNamespace(import_name="seedfile_app.app")
+                self.assertEqual(seed_module(app), "seedfile_app.seed")
+                self.assertIsNone(
+                    seed_module(SimpleNamespace(import_name="seedpkg_app.app"))
+                )
+            finally:
+                sys.path.remove(root)

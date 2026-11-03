@@ -199,9 +199,12 @@ def db_revision(message, autogenerate, head):
 def seed_module(app):
     """The app's `seed` module name, or None when the app has no seed.py."""
     import importlib.util
+    from pathlib import Path
 
     name = f"{app.import_name.split('.')[0]}.seed"
-    return name if importlib.util.find_spec(name) else None
+    spec = importlib.util.find_spec(name)
+    # An extension package named seed is the app's own, not a seed file.
+    return name if spec and Path(spec.origin or "").name == "seed.py" else None
 
 
 @db.command("seed")

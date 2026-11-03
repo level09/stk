@@ -369,7 +369,7 @@ class InitAndNewTests(unittest.TestCase):
         self.assertEqual(_package_digest(), self.before)
 
     def test_new_refuses_duplicates_and_reserved_names(self):
-        for name in ("widget", "user"):
+        for name in ("widget", "user", "seed"):
             with self.subTest(name=name):
                 result = _stk("new", name, "--no-migrate", cwd=self.app)
                 self.assertNotEqual(result.returncode, 0)

@@ -182,7 +182,7 @@ def _smoke_env(database_uri):
         }
     )
     # Empty, not removed: each child reloads .env, which fills in missing keys.
-    env.update({"REDIS_URL": "", "REDIS_SESSION": "", "MAIL_SERVER": ""})
+    env.update({"REDIS_URL": "", "REDIS_SESSION": ""})
     return env
 
 
