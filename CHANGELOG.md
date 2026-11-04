@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.9.5 (2026-11-04)
+
+No migration required. Apps that repeated the app bar title rule in their own CSS can drop it.
+
+- The app bar title rule (`flex: 0 1 auto`, from 17.9.3) moved from `app.css` to `layout.css`, so an app that replaces `app.css` with its own look keeps it. In those apps the title had fallen back to Vuetify's `flex: 1 1 0%` and clipped the brand on a phone.
+
 ## v17.9.4 (2026-11-04)
 
 No migration required.
