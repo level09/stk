@@ -1,10 +1,15 @@
+import subprocess
+import sys
 import unittest
+from unittest.mock import patch
 
 from quart import Blueprint
 
 from stk.app import Stk
 from stk.cli.reports import build_routes_report
 from stk.cli.smoke import (
+    _start_smoke_server,
+    _stop_smoke_server,
     build_smoke_report,
     discover_smoke_paths,
     machine_paths,
@@ -140,6 +145,21 @@ class EventStreamPageTest(unittest.IsolatedAsyncioTestCase):
             await browser.close()
             await playwright.stop()
         self.assertEqual(page["status"], 200)
+
+
+class SmokeServerOutputTests(unittest.TestCase):
+    def test_server_never_blocks_on_its_own_log(self):
+        """An access log past the 64 KB pipe buffer froze the server mid-run."""
+        popen = subprocess.Popen
+        chatty = [sys.executable, "-c", "print('x' * 200_000)"]
+        with patch(
+            "stk.cli.smoke.subprocess.Popen", lambda _, **kw: popen(chatty, **kw)
+        ):
+            server = _start_smoke_server(0, None)
+        try:
+            self.assertEqual(server.wait(timeout=5), 0)
+        finally:
+            _stop_smoke_server(server)
 
 
 class SmokeScreenshotTests(unittest.TestCase):

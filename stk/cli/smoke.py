@@ -7,6 +7,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -257,7 +258,9 @@ def _prepare_smoke(app, secret_key):
 
 
 def _start_smoke_server(port, env):
-    return subprocess.Popen(
+    # A pipe nobody reads fills at 64 KB of access log and freezes the server.
+    log = tempfile.TemporaryFile("w+")
+    process = subprocess.Popen(
         [
             sys.executable,
             "-m",
@@ -270,20 +273,21 @@ def _start_smoke_server(port, env):
             "--no-reload",
         ],
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+        stdout=log,
+        stderr=subprocess.STDOUT,
     )
+    process.log = log
+    return process
 
 
 def _wait_for_smoke_server(base_url, process):
     deadline = time.monotonic() + 20
     while time.monotonic() < deadline:
         if process.poll() is not None:
-            stdout, stderr = process.communicate(timeout=1)
+            process.log.seek(0)
             raise click.ClickException(
                 "smoke server exited before accepting requests\n"
-                f"{stdout.strip()}\n{stderr.strip()}"
+                + process.log.read().strip()
             )
         try:
             response = httpx2.get(f"{base_url}/login", timeout=1)
@@ -296,14 +300,14 @@ def _wait_for_smoke_server(base_url, process):
 
 
 def _stop_smoke_server(process):
-    if process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.communicate(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.communicate(timeout=5)
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+    process.log.close()
 
 
 async def _visit_smoke_page(context, base_url, name, path):
