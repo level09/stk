@@ -24,6 +24,14 @@ FILES = {
         """
     ),
     "tapp/templates/_head.html": '<meta name="tapp-head">',
+    # A top-bar-only shell: no drawer, the app's links in the user menu.
+    "tapp/templates/topbar.html": textwrap.dedent(
+        """\
+        {% extends "stk/layout.html" %}
+        {% block sidebar %}{% endblock %}
+        {% block user_menu %}<v-list-item href="/kyc/">KYC</v-list-item>{{ super() }}{% endblock %}
+        """
+    ),
     "tapp/static/css/app.css": "/* the app's */",
     "tapp/static/js/page.js": 'import "./shared.js";',
     "tapp/static/js/shared.js": "// the app's, shadowing the extension's",
@@ -98,6 +106,22 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
             for layout in ("layout.html", "auth_layout.html", "login-layout.html"):
                 page = await render_template(layout)
                 self.assertIn('name="tapp-head"', page, layout)
+
+    async def test_layout_without_the_sidebar_keeps_the_app_bar(self):
+        from types import SimpleNamespace
+
+        from quart import render_template
+
+        user = SimpleNamespace(is_authenticated=True, name="Ann", email="a@example.com")
+        async with self.app.test_request_context("/"):
+            full = await render_template("layout.html", current_user=user)
+            bar = await render_template("topbar.html", current_user=user)
+        self.assertIn("<v-navigation-drawer", full)
+        self.assertIn("ti-menu-2", full)
+        self.assertNotIn("<v-navigation-drawer", bar)
+        self.assertNotIn("ti-menu-2", bar)  # no drawer to open
+        self.assertLess(bar.index('href="/kyc/"'), bar.index("Change Password"))
+        self.assertIn("<theme-switcher>", bar)
 
     async def test_static_files_resolve_app_then_extensions_in_order(self):
         client = self.app.test_client()

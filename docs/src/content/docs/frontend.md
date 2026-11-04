@@ -115,7 +115,16 @@ Templates and static files resolve app first, then each extension's, then stk's,
 {% block title %}{{ config.APP_NAME }}{% endblock %}
 ```
 
-`layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `content`, `navigation`, and `js`. Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
+`layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `app_bar_actions` (the signed-in user's buttons and menu in the app bar), `user_menu` (the links in that menu), `sidebar` (the navigation drawer), `content`, `navigation`, and `js`. For a top-bar-only shell, empty `sidebar` (the menu button goes with it) and put the app's links in the user menu:
+
+```html
+{# myapp/templates/layout.html #}
+{% extends "stk/layout.html" %}
+{% block sidebar %}{% endblock %}
+{% block user_menu %}<v-list-item href="/admin/">Admin</v-list-item>{{ super() }}{% endblock %}
+```
+
+Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
 
 App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. stk's own is empty.
 

@@ -13,7 +13,7 @@
         min-height: 100vh;
     }
     .auth-image {
-        background-image: url('/static/img/auth-bg.webp');
+        background-image: url('{{ url_for('static', filename='img/auth-bg.webp') }}');
         background-size: cover;
         background-position: center;
         height: 100vh;

@@ -21,5 +21,6 @@ The authenticator label is `SECURITY_TOTP_ISSUER`. It is not read from the envir
 
 - `_brand.html` is the only template that references the logo. Put your own at `myapp/templates/_brand.html`, and the logo file under `myapp/static/img/`; yours win over stk's. Keep `class="logo-adaptive"` if your logo is dark-on-light: dark mode inverts it.
 - `myapp/static/img/favicon.ico` replaces the favicon for every layout.
+- `myapp/static/img/auth-bg.webp` replaces the photo beside the sign-in and sign-up forms.
 
 Then check both themes in a browser: `uv run stk smoke` writes `.stk/smoke/dashboard.png`.

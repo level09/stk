@@ -29,7 +29,7 @@
     <v-layout class="rounded rounded-md">
         <!-- App Bar -->
         <v-app-bar color="surface" density="comfortable" elevation="1">
-            {% if current_user.is_authenticated %}
+            {% if current_user.is_authenticated and self.sidebar()|trim %}
             <v-btn icon variant="text" @click="drawer = !drawer" class="d-md-none">
                 <i class="ti ti-menu-2" style="font-size: 24px;"></i>
             </v-btn>
@@ -46,6 +46,7 @@
             {% if not current_user.is_authenticated %}
             <v-btn href="/login" variant="text">Sign in</v-btn>
             {% else %}
+            {% block app_bar_actions %}
             <!-- Theme Switcher -->
             <theme-switcher></theme-switcher>
 
@@ -84,6 +85,7 @@
                     <v-divider></v-divider>
 
                     <v-list density="compact">
+                        {% block user_menu %}
                         <v-list-item href="/dashboard">
                             <template v-slot:prepend><i class="ti ti-layout-dashboard mr-3" style="font-size: 18px;"></i></template>
                             <v-list-item-title>My Account</v-list-item-title>
@@ -96,6 +98,7 @@
                             <template v-slot:prepend><i class="ti ti-shield-lock mr-3" style="font-size: 18px;"></i></template>
                             <v-list-item-title>Two-Factor Auth</v-list-item-title>
                         </v-list-item>
+                        {% endblock %}
                     </v-list>
 
                     <v-divider></v-divider>
@@ -108,9 +111,11 @@
                     </v-list>
                 </v-card>
             </v-menu>
+            {% endblock %}
             {% endif %}
         </v-app-bar>
 
+        {% block sidebar %}
         {% if current_user.is_authenticated %}
         <!-- Navigation Drawer (authenticated users only) -->
         <v-navigation-drawer v-model="drawer" :rail="isNavCollapsed" :rail-width="68" width="260">
@@ -143,6 +148,7 @@
             </ul>
         </v-navigation-drawer>
         {% endif %}
+        {% endblock %}
 
         <!-- Main Content -->
         <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
