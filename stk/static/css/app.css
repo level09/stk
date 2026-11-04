@@ -30,9 +30,10 @@ body,
     letter-spacing: -0.02em !important;
 }
 
-/* The spacer takes the slack: a shrinking title clips the brand on a phone. */
+/* Natural width while it fits, so the brand is whole; shrinks only when the bar is full,
+   so the buttons on the right stay on screen. */
 .v-toolbar-title {
-    flex: none;
+    flex: 0 1 auto;
     text-transform: uppercase;
     font-weight: 800 !important;
 }
