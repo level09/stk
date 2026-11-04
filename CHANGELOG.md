@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.9.4 (2026-11-04)
+
+No migration required.
+
+- `stk smoke` names the cause when low-contrast text sits on nothing painted (the browser canvas shows through, usually in the dark theme of an app that replaced `app.css`): "sits on no page background ... give body a background", instead of a ratio against an assumed white.
+- `config.js` puts `dark-mode` on `<html>` and `<body>` before Vue mounts, from the saved theme, so app CSS that switches on it never flashes light.
+
 ## v17.9.3 (2026-11-04)
 
 No migration required.
