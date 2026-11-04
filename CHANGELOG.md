@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.9.1 (2026-11-04)
+
+No migration required. Apps with their own `_head.html` that want stk's fonts add the Google Fonts link to it.
+
+- stk's Google Fonts link moved from `layout.html` into `_head.html`, beside the favicon: an app with its own type no longer loads three unused families, and the sign-in pages now load stk's fonts too.
+- The app bar's title no longer shrinks, so the brand is not clipped on a phone, with or without the menu button.
+
 ## v17.9.0 (2026-11-04)
 
 No migration required. Apps with their own `_head.html` must add their favicon link to it.
