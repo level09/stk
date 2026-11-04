@@ -322,3 +322,9 @@ body.dark-mode .qr-adaptive {
 .flash-close:hover {
   opacity: 1;
 }
+
+/* Natural width while it fits, so the brand is whole; shrinks only when the bar is full,
+   so the buttons on the right stay on screen. Here, not in app.css, which an app may replace. */
+.v-app-bar .v-toolbar-title {
+    flex: 0 1 auto;
+}

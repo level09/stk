@@ -30,10 +30,7 @@ body,
     letter-spacing: -0.02em !important;
 }
 
-/* Natural width while it fits, so the brand is whole; shrinks only when the bar is full,
-   so the buttons on the right stay on screen. */
 .v-toolbar-title {
-    flex: 0 1 auto;
     text-transform: uppercase;
     font-weight: 800 !important;
 }
