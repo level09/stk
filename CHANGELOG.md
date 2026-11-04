@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.9.2 (2026-11-04)
+
+No migration required.
+
+- Pages start in the saved theme. `config.js` picks it the way the theme switcher did (saved choice, then `__settings__.dark`, then the system), so Vuetify is created dark instead of rendering light and animating to dark after mount. That animation made `stk smoke`'s dark pass measure text mid-transition and report false 1:1 contrast; users saw it as a flash on every page.
+- `auth_layout.html` and `login-layout.html` have the `csrf-token` meta and set axios's `X-CSRFToken` header, like `layout.html`, so a public page that POSTs needs no workaround.
+- `stk doctor` treats `static/css/app.css` as a slot: it is stk's look, which an app with its own theme replaces.
+
 ## v17.9.1 (2026-11-04)
 
 No migration required. Apps with their own `_head.html` that want stk's fonts add the Google Fonts link to it.
