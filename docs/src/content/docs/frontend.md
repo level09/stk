@@ -126,7 +126,22 @@ Templates and static files resolve app first, then each extension's, then stk's,
 
 Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
 
-App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. stk's own is empty.
+App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. Yours replaces stk's, which holds only the favicon link, so put your favicon there too.
+
+Two functions a script loaded from `_head.html` can define change stk's frontend without copying its files:
+
+```js
+// myapp/static/js/app.js, loaded from _head.html
+function configureApp(config) {            // runs at the end of config.js
+  config.vuetifyConfig.theme.themes.light.colors.primary = '#0f766e';
+  config.vuetifyConfig.defaults.VTextField.density = 'comfortable';
+}
+function registerAppComponents(app) {      // runs inside registerStkComponents
+  app.component('kv-editor', KvEditor);
+}
+```
+
+Both run before Vue mounts and before the page's own script. Copying `stk/static/js/config.js` or `stk/static/js/components/index.js` instead freezes them at the version you copied; `stk doctor` warns about every copied stk file.
 
 Vuetify marks no theme on the page, so on every page that calls `registerStkComponents` the root puts `dark-mode` on `<html>` and `<body>` while the dark theme is on, whatever switched it. App CSS that changes with the theme selects on it: `:root.dark-mode { --ink: #e7e7e4; }`.
 

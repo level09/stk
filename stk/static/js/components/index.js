@@ -27,6 +27,10 @@ function registerStkComponents(app) {
     },
   });
 
+  // The app's own global components: define `function registerAppComponents(app)` in a script
+  // loaded from _head.html, instead of copying this file.
+  if (typeof registerAppComponents === 'function') registerAppComponents(app);
+
   return app;
 }
 

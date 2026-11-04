@@ -1,1 +1,3 @@
-{# Every layout includes this in <head>, outside any block a page can empty. Put the app's own fonts, tokens and scripts in myapp/templates/_head.html. #}
+{# Every layout includes this in <head>, outside any block a page can empty. An app's own
+   myapp/templates/_head.html replaces this one: put its favicon, fonts, tokens and scripts there. #}
+<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">

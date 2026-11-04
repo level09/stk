@@ -123,6 +123,17 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
         self.assertLess(bar.index('href="/kyc/"'), bar.index("Change Password"))
         self.assertIn("<theme-switcher>", bar)
 
+    def test_doctor_names_copies_of_stk_files_but_not_slots(self):
+        from stk.cli.doctor import _check_overrides
+
+        finding = _check_overrides(self.app)
+        self.assertEqual(finding["status"], "warn")
+        # index.html and _head.html are slots, topbar.html extends stk's layout.
+        self.assertIn(
+            "copies of stk files miss its fixes: static/css/app.css", finding["detail"]
+        )
+        self.assertNotIn("html", finding["detail"])
+
     async def test_static_files_resolve_app_then_extensions_in_order(self):
         client = self.app.test_client()
         app_css = await (await client.get("/static/css/app.css")).get_data(True)

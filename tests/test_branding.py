@@ -7,6 +7,7 @@ from stk.settings import TestingConfig
 
 class AcmeConfig(TestingConfig):
     APP_NAME = "Acme"
+    APP_DESCRIPTION = "Invoices that send themselves."
 
 
 class BrandingTests(unittest.IsolatedAsyncioTestCase):
@@ -18,6 +19,11 @@ class BrandingTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Acme", html)
         self.assertNotIn("Project stk", html)
         self.assertNotIn("New to stk", html)
+        self.assertIn(
+            '<meta name="description" content="Invoices that send themselves.">', html
+        )
+        self.assertNotIn("framework for the next decade", html)
+        self.assertIn('rel="icon"', html)  # from stk's _head.html
 
     def test_logo_lives_in_brand_partial(self):
         templates = pathlib.Path(__file__).parent.parent / "stk" / "templates"

@@ -387,6 +387,16 @@ async def _run_playwright_smoke(base_url, token, extra_paths, copy_allow):
             ]
             for path in extra_paths:
                 pages.append(await _visit_smoke_page(context, base_url, path, path))
+            # Again in the dark theme the switcher stores: text and surfaces that
+            # only one theme breaks. The copy is the same in both, so it is read once.
+            await context.add_init_script("localStorage.setItem('stk-theme', 'dark')")
+            for name, path in [
+                ("dashboard", "/dashboard/"),
+                ("admin-users", "/users/"),
+                *((path, path) for path in extra_paths),
+            ]:
+                dark = await _visit_smoke_page(context, base_url, f"{name} dark", path)
+                pages.append(dark | {"text": "", "rows": []})
             await context.close()
             await browser.close()
     except PlaywrightError as exc:

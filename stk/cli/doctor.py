@@ -15,6 +15,7 @@ from stk.cli.base import app_spec, cli_app, project_root, run_async
 from stk.migrations import build_alembic_config, sync_url
 
 CORE_STATIC = Path(stk.__file__).parent / "static"
+CORE_TEMPLATES = Path(stk.__file__).parent / "templates"
 
 OK = "ok"
 WARN = "warn"
@@ -240,6 +241,46 @@ def _check_repl():
     return _finding("shell", OK, "ptpython: highlighting and completion")
 
 
+# Files stk ships for an app to replace; every other shadowed file is a copy.
+OVERRIDE_SLOTS = ("_brand.html", "_head.html", "index.html", "dashboard.html", "img/")
+
+
+def _shadowed(folders, core):
+    for folder in folders:
+        for path in sorted(folder.rglob("*")):
+            name = path.relative_to(folder).as_posix()
+            if (
+                path.is_file()
+                and (core / name).is_file()
+                and not name.startswith(OVERRIDE_SLOTS)
+            ):
+                yield name, path
+
+
+def _check_overrides(app):
+    """A copied stk file stops receiving stk's fixes, and nothing else says so."""
+    copies = (
+        [
+            f"templates/{name}"
+            for name, path in _shadowed(app.template_folders[:-1], CORE_TEMPLATES)
+            if f"stk/{name}" not in path.read_text()  # extends the original
+        ]
+        + [
+            f"static/{name}"
+            for name, _ in _shadowed(app.static_folders[:-1], CORE_STATIC)
+        ]
+    )
+    if not copies:
+        return _finding("overrides", OK, "no copies of stk files")
+    return _finding(
+        "overrides",
+        WARN,
+        f"copies of stk files miss its fixes: {', '.join(copies)}",
+        'extend "stk/<name>" and override a block; app CSS, scripts and '
+        "config and components go in _head.html: configureApp(config), registerAppComponents(app)",
+    )
+
+
 def build_doctor_report():
     """Return every finding, plus the worst status seen."""
     findings = [_check_env_file(project_root())]
@@ -257,6 +298,7 @@ def build_doctor_report():
             _check_admin(),
             _check_agent_login(app.config),
             _check_public_url(app.config),
+            _check_overrides(app),
         ]
     findings += [_check_assets(), _check_browser(), _check_repl()]
     if any(item["status"] == FAIL for item in findings):

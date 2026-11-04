@@ -148,3 +148,7 @@ const config = {
         }
     }
 };
+
+// The app's changes to this config (theme colours, component defaults): define
+// `function configureApp(config)` in a script loaded from _head.html, instead of copying this file.
+if (typeof configureApp === 'function') configureApp(config);

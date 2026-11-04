@@ -34,11 +34,14 @@ uv run stk doctor
 ✓ admin user     1 admin(s)
 ✓ assets         vue 3.5.40 vuetify 4.1.6
 ✓ agent login    disabled
+✓ overrides      no copies of stk files
 ✓ browser        chromium ready for stk smoke
 ✓ shell          ptpython: highlighting and completion
 
 Usable, with the warnings above.
 ```
+
+`overrides` warns about each app template or static file that replaces one of stk's whole (a copy that no longer receives stk's fixes). Templates that extend `stk/<name>`, `_brand.html`, `_head.html`, `index.html`, `dashboard.html`, and images are meant to be replaced and pass.
 
 Every line that is not `✓` tells you the command that fixes it. A `!` is a warning, a
 `✗` is a failure, and the exit code is `1` only on a failure, so it works in scripts.
@@ -98,7 +101,9 @@ above, a console or uncaught error, a failed request, or button, chip, and alert
 below 3:1 contrast with its background. That last one catches the class of bug no
 console error ever reports. Each page leaves a full-page screenshot in `.stk/smoke/`,
 named after it (`dashboard.png`, `/monitor/runs` as `monitor-runs.png`), and each run
-clears the last run's. `--json` emits the per-page report, with each page's
+clears the last run's. The signed-in pages then run again in the dark theme, with the
+same checks except copy, as `dashboard dark` with `dashboard-dark.png`, because a
+colour that only breaks in one theme passes in the other. `--json` emits the per-page report, with each page's
 `screenshot` path.
 
 Smoke also fails on a page that works but reads badly. It reads the visible text of
