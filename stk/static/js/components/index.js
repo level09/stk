@@ -16,6 +16,17 @@ function registerStkComponents(app) {
   app.component('notification-dropdown', NotificationDropdown);
   app.component('theme-switcher', ThemeSwitcher);
 
+  // Vuetify 4 marks no theme on the page, so the root mirrors it as .dark-mode on <html> and <body>
+  // for app CSS that switches with the theme, on every page and whatever changes the theme.
+  app.mixin({
+    mounted() {
+      if (this !== this.$root) return;
+      this.$watch(() => this.$vuetify.theme.global.name, name => {
+        for (const el of [document.documentElement, document.body]) el.classList.toggle('dark-mode', name === 'dark');
+      }, { immediate: true });
+    },
+  });
+
   return app;
 }
 

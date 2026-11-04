@@ -117,6 +117,10 @@ Templates and static files resolve app first, then each extension's, then stk's,
 
 `layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `content`, `navigation`, and `js`. Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
 
+App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. stk's own is empty.
+
+Vuetify marks no theme on the page, so on every page that calls `registerStkComponents` the root puts `dark-mode` on `<html>` and `<body>` while the dark theme is on, whatever switched it. App CSS that changes with the theme selects on it: `:root.dark-mode { --ink: #e7e7e4; }`.
+
 ## layoutMixin
 
 Defined in `stk/templates/layout.html`. Every page gets:

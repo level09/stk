@@ -23,6 +23,7 @@ FILES = {
         {% block content %}APP INDEX {% include "ext_only.html" %}{% endblock %}
         """
     ),
+    "tapp/templates/_head.html": '<meta name="tapp-head">',
     "tapp/static/css/app.css": "/* the app's */",
     "tapp/static/js/page.js": 'import "./shared.js";',
     "tapp/static/js/shared.js": "// the app's, shadowing the extension's",
@@ -84,6 +85,19 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("APP INDEX FIRST", page)
         self.assertIn("<title>App title</title>", page)
         self.assertIn("stkNavigation", page)  # rendered by stk's layout
+
+    async def test_app_head_reaches_every_layout(self):
+        """Pages empty or replace the css block; the head partial sits outside it."""
+        from quart import render_template
+
+        self.assertIn(
+            'name="tapp-head"',
+            await (await self.app.test_client().get("/login")).get_data(True),
+        )
+        async with self.app.test_request_context("/"):
+            for layout in ("layout.html", "auth_layout.html", "login-layout.html"):
+                page = await render_template(layout)
+                self.assertIn('name="tapp-head"', page, layout)
 
     async def test_static_files_resolve_app_then_extensions_in_order(self):
         client = self.app.test_client()
