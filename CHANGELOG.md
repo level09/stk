@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.9.3 (2026-11-04)
+
+No migration required.
+
+- The app bar title takes its natural width and shrinks only when the bar is full (`flex: 0 1 auto`). 17.9.1's `flex: none` kept a long brand whole by pushing the user menu off a phone screen; now the brand truncates first and every button stays reachable.
+
 ## v17.9.2 (2026-11-04)
 
 No migration required.
