@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.7.0 (2026-11-04)
+
+No migration required.
+
+- `_head.html`: every layout, including the sign-in pages', includes it in `<head>` outside any block, so an app's fonts, tokens and scripts stay on admin pages that empty the `css` block and on sign-in pages that replace every block. Put yours at `myapp/templates/_head.html`; stk's is empty.
+- The root component mirrors the Vuetify theme as `dark-mode` on `<html>` and `<body>` on every page that calls `registerStkComponents`, not only on `<body>` where the theme switcher is mounted. Apps that patched this in themselves (an `html.night` mixin) can delete the patch and select on `.dark-mode`.
+
 ## v17.6.1 (2026-11-03)
 
 No migration required.
