@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.8.0 (2026-11-04)
+
+No migration required.
+
+- `layout.html` has the blocks `app_bar_actions`, `user_menu` and `sidebar`, so an app gets a top-bar-only shell by emptying `sidebar` and adding its links to `user_menu`, instead of overriding the whole layout. The app bar's menu button only appears when the sidebar renders.
+- The sign-in and sign-up photo loads through `url_for`, so an app's `static/img/auth-bg.webp` replaces it with a versioned URL that busts the browser's cached copy of stk's.
+
 ## v17.7.0 (2026-11-04)
 
 No migration required.
