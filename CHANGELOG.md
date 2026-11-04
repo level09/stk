@@ -1,5 +1,14 @@
 # Changelog
 
+## v17.9.0 (2026-11-04)
+
+No migration required. Apps with their own `_head.html` must add their favicon link to it.
+
+- `configureApp(config)` and `registerAppComponents(app)`: functions an app defines in a script from `_head.html` to change the Vuetify config and add global components, instead of copying `config.js` or `components/index.js`. A copied `index.js` silently dropped 17.8.0's `dark-mode` mirror in one app.
+- `stk doctor` warns about every app template or static file that replaces a stk file whole, since a copy stops receiving stk's fixes. Templates that extend `stk/<name>`, `_brand.html`, `_head.html`, `index.html`, `dashboard.html` and images pass.
+- `stk smoke` runs the signed-in pages again in the dark theme (`dashboard dark`, `dashboard-dark.png`) with the same checks except copy, so a page that breaks only at night fails.
+- The meta description is `APP_DESCRIPTION` (none when empty), not stk's tagline, and the favicon link moved into `_head.html`, so an app's own `_head.html` owns its favicon in any format.
+
 ## v17.8.0 (2026-11-04)
 
 No migration required.
