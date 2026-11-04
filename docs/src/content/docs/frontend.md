@@ -141,7 +141,7 @@ function registerAppComponents(app) {      // runs inside registerStkComponents
 }
 ```
 
-Both run before Vue mounts and before the page's own script. Copying `stk/static/js/config.js` or `stk/static/js/components/index.js` instead freezes them at the version you copied; `stk doctor` warns about every copied stk file.
+Both run before Vue mounts and before the page's own script. `stk/static/css/app.css` is stk's look (monochrome colours, fonts, view transitions): an app with its own theme replaces it with its own `static/css/app.css` and keeps what it wants. Copying `stk/static/js/config.js` or `stk/static/js/components/index.js` instead freezes them at the version you copied; `stk doctor` warns about every copied stk file.
 
 Vuetify marks no theme on the page, so on every page that calls `registerStkComponents` the root puts `dark-mode` on `<html>` and `<body>` while the dark theme is on, whatever switched it. App CSS that changes with the theme selects on it: `:root.dark-mode { --ink: #e7e7e4; }`.
 

@@ -3,6 +3,12 @@
  * Monochrome brutalist palette
  */
 
+// The theme a page starts in, so a dark page never renders light and animates to dark:
+// the switcher's saved choice, then the server's setting, then the system's.
+const savedTheme = localStorage.getItem('stk-theme');
+const startDark = savedTheme ? savedTheme === 'dark'
+    : window.__settings__?.dark ?? window.matchMedia('(prefers-color-scheme: dark)').matches;
+
 const config = {
     // Common Vue settings
     delimiters: ['${', '}'],
@@ -110,7 +116,7 @@ const config = {
             }
         },
         theme: {
-            defaultTheme: window.__settings__?.dark ? 'dark' : 'light',
+            defaultTheme: startDark ? 'dark' : 'light',
             themes: {
                 light: {
                     dark: false,

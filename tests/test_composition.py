@@ -33,6 +33,7 @@ FILES = {
         """
     ),
     "tapp/static/css/app.css": "/* the app's */",
+    "tapp/static/js/components/ThemeSwitcher.js": "// a copy of stk's",
     "tapp/static/js/page.js": 'import "./shared.js";',
     "tapp/static/js/shared.js": "// the app's, shadowing the extension's",
     "tapp/first/__init__.py": textwrap.dedent(
@@ -128,11 +129,11 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
 
         finding = _check_overrides(self.app)
         self.assertEqual(finding["status"], "warn")
-        # index.html and _head.html are slots, topbar.html extends stk's layout.
-        self.assertIn(
-            "copies of stk files miss its fixes: static/css/app.css", finding["detail"]
+        # index.html, _head.html and app.css are slots; topbar.html extends stk's.
+        self.assertEqual(
+            finding["detail"],
+            "copies of stk files miss its fixes: static/js/components/ThemeSwitcher.js",
         )
-        self.assertNotIn("html", finding["detail"])
 
     async def test_static_files_resolve_app_then_extensions_in_order(self):
         client = self.app.test_client()

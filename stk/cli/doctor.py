@@ -242,7 +242,14 @@ def _check_repl():
 
 
 # Files stk ships for an app to replace; every other shadowed file is a copy.
-OVERRIDE_SLOTS = ("_brand.html", "_head.html", "index.html", "dashboard.html", "img/")
+OVERRIDE_SLOTS = (
+    "_brand.html",
+    "_head.html",
+    "index.html",
+    "dashboard.html",
+    "css/app.css",  # stk's look, which a themed app replaces
+    "img/",
+)
 
 
 def _shadowed(folders, core):

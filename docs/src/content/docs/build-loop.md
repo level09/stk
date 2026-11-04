@@ -41,7 +41,7 @@ uv run stk doctor
 Usable, with the warnings above.
 ```
 
-`overrides` warns about each app template or static file that replaces one of stk's whole (a copy that no longer receives stk's fixes). Templates that extend `stk/<name>`, `_brand.html`, `_head.html`, `index.html`, `dashboard.html`, and images are meant to be replaced and pass.
+`overrides` warns about each app template or static file that replaces one of stk's whole (a copy that no longer receives stk's fixes). Templates that extend `stk/<name>`, `_brand.html`, `_head.html`, `index.html`, `dashboard.html`, `static/css/app.css`, and images are meant to be replaced and pass.
 
 Every line that is not `✓` tells you the command that fixes it. A `!` is a warning, a
 `✗` is a failure, and the exit code is `1` only on a failure, so it works in scripts.

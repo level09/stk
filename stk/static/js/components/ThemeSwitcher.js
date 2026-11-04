@@ -35,28 +35,10 @@ const ThemeSwitcher = {
         window.__settings__.dark = this.isDark;
       }
     },
-
-    loadTheme() {
-      // Check localStorage first
-      const saved = localStorage.getItem('stk-theme');
-      if (saved) {
-        this.isDark = saved === 'dark';
-      } else if (window.__settings__?.dark !== undefined) {
-        // Fall back to server-provided setting
-        this.isDark = window.__settings__.dark;
-      } else {
-        // Fall back to system preference
-        this.isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-
-      // Apply theme
-      if (this.$vuetify) {
-        this.$vuetify.theme.global.name = this.isDark ? 'dark' : 'light';
-      }
-    }
   },
 
   mounted() {
-    this.loadTheme();
+    // config.js started the page in the saved theme.
+    this.isDark = this.$vuetify.theme.global.name === 'dark';
   }
 };

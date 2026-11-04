@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config.APP_NAME }}</title>
     {% if config.APP_DESCRIPTION %}<meta name="description" content="{{ config.APP_DESCRIPTION }}">{% endif %}
     <meta name="author" content="{{ config.APP_NAME }}">
@@ -20,6 +21,7 @@
     <script src="{{ url_for('static', filename='js/vue.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vuetify.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
+    <script>axios.defaults.headers.common["X-CSRFToken"] = document.querySelector('meta[name="csrf-token"]').content;</script>
     <script src="{{ url_for('static', filename='js/config.js') }}"></script>
     {% block js %}{% endblock %}
 </body>
