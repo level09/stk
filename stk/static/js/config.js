@@ -9,6 +9,9 @@ const savedTheme = localStorage.getItem('stk-theme');
 const startDark = savedTheme ? savedTheme === 'dark'
     : window.__settings__?.dark ?? window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+// Apps' CSS that switches on .dark-mode sees it before Vue mounts, so a dark page does not flash light.
+for (const el of [document.documentElement, document.body]) el.classList.toggle('dark-mode', startDark);
+
 const config = {
     // Common Vue settings
     delimiters: ['${', '}'],

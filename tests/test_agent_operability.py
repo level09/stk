@@ -178,7 +178,10 @@ class AgentOperabilityTests(unittest.TestCase):
                     "status": 200,
                     "console": [],
                     "failed_requests": [],
-                    "low_contrast": [{"label": "GO TO DASHBOARD", "ratio": 1.0}],
+                    "low_contrast": [
+                        {"label": "GO TO DASHBOARD", "ratio": 1.0},
+                        {"label": "ADD", "ratio": 1.0, "unpainted": True},
+                    ],
                 }
             ],
             dashboard_screenshot=".stk/smoke/dashboard.png",
@@ -189,6 +192,8 @@ class AgentOperabilityTests(unittest.TestCase):
             'invisible text: "GO TO DASHBOARD" contrast 1.0:1',
             report["pages"][0]["problems"],
         )
+        # Nothing painted behind it: name the cause, not a ratio against white.
+        self.assertIn("sits on no page background", report["pages"][0]["problems"][1])
 
 
 class AgentLoginConfigTests(unittest.TestCase):

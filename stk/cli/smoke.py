@@ -62,7 +62,8 @@ _CONTRAST_TEMPLATE = """() => {
       const background = parse(getComputedStyle(node).backgroundColor);
       if (background && background.a > 0.5) return background;
     }
-    return {r: 255, g: 255, b: 255, a: 1};
+    // Nothing painted: the browser canvas, white unless the page says otherwise.
+    return {r: 255, g: 255, b: 255, a: 1, unpainted: true};
   };
   const findings = [];
   for (const element of document.querySelectorAll('.v-btn, .v-chip, .v-alert')) {
@@ -75,7 +76,8 @@ _CONTRAST_TEMPLATE = """() => {
     const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     if (ratio < __MIN_RATIO__) {
       findings.push({label: element.innerText.trim().slice(0, 32),
-                     ratio: Math.round(ratio * 100) / 100});
+                     ratio: Math.round(ratio * 100) / 100,
+                     unpainted: !!background.unpainted});
     }
   }
   return findings;
@@ -114,6 +116,15 @@ def discover_smoke_paths(routes, skip=frozenset()):
     )
 
 
+def _contrast_cause(finding):
+    if finding.get("unpainted"):
+        return (
+            "sits on no page background: nothing behind it is painted, so the "
+            "browser canvas shows through; give body a background"
+        )
+    return f"contrast {finding['ratio']}:1"
+
+
 def build_smoke_report(pages, dashboard_screenshot, copy_allow=()):
     """Return a browser smoke report with per-page failure reasons."""
     page_reports = []
@@ -137,7 +148,7 @@ def build_smoke_report(pages, dashboard_screenshot, copy_allow=()):
 
         for finding in page.get("low_contrast", []):
             problems.append(
-                f'invisible text: "{finding["label"]}" contrast {finding["ratio"]}:1'
+                f'invisible text: "{finding["label"]}" {_contrast_cause(finding)}'
             )
 
         copy = copy_findings(page.get("text", ""), page.get("rows", ()), copy_allow)
@@ -449,7 +460,9 @@ def print_smoke_report(report):
         for entry in page["console"]:
             click.echo(f"  console {entry['type']}: {entry['text']}")
         for finding in page.get("low_contrast", []):
-            click.echo(f"  invisible text: {finding['label']!r} {finding['ratio']}:1")
+            click.echo(
+                f"  invisible text: {finding['label']!r} {_contrast_cause(finding)}"
+            )
         for finding in page.get("copy", []):
             click.echo(f"  reads badly: {finding['rule']} {finding['text']!r}")
         for request in page["failed_requests"]:
