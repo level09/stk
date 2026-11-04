@@ -126,7 +126,7 @@ Templates and static files resolve app first, then each extension's, then stk's,
 
 Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
 
-App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. Yours replaces stk's, which holds only the favicon link, so put your favicon there too.
+App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. Yours replaces stk's, which holds only the favicon and stk's Google Fonts links, so put your favicon (and any fonts) there too.
 
 Two functions a script loaded from `_head.html` can define change stk's frontend without copying its files:
 

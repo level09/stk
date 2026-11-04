@@ -30,7 +30,9 @@ body,
     letter-spacing: -0.02em !important;
 }
 
+/* The spacer takes the slack: a shrinking title clips the brand on a phone. */
 .v-toolbar-title {
+    flex: none;
     text-transform: uppercase;
     font-weight: 800 !important;
 }
