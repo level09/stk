@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.9.6 (2026-11-04)
+
+No migration required.
+
+- `stk smoke` no longer freezes the app server partway through a long run. The server's output went to a pipe nobody read; past 64 KB of access log (about 60 pages light and dark) the server blocked on its next write and every later page timed out. Its output now goes to a temporary file, shown only when the server exits before accepting requests.
+
 ## v17.9.5 (2026-11-04)
 
 No migration required. Apps that repeated the app bar title rule in their own CSS can drop it.
