@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.10.0 (2026-11-05)
+
+No migration required.
+
+- `layout.html` has five more blocks so an app with its own shell can extend stk's layout instead of copying it: `body_start`, `app_bar`, `main`, `app_end` and `layout_script`. The app keeps stk's head, CSRF setup, core scripts, flash messages and logout form. Each block holds what the layout rendered before, so nothing changes for apps that don't fill them.
+
 ## v17.9.6 (2026-11-04)
 
 No migration required.
