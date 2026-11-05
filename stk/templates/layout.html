@@ -23,8 +23,10 @@
 </head>
 
 <body class="{% block body_class %} {% endblock %}">
+{% block body_start %}{% endblock %}
 <v-app id="app" v-cloak>
     <v-layout class="rounded rounded-md">
+        {% block app_bar %}
         <!-- App Bar -->
         <v-app-bar color="surface" density="comfortable" elevation="1">
             {% if current_user.is_authenticated and self.sidebar()|trim %}
@@ -112,6 +114,7 @@
             {% endblock %}
             {% endif %}
         </v-app-bar>
+        {% endblock %}
 
         {% block sidebar %}
         {% if current_user.is_authenticated %}
@@ -148,11 +151,13 @@
         {% endif %}
         {% endblock %}
 
+        {% block main %}
         <!-- Main Content -->
         <v-main class="d-flex align-center justify-center" style="min-height: 300px;">
             {% block content %}
             {% endblock %}
         </v-main>
+        {% endblock %}
 
         <!-- Flash messages (plain HTML - renders before Vue mounts) -->
         {% set messages = get_flashed_messages(with_categories=true) %}
@@ -166,6 +171,7 @@
                 {% endfor %}
             </div>
         {% endif %}
+        {% block app_end %}{% endblock %}
     </v-layout>
 </v-app>
 
@@ -210,6 +216,7 @@
 <script src="{{ url_for('static', filename='js/components/ThemeSwitcher.js') }}"></script>
 <script src="{{ url_for('static', filename='js/components/index.js') }}"></script>
 
+{% block layout_script %}
 <!-- Layout Base Script -->
 <script>
     // User roles passed from server
@@ -288,6 +295,7 @@
         }
     };
 </script>
+{% endblock %}
 
 {% block js %}{% endblock %}
 

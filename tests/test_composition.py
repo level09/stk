@@ -32,6 +32,18 @@ FILES = {
         {% block user_menu %}<v-list-item href="/kyc/">KYC</v-list-item>{{ super() }}{% endblock %}
         """
     ),
+    # An app's own shell: stk keeps the head, scripts, flash and logout form.
+    "tapp/templates/shell.html": textwrap.dedent(
+        """\
+        {% extends "stk/layout.html" %}
+        {% block body_start %}<div id="boot"></div>{% endblock %}
+        {% block app_bar %}<v-app-bar class="own-bar"></v-app-bar>{% endblock %}
+        {% block main %}<v-main class="own-main">{{ self.content() }}</v-main>{% endblock %}
+        {% block content %}PAGE{% endblock %}
+        {% block app_end %}<v-footer app></v-footer>{% endblock %}
+        {% block layout_script %}<script>const layoutMixin = {};</script>{% endblock %}
+        """
+    ),
     "tapp/static/css/app.css": "/* the app's */",
     "tapp/static/js/components/ThemeSwitcher.js": "// a copy of stk's",
     "tapp/static/js/page.js": 'import "./shared.js";',
@@ -124,12 +136,30 @@ class CompositionTest(unittest.IsolatedAsyncioTestCase):
         self.assertLess(bar.index('href="/kyc/"'), bar.index("Change Password"))
         self.assertIn("<theme-switcher>", bar)
 
+    async def test_app_shell_replaces_bar_main_and_script_but_keeps_stk_plumbing(self):
+        from types import SimpleNamespace
+
+        from quart import render_template
+
+        user = SimpleNamespace(is_authenticated=True, name="Ann", email="a@example.com")
+        async with self.app.test_request_context("/"):
+            page = await render_template("shell.html", current_user=user, roles=[])
+        self.assertLess(page.index('<div id="boot">'), page.index('id="app"'))
+        self.assertIn('class="own-bar"', page)
+        self.assertNotIn("<theme-switcher>", page)
+        self.assertIn('<v-main class="own-main">PAGE</v-main>', page)
+        self.assertNotIn("justify-center", page)
+        self.assertLess(page.index("<v-footer app>"), page.index("</v-layout>"))
+        self.assertEqual(page.count("const layoutMixin"), 1)
+        for kept in ('name="csrf-token"', "X-CSRFToken", 'id="logout-form"'):
+            self.assertIn(kept, page)
+
     def test_doctor_names_copies_of_stk_files_but_not_slots(self):
         from stk.cli.doctor import _check_overrides
 
         finding = _check_overrides(self.app)
         self.assertEqual(finding["status"], "warn")
-        # index.html, _head.html and app.css are slots; topbar.html extends stk's.
+        # index.html, _head.html and app.css are slots; topbar.html and shell.html extend stk's.
         self.assertEqual(
             finding["detail"],
             "copies of stk files miss its fixes: static/js/components/ThemeSwitcher.js",

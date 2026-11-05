@@ -115,7 +115,7 @@ Templates and static files resolve app first, then each extension's, then stk's,
 {% block title %}{{ config.APP_NAME }}{% endblock %}
 ```
 
-`layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `app_bar_actions` (the signed-in user's buttons and menu in the app bar), `user_menu` (the links in that menu), `sidebar` (the navigation drawer), `content`, `navigation`, and `js`. For a top-bar-only shell, empty `sidebar` (the menu button goes with it) and put the app's links in the user menu:
+`layout.html` has the blocks `title`, `css`, `head_js`, `body_class`, `app_bar_actions` (the signed-in user's buttons and menu in the app bar), `user_menu` (the links in that menu), `sidebar` (the navigation drawer), `content`, `navigation`, and `js`. An app with its own shell replaces larger pieces and keeps stk's head, CSRF setup, core scripts, flash messages and logout form: `body_start` (inside `<body>`, before `#app`, e.g. a boot skeleton), `app_bar` (the whole bar), `main` (the `v-main` around `content`, with its centring classes; call `{{ self.content() }}` inside yours), `app_end` (inside `v-layout` after `v-main`, for an app footer or dialogs) and `layout_script` (stk's `layoutMixin`; a replacement must define `layoutMixin` itself). For a top-bar-only shell, empty `sidebar` (the menu button goes with it) and put the app's links in the user menu:
 
 ```html
 {# myapp/templates/layout.html #}
