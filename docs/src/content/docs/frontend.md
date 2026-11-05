@@ -124,7 +124,7 @@ Templates and static files resolve app first, then each extension's, then stk's,
 {% block user_menu %}<v-list-item href="/admin/">Admin</v-list-item>{{ super() }}{% endblock %}
 ```
 
-Override a block rather than copying the layout: a copy stops receiving stk's fixes. `url_for('static', ...)` versions the file that will actually be served.
+Override a block rather than copying the layout: a copy stops receiving stk's fixes. Block names are shared by every template in the chain, so a page's own block named like one of these replaces it: an in-page heading block called `title` lands in the browser tab, so call it `heading`. `url_for('static', ...)` versions the file that will actually be served.
 
 App-wide fonts, CSS tokens and scripts go in `myapp/templates/_head.html`. Every layout (`layout.html`, the sign-in page's `auth_layout.html`, and `login-layout.html` for the other security pages) includes it in `<head>`, outside any block, so it stays on pages that empty `css` or replace every block. Yours replaces stk's, which holds only the favicon and stk's Google Fonts links, so put your favicon (and any fonts) there too.
 
