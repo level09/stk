@@ -217,6 +217,7 @@ def check_templates(app):
         "401.html",
         "404.html",
         "500.html",
+        "error.html",
         "cms/users.html",
         "cms/roles.html",
         "cms/activities.html",

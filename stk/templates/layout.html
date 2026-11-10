@@ -297,7 +297,14 @@
 </script>
 {% endblock %}
 
-{% block js %}{% endblock %}
+{# A page with no script of its own (an error page) still has to mount, or v-cloak hides it. #}
+{% block js %}
+<script>
+    const app = Vue.createApp({mixins: [layoutMixin], delimiters: config.delimiters});
+    registerStkComponents(app);
+    app.use(Vuetify.createVuetify(config.vuetifyConfig)).mount('#app');
+</script>
+{% endblock %}
 
 <!-- Prefetch same-origin links on hover (Chrome). Skip mutating/auth routes. -->
 <script type="speculationrules">

@@ -4,8 +4,10 @@ import unittest
 
 from quart import url_for
 
+import stk.extensions as ext
 from stk.app import Stk
 from stk.settings import TestingConfig
+from stk.user.models import Base
 
 
 class StaticVersioningTests(unittest.IsolatedAsyncioTestCase):
@@ -37,6 +39,10 @@ class StaticVersioningTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_errors_and_session_cookies_are_never_cached_publicly(self):
         app = Stk(__name__, config=TestingConfig)
+        # Without tables the stale login raises instead of being cleared.
+        async with ext.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        self.addAsyncCleanup(ext.engine.dispose)
         client = app.test_client()
         missing = await client.get("/static/missing.css?v=1")
         self.assertEqual(missing.status_code, 404)

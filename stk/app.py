@@ -379,8 +379,13 @@ def register_errorhandlers(app):
                 if code == 500
                 else getattr(error, "description", "Request failed")
             }, code
-        # Fall back to 500.html for codes without a dedicated template (405, 403, ...)
-        return await render_template([f"{code}.html", "500.html"]), code
+        # Codes without a template of their own (400, 403, 405, ...) say what they are.
+        return await render_template(
+            [f"{code}.html", "error.html"],
+            code=code,
+            name=getattr(error, "name", ""),
+            description=getattr(error, "description", ""),
+        ), code
 
     async def render_error(error):
         error_code = getattr(error, "code", 500)

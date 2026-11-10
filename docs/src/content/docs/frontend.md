@@ -39,7 +39,7 @@ app.use(vuetify).mount("#app");
 {% endblock %}
 ```
 
-The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. Page templates fill `{% block content %}` and never redefine it.
+The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. Page templates fill `{% block content %}` and never redefine it. A page that defines no `{% block js %}` gets the layout's default, which mounts the bare shell; that is how the error pages render: `401.html`, `404.html` and `500.html`, plus `error.html` for every other status, which shows the code and its description. An app overrides one by path, or adds its own `<code>.html`. A page's own `js` block replaces the default, so it must mount `#app` itself.
 
 ## Rules that fail silently
 
