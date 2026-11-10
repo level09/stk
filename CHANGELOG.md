@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.11.0 (2026-11-10)
+
+No migration required. An app that added its own default `js` block to mount error pages, or its own 400 handler for stale form tokens, can drop both.
+
+- Error pages render. `layout.html` now mounts the bare shell when a page defines no `js` block; before, such a page never mounted and `v-cloak` hid everything but the logo. `404.html` now extends the layout like `401.html` and `500.html`.
+- A status without its own page (400, 403, 405 and the rest) renders the new `error.html` with its code and description, instead of `500.html` and its "something went wrong on our system". An app overrides `error.html` by path or adds its own `<code>.html`.
+- A browser form sent with a missing or stale CSRF token, typically from a page left open while the session changed, is no longer a dead end. stk flashes "That page had expired. Nothing was sent; please try again." and redirects (303) to the page the form was on, never off the site. Requests under `/api/`, requests that prefer JSON, and JSON bodies still get 400 `Invalid CSRF token`.
+
 ## v17.10.0 (2026-11-05)
 
 No migration required.
