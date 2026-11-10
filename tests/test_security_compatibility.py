@@ -54,6 +54,45 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         async with client.session_transaction() as cookie:
             return dict(cookie)
 
+    async def test_expired_form_returns_to_its_page_and_then_works(self):
+        client = self.app.test_client()
+        form = {"email": "user@example.com", "password": "TestPassword123!"}
+        await client.get("/login")
+        stale = await client.post("/login", form={**form, "csrf_token": "old"})
+        self.assertEqual(stale.status_code, 303)
+        self.assertEqual(stale.headers["Location"], "/login")
+        page = await (await client.get("/login")).get_data(as_text=True)
+        self.assertIn("That page had expired", page)
+        async with client.session_transaction() as cookie:
+            form["csrf_token"] = cookie["_csrf_token"]
+        self.assertEqual((await client.post("/login", form=form)).status_code, 302)
+
+    async def test_expired_form_never_redirects_off_site(self):
+        client = self.app.test_client()
+        stale = {"form": {"csrf_token": "old"}}
+        for referer, path, target in (
+            ("https://elsewhere.example/steal", "/login", "/login"),
+            ("http://localhost//evil.example", "/login", "/evil.example"),
+            ("http://localhost/todo?x=1", "/logout", "/todo"),
+            (None, "//evil.example", "/evil.example"),
+        ):
+            headers = {"Referer": referer} if referer else {}
+            response = await client.post(path, headers=headers, **stale)
+            self.assertEqual(response.status_code, 303, (referer, path))
+            self.assertEqual(response.headers["Location"], target)
+        # Scripts keep the plain 400: an API path, a JSON Accept, a JSON body.
+        for path, kwargs in (
+            ("/api/users", stale),
+            ("/login", {**stale, "headers": {"Accept": "application/json"}}),
+        ):
+            response = await client.post(path, **kwargs)
+            self.assertEqual(response.status_code, 400, path)
+            self.assertEqual(
+                (await response.get_json())["message"], "Invalid CSRF token"
+            )
+        response = await client.post("/login", json={"csrf_token": "old"})
+        self.assertEqual(response.status_code, 400)
+
     async def test_emails_are_stored_lowercase_and_matched_regardless_of_case(self):
         self.assertEqual(User(email="  New@Example.COM ").email, "new@example.com")
         # A row stored before normalization keeps its case; lookups still find it.

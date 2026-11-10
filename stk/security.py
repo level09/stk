@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from quart import abort, current_app, g, request, session
+from quart import abort, current_app, flash, g, redirect, request, session
 from quart_security import SecurityState, current_user
 from quart_security.breach import password_is_breached
 from quart_security.password import validate_password
@@ -52,7 +52,24 @@ def register_security_controls(app):
                 or not isinstance(supplied, str)
                 or not secrets.compare_digest(expected, supplied)
             ):
-                abort(400, description="Invalid CSRF token")
+                # A form a person sent from a page left open while the session
+                # changed: hand the page back with a fresh token. Scripts and API
+                # callers keep the plain 400.
+                if (
+                    request.mimetype
+                    not in {"application/x-www-form-urlencoded", "multipart/form-data"}
+                    or request.path.startswith("/api/")
+                    or request.accept_mimetypes.best == "application/json"
+                ):
+                    abort(400, description="Invalid CSRF token")
+                await flash(
+                    "That page had expired. Nothing was sent; please try again.",
+                    "warning",
+                )
+                # Back to the page the form was on, never off this site.
+                came = urlsplit(request.referrer or "")
+                back = came.path if came.netloc == request.host else request.path
+                return redirect("/" + back.lstrip("/"), 303)
             if request.path.startswith("/api/") and request.method in {
                 "POST",
                 "PUT",

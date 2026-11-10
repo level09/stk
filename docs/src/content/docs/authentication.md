@@ -86,6 +86,8 @@ async def before_request():
 
 Every POST, PUT, PATCH, and DELETE request needs the session CSRF token, in a form field or the `X-CSRFToken` header. The shared layout configures Axios for you. Third-party webhooks that have no session can opt out per view with `csrf_exempt` from `stk.security`, placed under the route decorator; such a view must authenticate the caller itself, for example with an HMAC signature.
 
+A browser form sent with a missing or stale token, typically from a page left open while the session changed, is not answered with an error page. stk flashes "That page had expired. Nothing was sent; please try again." and redirects (303) to the page the form was on, which carries a fresh token. The target is the path of a same-host `Referer`, otherwise the form's own path, never another site. Requests under `/api/`, requests that prefer JSON, and JSON bodies still get 400 `Invalid CSRF token`.
+
 Logout is POST-only. Use `layoutMixin.logout()`; a plain link to `/logout` returns 405.
 
 ## Sessions and rate limits
