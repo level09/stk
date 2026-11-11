@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.11.1 (2026-11-11)
+
+No migration required. An app that set `dns_opt: ["no-aaaa"]` on its containers to work around this can keep or drop it.
+
+- `netguard` fetches reach hosts that have both IPv4 and IPv6 addresses from a machine without an IPv6 route, such as a container on a default Docker network. `pin` chose the address to connect to by text order, so `2600:...` won over `3.167...` and every fetch failed with "All connection attempts failed". It now connects to an IPv4 address when the host has one. Every resolved address must still be public.
+
 ## v17.11.0 (2026-11-10)
 
 No migration required. An app that added its own default `js` block to mount error pages, or its own 400 handler for stale form tokens, can drop both.
