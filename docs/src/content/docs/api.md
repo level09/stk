@@ -124,7 +124,7 @@ async with stream(url, timeout=60, max_bytes=50_000_000) as (response, final_url
 
 `timeout` covers reading the body inside the block too. `max_bytes` (no cap by default) makes any read raise `Blocked` once more decoded bytes than that arrive. With `follow_redirects=False` a redirect is yielded as is instead of followed.
 
-`pin(url)` runs the same checks without fetching and returns `(url with the checked IP, Host header, TLS server name)`. Use it to vet a URL that another client, such as a headless browser, is about to open.
+`pin(url)` runs the same checks without fetching and returns `(url with the checked IP, Host header, TLS server name)`. Use it to vet a URL that another client, such as a headless browser, is about to open. When a host has both IPv4 and IPv6 addresses, all of them must be public and the connection goes to an IPv4 one, because a host without an IPv6 route (a default Docker network) still resolves AAAA records.
 
 ## File uploads
 

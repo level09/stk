@@ -205,6 +205,18 @@ class NetguardTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(Blocked):
                 await pin("https://inside.test/")
 
+    async def test_dual_stack_host_is_pinned_to_ipv4(self):
+        # "2600:..." sorts before "3...." as text; a container without an IPv6
+        # route could then reach nothing.
+        with resolver({"dual.test": ["2600:9000::1", "3.167.227.58"]}):
+            self.assertEqual(
+                (await pin("https://dual.test/"))[0], "https://3.167.227.58/"
+            )
+        with resolver({"six.test": ["2600:9000::1"]}):
+            self.assertEqual(
+                (await pin("https://six.test/"))[0], "https://[2600:9000::1]/"
+            )
+
     async def test_stream_yields_the_body_unread_and_caps_streamed_bytes(self):
         async def body():
             for _ in range(10):

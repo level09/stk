@@ -83,7 +83,10 @@ async def pin(url: str) -> tuple[str, str, str]:
         raise Blocked(f"host does not resolve: {host}") from exc
     if not addrs or not all(_public(a) for a in addrs):
         raise Blocked(f"host resolves to a non-public address: {host}")
-    ip = addrs[0]
+    # ponytail: IPv4 first, since a host without an IPv6 route (a default Docker
+    # network) still resolves AAAA records. Try each address in turn if an
+    # IPv6-only host ever has to reach a dual-stack one.
+    ip = min(addrs, key=lambda a: (":" in a, a))
     netloc = f"[{ip}]" if ":" in ip else ip
     host_header = f"[{host}]" if ":" in host else host
     if port:
