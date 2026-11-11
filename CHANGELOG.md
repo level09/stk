@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.12.0 (2026-11-11)
+
+No migration required. A test that patched the private `netguard._resolve` patches `netguard.resolve` instead; the old name is gone, so such a test fails with `AttributeError` until it is renamed.
+
+- `stk.utils.netguard.resolve(host, port)` is public: the one place `fetch`, `stream` and `pin` look up addresses. Tests patch it to fake DNS without reaching into a private name.
+
 ## v17.11.2 (2026-11-11)
 
 No migration required.
