@@ -16,7 +16,7 @@ def resolver(table):
     async def resolve(host, port):
         return table[host]
 
-    return mock.patch.object(netguard, "_resolve", resolve)
+    return mock.patch.object(netguard, "resolve", resolve)
 
 
 class NetguardTests(unittest.IsolatedAsyncioTestCase):
@@ -192,7 +192,7 @@ class NetguardTests(unittest.IsolatedAsyncioTestCase):
         async def slow(host, port):
             await netguard.asyncio.sleep(1)
 
-        with mock.patch.object(netguard, "_resolve", slow):
+        with mock.patch.object(netguard, "resolve", slow):
             with self.assertRaises(TimeoutError):
                 await fetch("https://slow.example.com/", timeout=0.05)
 

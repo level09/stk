@@ -19,7 +19,8 @@ class Blocked(Exception):
     """The fetch was refused: the URL, an address, a redirect or the body size."""
 
 
-async def _resolve(host: str, port: int) -> list[str]:
+async def resolve(host: str, port: int) -> list[str]:
+    """The addresses `host` resolves to. Tests patch this to fake DNS."""
     infos = await asyncio.get_running_loop().getaddrinfo(
         host, port, type=socket.SOCK_STREAM
     )
@@ -78,7 +79,7 @@ async def pin(url: str) -> tuple[str, str, str]:
     except ValueError:
         raise Blocked(f"non-canonical IP literal: {host}") from None
     try:
-        addrs = await _resolve(host, port or (443 if parts.scheme == "https" else 80))
+        addrs = await resolve(host, port or (443 if parts.scheme == "https" else 80))
     except (socket.gaierror, UnicodeError) as exc:
         raise Blocked(f"host does not resolve: {host}") from exc
     if not addrs or not all(_public(a) for a in addrs):
