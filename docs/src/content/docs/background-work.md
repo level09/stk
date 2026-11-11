@@ -68,7 +68,9 @@ The bell and the `/api/notifications` routes are opt-in: add `stk.notification` 
 ```python
 from stk.notification import notify
 
-await notify(user.id, "Export ready", link="/exports/3", kind="export", body="March invoices")
+await notify(
+    user.id, "Export ready", link="/exports/3", kind="export", body="March invoices"
+)
 ```
 
 Only `user_id` and `title` are required. `link` must be a same-origin path (`/exports/3`); anything else raises `ValueError`, because the bell navigates to it. `kind` is a free label for your own filtering. Pass `session=` to make the notification part of your transaction: it is stored and pushed when you commit, and dropped if you roll back. Without it, `notify` commits on its own session, so call it after your own commit. It reaches open sockets the same way from a request, a durable job in `stk worker`, or `stk shell`.
@@ -92,7 +94,9 @@ Signed-in pages connect to `/ws` automatically through `layoutMixin`. Push a mes
 from stk.websocket import broadcast
 
 await broadcast({"type": "progress", "done": 40}, user_id=user.id)
-await broadcast({"type": "saved"}, user_id=user.id, session=g.db_session)  # sent at commit
+await broadcast(
+    {"type": "saved"}, user_id=user.id, session=g.db_session
+)  # sent at commit
 ```
 
 There is no broadcast-to-everyone: every message names its recipient. `{type: 'notification'}` messages go to the bell; override `_onWsMessage(msg)` in your page's methods for your own types. `Activity.register()` stores audit events and does not broadcast.
