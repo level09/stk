@@ -3,10 +3,10 @@
 # committed. Bump a version here, run this, then run `uv run quart smoke`.
 set -euo pipefail
 
-VUE_VERSION="3.5.44"
-VUETIFY_VERSION="4.3.1"
-AXIOS_VERSION="1.21.0"
-TABLER_VERSION="3.50.0"
+VUE_VERSION="3.5.45"
+VUETIFY_VERSION="4.3.3"
+AXIOS_VERSION="1.21.1"
+TABLER_VERSION="3.51.0"
 
 cd "$(dirname "$0")"
 STATIC="stk/static"

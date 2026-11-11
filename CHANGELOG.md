@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.11.2 (2026-11-11)
+
+No migration required.
+
+- Vendored Vue 3.5.45, Vuetify 4.3.3, axios 1.21.1 and Tabler icons 3.51.0.
+
 ## v17.11.1 (2026-11-11)
 
 No migration required. An app that set `dns_opt: ["no-aaaa"]` on its containers to work around this can keep or drop it.
