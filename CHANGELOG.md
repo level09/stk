@@ -5,6 +5,7 @@
 No migration required. An app that answered 401 to background GETs of `/login` to work around this can drop that hook.
 
 - Requires quart-security 2.2.1. A signed-out request that is not a page visit, such as an EventSource or XHR that outlived its session, gets 401 instead of a redirect to `/login?next=`. Before, the login form kept that request's URL, and the next person to sign in landed on it instead of their page.
+- Locks dnspython 2.9.2 (GHSA-vvf4-9x63-8xvv, excessive memory and CPU use).
 
 ## v17.12.0 (2026-11-11)
 
