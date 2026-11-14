@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.12.1 (2026-11-14)
+
+No migration required. An app that answered 401 to background GETs of `/login` to work around this can drop that hook.
+
+- Requires quart-security 2.2.1. A signed-out request that is not a page visit, such as an EventSource or XHR that outlived its session, gets 401 instead of a redirect to `/login?next=`. Before, the login form kept that request's URL, and the next person to sign in landed on it instead of their page.
+
 ## v17.12.0 (2026-11-11)
 
 No migration required. A test that patched the private `netguard._resolve` patches `netguard.resolve` instead; the old name is gone, so such a test fails with `AttributeError` until it is renamed.

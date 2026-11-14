@@ -54,6 +54,28 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         async with client.session_transaction() as cookie:
             return dict(cookie)
 
+    async def test_a_background_request_never_sets_where_sign_in_goes(self):
+        # The form is open while a stale stream in another tab reconnects.
+        client = self.app.test_client()
+        await client.get("/login")
+        async with client.session_transaction() as cookie:
+            csrf = cookie["_csrf_token"]
+        stale = await client.get(
+            "/dashboard/",
+            headers={"Sec-Fetch-Mode": "cors", "Accept": "text/event-stream"},
+            follow_redirects=True,
+        )
+        self.assertEqual(stale.status_code, 401)
+        response = await client.post(
+            "/login",
+            form={
+                "email": "user@example.com",
+                "password": "TestPassword123!",
+                "csrf_token": csrf,
+            },
+        )
+        self.assertNotEqual(response.headers["Location"], "/dashboard/")
+
     async def test_expired_form_returns_to_its_page_and_then_works(self):
         client = self.app.test_client()
         form = {"email": "user@example.com", "password": "TestPassword123!"}
