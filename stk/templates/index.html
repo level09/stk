@@ -11,19 +11,12 @@
                     An async Python framework for building web applications, on Quart.
                 </p>
 
-                {% if current_user.is_authenticated %}
-                <v-btn color="primary" size="large" href="/dashboard">
-                    <template v-slot:prepend><i class="ti ti-layout-dashboard"></i></template>
-                    Go to Dashboard
-                </v-btn>
-                {% else %}
                 <v-btn color="primary" size="large" href="/register">
                     Get Started
                 </v-btn>
                 <div class="mt-4 text-body-medium text-medium-emphasis">
                     Already have an account? <a href="/login" class="text-primary">Sign in</a>
                 </div>
-                {% endif %}
             </v-col>
         </v-row>
     </v-container>

@@ -29,6 +29,7 @@ import stk.extensions as ext
 from stk.agent_login import agent_login_enabled, bp_agent_login
 from stk.extensions import session
 from stk.portal.views import portal
+from stk.public.views import index as public_index
 from stk.public.views import public
 from stk.settings import Config
 from stk.user.forms import ExtendedRegisterForm, OAuthAwareChangePasswordForm
@@ -84,6 +85,11 @@ class Stk(Quart):
             if importlib.util.find_spec(f"{module.__name__}.models"):
                 importlib.import_module(f"{module.__name__}.models")
             module.init_app(self)
+
+        # An app's own "/" route wins; stk's landing page answers only without one.
+        if not any(rule.rule == "/" for rule in self.url_map.iter_rules()):
+            view = self.view_functions.get("public.index", public_index)
+            self.add_url_rule("/", "public.index", view)
 
     @functools.cached_property
     def jinja_loader(self):

@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.13.0 (2026-11-14)
+
+No migration required. An app that set `SECURITY_POST_LOGIN_VIEW` keeps its value. An app that replaced the landing page with `app.view_functions["public.index"] = home` keeps working, and can register its own `/` route instead.
+
+- An extension's own route for `/` replaces stk's landing page. stk adds its landing page after the app's extensions, only when none claims `/`; before, stk's route always won and an app had to swap the view function.
+- Sign-in lands on `/` instead of `/dashboard`, so an app that owns `/` sends its members to its own home without also setting `SECURITY_POST_LOGIN_VIEW`. stk's landing page sends a signed-in user on to `/dashboard/`, so a default app behaves as before.
+- OAuth sign-in follows `next` and `SECURITY_POST_LOGIN_VIEW` like password sign-in. It went to `/dashboard` regardless.
+
 ## v17.12.1 (2026-11-14)
 
 No migration required. An app that answered 401 to background GETs of `/login` to work around this can drop that hook.

@@ -51,6 +51,8 @@ See [Renaming Your App](/branding).
 | `SECURITY_CONFIRMABLE` | `True` | Self-registered accounts sign in only after opening the emailed link. With sign-up on, startup fails without `MAIL_SERVER` and `STK_PUBLIC_URL`. |
 | `SECURITY_RECOVERABLE` | auto | Password reset by email at `/reset`. Unset, it is on once `MAIL_SERVER` and `STK_PUBLIC_URL` are both set. |
 | `SECURITY_TOTP_ENCRYPTION_KEYS` | unset | Comma-separated Fernet keys, newest first, for TOTP seeds. Rotate with `stk protect-mfa`. |
+| `SECURITY_POST_LOGIN_VIEW` | `/` | Where sign-in lands when no `next` page asked for one, for passwords, 2FA, passkeys and OAuth. `/` routes a member onward, so most apps leave it. |
+| `SECURITY_POST_CONFIRM_VIEW` | `/` | Where opening the email confirmation link lands. |
 | `SECURITY_WAN_RP_ID` | unset | Passkey relying party: your bare DNS name. |
 | `SECURITY_WAN_EXPECTED_ORIGIN` | unset | Passkey origin: your HTTPS origin. |
 | `SESSION_COOKIE_SECURE` | `True` | Set `False` only for local HTTP; under plain HTTP a secure cookie breaks login. |

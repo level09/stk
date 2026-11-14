@@ -172,6 +172,15 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
         async with ext.async_session_factory() as db:
             self.assertIsNone(await db.scalar(select(OAuth)))
 
+    async def test_linked_oauth_lands_where_password_sign_in_does(self):
+        async with ext.async_session_factory() as db:
+            user = await db.get(User, self.user_id)
+            db.add(OAuth(provider="google", provider_user_id="fixture", user=user))
+            await db.commit()
+        self.app.config["SECURITY_POST_LOGIN_VIEW"] = "/todo"
+        response = await self.app.test_client().get("/_fixture/oauth?verified=true")
+        self.assertEqual(response.headers["Location"], "/todo")
+
     async def test_oauth_rejects_unverified_email(self):
         client = self.app.test_client()
         await client.get("/_fixture/oauth")

@@ -128,16 +128,20 @@ It also holds the models (`stk/user/models.py`) and the auth signal handlers tha
 
 Unauthenticated routes: the landing page, `/health`, `robots.txt`, and the Google and GitHub OAuth callbacks.
 
+Sign-in lands on `/`, and `/` decides where a signed-in user belongs. stk's landing page renders `index.html` for visitors and sends a signed-in user to `/dashboard/`.
+
+To change the landing page, override `index.html` in your app. To answer `/` with something else, such as your app's home for members and sign-in for everyone else, register your own route for `/` in an extension. stk adds its landing page only when no extension claims `/`:
+
 ```python
-public = Blueprint("public", __name__, static_folder="../static")
+home = Blueprint("home", __name__)
 
 
-@public.route("/")
+@home.get("/")
 async def index():
-    return await render_template("index.html")
+    return redirect("/todo" if current_user.is_authenticated else "/login")
 ```
 
-To change the landing page, override `index.html` in your app. To answer `/` with something else, such as a redirect to your app's home or to sign-in, replace the view in an extension's `init_app`: `app.view_functions["public.index"] = home`. `stk verify` follows redirects from `/` and checks that the page it lands on answers 200.
+`stk verify` follows redirects from `/` and checks that the page it lands on answers 200.
 
 To add a module of your own, run `uv run stk new <module>`. It writes an extension into your app package (blueprint, model, template, sidebar entry), adds it to `extensions`, generates and applies its migration, and ends at a URL you can open.
 

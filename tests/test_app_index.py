@@ -2,19 +2,42 @@
 
 import contextlib
 import io
+import sys
+import tempfile
 import unittest
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
-from quart import redirect
+from quart import Blueprint, redirect
 
 from stk import checks
 from stk.app import Stk
-from stk.checks import check_http_index
+from stk.checks import check_http_index, check_unique_routes
 from stk.cli.main import _app_sections
 from stk.settings import TestingConfig
 
 
 class AppIndexTest(unittest.IsolatedAsyncioTestCase):
+    async def test_an_extension_route_for_slash_replaces_the_landing_page(self):
+        home = Blueprint("home", __name__)
+
+        @home.get("/")
+        async def own_home():
+            return "own home"
+
+        module = ModuleType("own_home_ext")
+        module.init_app = lambda app: app.register_blueprint(home)
+        with tempfile.TemporaryDirectory() as path:
+            module.__path__ = [path]
+            sys.modules[module.__name__] = module
+            try:
+                app = Stk(__name__, config=TestingConfig, extensions=[module])
+            finally:
+                del sys.modules[module.__name__]
+        response = await app.test_client().get("/")
+        self.assertEqual(await response.get_data(as_text=True), "own home")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertTrue(await check_unique_routes(app))
+
     async def test_index_can_be_replaced_and_a_redirect_passes_the_check(self):
         app = Stk(__name__, config=TestingConfig)
 

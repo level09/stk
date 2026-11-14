@@ -46,8 +46,9 @@ class Config:
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT")
     # quart-security handles email normalization internally
 
-    SECURITY_POST_LOGIN_VIEW = "/dashboard"
-    SECURITY_POST_CONFIRM_VIEW = "/dashboard"
+    # Sign-in goes home; "/" decides where a signed-in user belongs.
+    SECURITY_POST_LOGIN_VIEW = "/"
+    SECURITY_POST_CONFIRM_VIEW = "/"
     SECURITY_POST_REGISTER_VIEW = "/login"
 
     SECURITY_MULTI_FACTOR_RECOVERY_CODES = True

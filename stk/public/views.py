@@ -20,6 +20,7 @@ from quart import (
 )
 from quart_security import current_user
 from quart_security.proxies import _security
+from quart_security.views import _complete_login
 from sqlalchemy import select
 
 from stk.user.models import OAuth, User
@@ -80,8 +81,10 @@ async def health():
     return status, code
 
 
-@public.route("/")
 async def index():
+    # Registered by Stk after the app's extensions, only when none claims "/".
+    if current_user.is_authenticated:
+        return redirect(url_for("portal.dashboard"))
     return await render_template("index.html")
 
 
@@ -159,8 +162,7 @@ async def handle_oauth_callback(provider_name, token, user_info):
             {"user_id": user.get_id()}, ttl=300
         )
         return redirect(url_for("security.two_factor_token_validation"))
-    await _security.login_user(user)
-    return redirect(url_for("portal.dashboard"))
+    return await _complete_login(user)
 
 
 def get_google_client():

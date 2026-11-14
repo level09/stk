@@ -54,6 +54,22 @@ class SecurityCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         async with client.session_transaction() as cookie:
             return dict(cookie)
 
+    async def test_sign_in_goes_home_and_home_sends_a_member_to_the_dashboard(self):
+        client = self.app.test_client()
+        await client.get("/login")
+        async with client.session_transaction() as cookie:
+            csrf = cookie["_csrf_token"]
+        response = await client.post(
+            "/login",
+            form={
+                "email": "user@example.com",
+                "password": "TestPassword123!",
+                "csrf_token": csrf,
+            },
+        )
+        self.assertEqual(response.headers["Location"], "/")
+        self.assertEqual((await client.get("/")).headers["Location"], "/dashboard/")
+
     async def test_a_background_request_never_sets_where_sign_in_goes(self):
         # The form is open while a stale stream in another tab reconnects.
         client = self.app.test_client()
