@@ -44,8 +44,8 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             form={"email": email, "password": "Password123!", "csrf_token": token},
         )
         self.assertEqual(response.status_code, 302)
-        # Login rotates the CSRF token.
-        await client.get("/login")
+        # Login rotates the CSRF token; any signed-in page issues the new one.
+        await client.get("/dashboard/")
         async with client.session_transaction() as cookie:
             client.headers = {"X-CSRFToken": cookie["_csrf_token"]}
         return client

@@ -111,7 +111,9 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
         await ext.engine.dispose()
 
     async def csrf(self, client, path="/login"):
-        await client.get(path)
+        # A signed-in visit to /login redirects; following it reaches a page
+        # that issues the token.
+        await client.get(path, follow_redirects=True)
         async with client.session_transaction() as cookie:
             return cookie["_csrf_token"]
 

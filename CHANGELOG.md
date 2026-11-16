@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.13.1 (2026-11-16)
+
+No migration required.
+
+- Requires quart-security 2.3.0. A signed-in user who opens `/login` is sent to the safe `next` target or the post-login view instead of seeing the form, as Devise and Flask-Security do. A form posted after its session expired goes to plain `/login`; before, its POST URL became `next` and sign-in landed there as a GET.
+
 ## v17.13.0 (2026-11-14)
 
 No migration required. An app that set `SECURITY_POST_LOGIN_VIEW` keeps its value. An app that replaced the landing page with `app.view_functions["public.index"] = home` keeps working, and can register its own `/` route instead.
