@@ -7,10 +7,20 @@ on:
 env:
   SECRET_KEY: ci-only-secret-key-not-for-production
   SECURITY_PASSWORD_SALT: ci-only-password-salt-not-for-production
+  # Production on PostgreSQL? Check on it too: with no URL here, every check and
+  # smoke run uses SQLite, and a Postgres-only query passes CI and fails in production.
+  # Uncomment this, the `services:` block below, and use `uv sync --extra full`.
+  # SQLALCHEMY_DATABASE_URI: postgresql+asyncpg://ci:ci@localhost:5432/ci
 
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # services:
+    #   postgres:
+    #     image: postgres:17
+    #     env: {POSTGRES_USER: ci, POSTGRES_PASSWORD: ci, POSTGRES_DB: ci}
+    #     ports: ["5432:5432"]
+    #     options: --health-cmd pg_isready --health-interval 5s --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v9.0.0

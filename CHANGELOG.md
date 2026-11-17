@@ -1,5 +1,16 @@
 # Changelog
 
+## v17.15.0 (2026-11-17)
+
+No migration required, but `stk verify` may now fail on an app that passed before. Each failure names a real problem: fix the file and line it prints. An app that uses MD2 classes such as `text-caption` or `text-body-1` gets one line per use; replace them with the MD3 names in the frontend docs (`text-body-small`, `text-body-large`).
+
+- `stk verify` fails on the frontend rules that fail silently: MD2 type classes (Vuetify 4 applies no style for them), MDI icons, Composition API `setup()`, and a `<script>` inside `{% block content %}`. It scans the app's templates and its own static JS.
+- `stk verify` reports `incomplete` and exits 1 when a check could not run, such as ruff when it is not installed. It reported `passed` before.
+- `stk smoke` fails a page that returned 200 but never rendered: Vue did not mount (`v-cloak` still hides it), or nothing visible was drawn. A page smoke could not measure fails too.
+- stk's own tests drive real Chromium through broken and healthy pages, so a smoke check that stops detecting its failure turns the suite red.
+- The generated CI workflow carries a commented Postgres service: an app on PostgreSQL that leaves `SQLALCHEMY_DATABASE_URI` unset in CI checks everything on SQLite.
+- The repair agent can no longer edit anything that grades it: smoke, verify, migration drift, and the tests are protected paths, pinned by a test.
+
 ## v17.14.1 (2026-11-17)
 
 No migration required. An app that restarted its dev server after every template edit can stop.

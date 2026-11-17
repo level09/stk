@@ -19,8 +19,9 @@ env:
   SECRET_KEY: test-secret-key-for-ci
   SECURITY_PASSWORD_SALT: test-salt-for-ci
   SECURITY_TOTP_SECRETS: test-totp-secret
-  # Paths only a human changes: the checks the agent is graded against, auth, and CI.
-  PROTECTED: '^(stk/checks\.py|stk/security\.py|stk/agent_login\.py|stk/user/|\.github/)'
+  # Paths only a human changes: everything that grades the agent (checks, verify,
+  # smoke, migration drift, the tests), auth, and CI. New migrations stay open.
+  PROTECTED: '^(stk/checks\.py|stk/cli/(smoke|reports|copy_rules|watch|database)\.py|stk/migrations/(__init__|env)\.py|tests/|stk/security\.py|stk/agent_login\.py|stk/user/|\.github/)'
 
 jobs:
   repair:
@@ -61,10 +62,12 @@ jobs:
             change. For an advisory, raise the dependency floor past the fixed version
             in pyproject.toml and relock.
 
-            Never edit stk/checks.py, stk/security.py, stk/agent_login.py, stk/user/,
-            or .github/, and never weaken or delete a test to make it pass. If a
-            failure can only be fixed there, change nothing for it and say so in the
-            description.
+            Never edit what grades you: stk/checks.py, stk/cli/smoke.py,
+            stk/cli/reports.py, stk/cli/copy_rules.py, stk/cli/watch.py,
+            stk/cli/database.py, stk/migrations/__init__.py, stk/migrations/env.py,
+            or tests/. Never edit stk/security.py, stk/agent_login.py, stk/user/, or
+            .github/. If a failure can only be fixed there, change nothing for it and
+            say so in the description.
 
             Done means `uv run stk verify` and
             `uv run python -m unittest discover -s tests` both pass.

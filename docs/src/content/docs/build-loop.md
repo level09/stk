@@ -97,8 +97,10 @@ uv run stk smoke
 Boots a throwaway app on a free port against a temporary database, drives Chromium
 through the home page, login, dashboard, and admin users page, then visits every other
 GET page that takes no URL arguments. It fails on any of: an HTTP status of 400 or
-above, a console or uncaught error, a failed request, or button, chip, and alert text
-below 3:1 contrast with its background. That last one catches the class of bug no
+above, a page that never rendered (Vue did not mount, so `v-cloak` still hides it, or
+nothing visible was drawn), a console or uncaught error, a failed request, or button,
+chip, and alert text below 3:1 contrast with its background. A page smoke could not
+measure fails too: an unmeasured page proves nothing. That last one catches the class of bug no
 console error ever reports. Each page leaves a full-page screenshot in `.stk/smoke/`,
 named after it (`dashboard.png`, `/monitor/runs` as `monitor-runs.png`), and each run
 clears the last run's. The signed-in pages then run again in the dark theme, with the
@@ -161,7 +163,7 @@ uv run stk verify && uv run stk smoke
 uv run stk report          # docs/stk-report.html: routes, auth, gate results
 ```
 
-`stk verify` runs ruff, the sanity checks in `stk/checks.py` against your app, and migration drift, and exits `1` if any fail.
+`stk verify` runs ruff, the sanity checks in `stk/checks.py` against your app, and migration drift, and exits `1` if any fail. A check that could not run, such as ruff when it is not installed, leaves the run `incomplete` and also exits `1`: a check that never ran proves nothing. The sanity checks include the frontend rules that fail silently: MD2 type classes, MDI icons, Composition API `setup()`, and a `<script>` inside `{% block content %}`, each named with its file and line.
 Each failure prints its reason and a remedy. In `stk verify --json`, the `checks` entry
 also carries `results`: one `{name, status, detail}` per sanity check, so a tool or agent
 reads which check failed and why without parsing text.

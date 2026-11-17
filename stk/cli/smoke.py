@@ -86,6 +86,24 @@ _CONTRAST_TEMPLATE = """() => {
 CONTRAST_JS = _CONTRAST_TEMPLATE.replace("__MIN_RATIO__", str(MIN_CONTRAST_RATIO))
 
 
+# A 200 with no console error can still be a blank page: Vue never mounted
+# (v-cloak still hides #app) or nothing visible was drawn.
+RENDER_JS = """() => ({
+  cloaked: document.querySelectorAll('[v-cloak]').length,
+  chars: document.body ? document.body.innerText.trim().length : 0,
+})"""
+
+
+def _render_problems(render):
+    if render is None:
+        return ["smoke could not tell whether the page rendered"]
+    if render["cloaked"]:
+        return ["page never rendered: Vue did not mount, v-cloak still hides it"]
+    if not render["chars"]:
+        return ["page is blank: no visible text"]
+    return []
+
+
 FIXED_SMOKE_PATHS = ("/", "/login", "/dashboard/", "/users/")
 # Prefixes that are not pages, or whose GET starts an auth flow or redirect
 # (OAuth logins, agent login).
@@ -136,6 +154,8 @@ def build_smoke_report(pages, dashboard_screenshot, copy_allow=()):
             problems.append("no document response")
         elif status_code >= 400:
             problems.append(f"HTTP {status_code}")
+        else:
+            problems.extend(_render_problems(page.get("render")))
 
         for entry in page.get("console", []):
             if entry["type"] == "error":
@@ -335,6 +355,7 @@ async def _visit_smoke_page(context, base_url, name, path):
     from playwright.async_api import Error as PlaywrightError
 
     try:
+        render = await page.evaluate(RENDER_JS)
         low_contrast = await page.evaluate(CONTRAST_JS)
         text = await page.evaluate(VISIBLE_TEXT_JS)
         rows = await page.evaluate(ROWS_JS)
@@ -343,7 +364,7 @@ async def _visit_smoke_page(context, base_url, name, path):
         console_entries.append(
             {"type": "pageerror", "text": f"smoke could not read the page: {exc}"}
         )
-        low_contrast, text, rows = [], "", []
+        render, low_contrast, text, rows = None, [], "", []
     shot = screenshot_path(name)
     # The folder starts empty each run, so a taken name is another page this run.
     for n in range(2, 100):
@@ -362,6 +383,7 @@ async def _visit_smoke_page(context, base_url, name, path):
         "name": name,
         "path": path,
         "status": response.status if response else None,
+        "render": render,
         "console": console_entries,
         "failed_requests": failed_requests,
         "low_contrast": low_contrast,

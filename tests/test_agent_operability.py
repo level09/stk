@@ -94,14 +94,15 @@ class AgentOperabilityTests(unittest.TestCase):
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["checks"][0]["results"], results)
 
-    def test_verify_report_allows_skipped_optional_checks(self):
+    def test_a_skipped_check_leaves_verify_incomplete_not_passed(self):
         report = build_verify_report(
             [("ruff", ["ruff", "check", "."])],
             runner=lambda command: (None, "", "ruff not installed"),
         )
 
-        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["status"], "incomplete")
         self.assertEqual(report["checks"][0]["status"], "skipped")
+        self.assertIn("uv sync --group dev", report["checks"][0]["remedy"])
 
     def test_command_runner_reports_missing_ruff_as_skipped(self):
         with patch("stk.cli.reports.subprocess.run") as run:
@@ -141,6 +142,7 @@ class AgentOperabilityTests(unittest.TestCase):
                     "name": "login",
                     "path": "/login",
                     "status": 200,
+                    "render": {"cloaked": 0, "chars": 120},
                     "console": [{"type": "warning", "text": "slow asset"}],
                     "failed_requests": [],
                 },
@@ -168,6 +170,24 @@ class AgentOperabilityTests(unittest.TestCase):
             report["pages"][1]["problems"],
         )
 
+    def test_smoke_report_fails_a_200_that_never_rendered(self):
+        """A clean 200 proves nothing about what the page shows."""
+
+        def problems(render):
+            page = {"name": "p", "path": "/p", "status": 200, "render": render}
+            report = build_smoke_report([page], ".stk/smoke/dashboard.png")
+            self.assertEqual(report["status"], "failed")
+            return report["pages"][0]["problems"]
+
+        self.assertIn(
+            "page never rendered: Vue did not mount, v-cloak still hides it",
+            problems({"cloaked": 1, "chars": 0}),
+        )
+        self.assertIn(
+            "page is blank: no visible text", problems({"cloaked": 0, "chars": 0})
+        )
+        self.assertIn("smoke could not tell whether the page rendered", problems(None))
+
     def test_smoke_report_fails_on_invisible_text(self):
         """Text the same colour as its background raises no console error."""
         report = build_smoke_report(
@@ -176,6 +196,7 @@ class AgentOperabilityTests(unittest.TestCase):
                     "name": "home",
                     "path": "/",
                     "status": 200,
+                    "render": {"cloaked": 0, "chars": 120},
                     "console": [],
                     "failed_requests": [],
                     "low_contrast": [

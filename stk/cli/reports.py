@@ -24,6 +24,10 @@ REMEDIES = {
 }
 
 
+# Apps get ruff from stkit[dev] in their dev group; stk's own checkout has an extra.
+SKIPPED_REMEDY = "uv sync --group dev in an app, uv sync --extra dev in stk itself"
+
+
 def _command_runner(command):
     try:
         result = subprocess.run(
@@ -226,16 +230,20 @@ def build_verify_report(commands=None, runner=_command_runner):
             else "failed",
             "stdout": stdout.strip(),
             "stderr": stderr.strip(),
-            "remedy": REMEDIES.get(name),
+            "remedy": SKIPPED_REMEDY if returncode is None else REMEDIES.get(name),
         }
         # Empty when the checks crashed before reporting; stderr then says why.
         if name == "checks" and stdout.strip():
             entry["results"] = json.loads(stdout)
         checks.append(entry)
+    # A check that never ran proves nothing, so it cannot make the whole run pass.
+    statuses = {check["status"] for check in checks}
     status = (
-        "passed"
-        if all(check["returncode"] in (0, None) for check in checks)
-        else "failed"
+        "failed"
+        if "failed" in statuses
+        else "incomplete"
+        if "skipped" in statuses
+        else "passed"
     )
     return {"status": status, "checks": checks}
 

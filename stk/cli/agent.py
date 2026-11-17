@@ -83,6 +83,11 @@ MARKERS = {"passed": "[green]✓[/]", "failed": "[red]✗[/]", "skipped": "[yell
 def _print_verify_report(report, detail_lines=5):
     for check in report["checks"]:
         console.print(f"{MARKERS[check['status']]} {check['name']}", highlight=False)
+        if check["status"] == "skipped":
+            console.print(
+                f"    [yellow]did not run: {check['stderr']}[/]", highlight=False
+            )
+            console.print(f"    [cyan]→ {check['remedy']}[/]", highlight=False)
         if check["status"] != "failed":
             continue
         if "results" in check:

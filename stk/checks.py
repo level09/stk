@@ -255,6 +255,56 @@ def check_vue_delimiters(app):
     )
 
 
+@check("Frontend follows the rules that fail silently")
+def check_frontend_rules(app):
+    # Each of these renders without an error and does nothing: Vuetify 4 has no MD2
+    # type classes, stk ships Tabler icons only, pages use the Options API, and Vue
+    # strips <script> tags inside #app. A green smoke run cannot see any of them.
+    import os
+    import re
+
+    class_attr = re.compile(r'\bclass="([^"]*)"')
+    md2 = re.compile(r"\btext-(h[1-6]|subtitle-[12]|body-[12]|caption|overline)\b")
+    mdi = re.compile(r"\bmdi-[a-z][\w-]*")
+    setup = re.compile(r"\bsetup\s*\(")
+    tags = re.compile(r"{%-?\s*(?:block\s+(\w+)|endblock\b)[^%]*%}|<script\b", re.I)
+
+    def findings(text):
+        line = lambda pos: text.count("\n", 0, pos) + 1  # noqa: E731
+        for attr in class_attr.finditer(text):
+            for name in md2.finditer(attr.group(1)):
+                yield line(attr.start()), f"MD2 class {name.group(0)} does nothing"
+        for icon in mdi.finditer(text):
+            yield line(icon.start()), f"MDI icon {icon.group(0)}: use Tabler ti ti-*"
+        for call in setup.finditer(text):
+            yield line(call.start()), "Composition API setup(): use the Options API"
+        blocks = []
+        for tag in tags.finditer(text):
+            if tag.group(0).lower().startswith("<script"):
+                if "content" in blocks:
+                    yield (
+                        line(tag.start()),
+                        "<script> in {% block content %}: move to js",
+                    )
+            elif tag.group(1):
+                blocks.append(tag.group(1))
+            elif blocks:
+                blocks.pop()
+
+    files = {path for folder in app.template_folders for path in folder.rglob("*.html")}
+    for folder in app.static_folders[:-1]:
+        files |= {p for p in folder.rglob("*.js") if not p.name.endswith(".min.js")}
+    problems = [
+        f"{os.path.relpath(path)}:{line}: {message}"
+        for path in sorted(files)
+        for line, message in findings(path.read_text(errors="ignore"))
+    ]
+    assert not problems, "\n    ".join(
+        [f"{len(problems)} silent frontend problem(s):", *problems[:20]]
+        + ([f"... and {len(problems) - 20} more"] if len(problems) > 20 else [])
+    )
+
+
 @check("Static assets exist")
 def check_static_assets(app):
     required = [

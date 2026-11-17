@@ -128,7 +128,7 @@ uv run stk db upgrade
 uv run stk install
 ```
 
-SQLite works with no configuration and lives in `instance/stk.db` beside the app package. For PostgreSQL, set `SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname`; the `postgresql://` scheme will not work. For Redis sessions, set `REDIS_URL`.
+SQLite works with no configuration and lives in `instance/stk.db` beside the app package. For PostgreSQL, set `SQLALCHEMY_DATABASE_URI=postgresql+asyncpg://user:password@localhost/dbname`; the `postgresql://` scheme will not work. Check on the database you deploy: an app's CI with no `SQLALCHEMY_DATABASE_URI` runs every check and smoke on SQLite, so a Postgres-only query passes CI and fails in production. The generated `.github/workflows/checks.yml` carries a commented Postgres service to turn on. For Redis sessions, set `REDIS_URL`.
 
 Run uvicorn under systemd, bound to localhost and trusting forwarded headers only from the local proxy. Its target is the `[tool.stk] app` value from the app's `pyproject.toml`:
 

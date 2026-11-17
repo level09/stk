@@ -63,7 +63,7 @@ The layout shell (app bar, navigation drawer, `v-main`) lives in `layout.html`. 
   | `text-caption` | `text-body-small` |
   | `text-overline` | `text-label-small` |
 
-  The font overrides in `stk/static/css/app.css` select on the MD3 names, so a stray MD2 class also loses the typeface.
+  The font overrides in `stk/static/css/app.css` select on the MD3 names, so a stray MD2 class also loses the typeface. `stk verify` names every MD2 class, MDI icon, `setup()` and `<script>` in `{% block content %}` it finds in your templates and static JS.
 - **No `<tbody>`/`<tr>` inside `<v-table>`** or another custom element. The browser parser moves the rows out before Vue mounts. Use `v-data-table`, a native `<table>`, or flex rows.
 - **Never ship the Vue development build.** Vue 3.5's production build loops forever on state mutated inside a computed, where the dev build only warns. That is why `filterNavByRole` in `stk/static/js/components/index.js` must stay pure.
 

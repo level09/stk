@@ -99,6 +99,7 @@ class SmokeCopyReportTests(unittest.TestCase):
             "name": "/invoices/",
             "path": "/invoices/",
             "status": 200,
+            "render": {"cloaked": 0, "chars": 120},
             "text": "Showing 1 items",
             "rows": [],
         }
