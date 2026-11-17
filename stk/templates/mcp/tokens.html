@@ -132,9 +132,12 @@
                         this.item = { name: '', scopes: [] };
                     })
                     .catch(err => {
-                        this.showSnack(err.response?.status === 401
-                            ? 'Sign in again to create a token'
-                            : err.response?.data?.message || 'Could not create the token');
+                        // Creating a token needs a recent sign-in; confirm it and come back.
+                        if (err.response?.status === 401) {
+                            window.location.href = '/verify?next=' + encodeURIComponent(location.pathname + location.search);
+                            return;
+                        }
+                        this.showSnack(err.response?.data?.message || 'Could not create the token');
                     });
             },
             copy() {

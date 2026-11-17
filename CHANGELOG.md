@@ -1,5 +1,13 @@
 # Changelog
 
+## v17.14.0 (2026-11-17)
+
+No migration required. An app that overrides `security/verify.html` styles the new page; otherwise stk's version is used.
+
+- Requires quart-security 2.4.0. A session older than an hour that opens Change Password, Two-Factor Auth, Recovery Codes or passkey settings goes to `/verify` to enter its password or use a passkey, then lands back on the page. Before, it got a bare 401 page. An OAuth-only user is offered a sign-out to sign in again.
+- Creating an agent token from a stale session sends the user to `/verify` and back to the tokens page, instead of a "sign in again" message.
+- A TOTP secret under 112 bits, which pyotp 2.12 refuses, fails like a wrong code and logs which user to reset, instead of a server error.
+
 ## v17.13.1 (2026-11-16)
 
 No migration required.

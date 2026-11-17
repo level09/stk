@@ -32,7 +32,7 @@ After 5 failed logins an account is locked for 15 minutes (quart-security's `SEC
 
 ## Two-factor and passkeys
 
-TOTP authenticator apps are the enabled second factor. Three single-use recovery codes are generated per user, hashed at rest, and shown only once. WebAuthn passkeys work as a first factor or as a second factor. Managing 2FA, recovery codes, or passkeys requires a fresh session: a login within the last 60 minutes, otherwise the request gets a 401.
+TOTP authenticator apps are the enabled second factor. Three single-use recovery codes are generated per user, hashed at rest, and shown only once. WebAuthn passkeys work as a first factor or as a second factor. Changing the password, managing 2FA, recovery codes or passkeys, and creating an MCP token require a fresh session: a sign-in within the last 60 minutes. An older session opening one of those pages goes to `/verify?next=<page>`, enters its password or uses a passkey, and lands back on the page. Wrong passwords there count toward the login lockout. A user with neither (OAuth only) is offered a sign-out to sign in again. An API call to a fresh-only endpoint gets 401; the token page answers it by sending the user to `/verify`.
 
 TOTP seeds are encrypted at rest. By default the key is derived from `SECRET_KEY`, so changing `SECRET_KEY` breaks existing 2FA unless you keep the old key. For independent rotation, set `SECURITY_TOTP_ENCRYPTION_KEYS` to a comma-separated list of Fernet keys, newest first:
 
