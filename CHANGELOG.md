@@ -28,7 +28,7 @@ No migration required. An app that overrides `security/verify.html` styles the n
 
 ## v17.13.1 (2026-11-16)
 
-No migration required.
+No migration required. A test that signs in and then GETs `/login` to read a fresh CSRF token gets a redirect and no token, so it fails with `KeyError: '_csrf_token'`: sign-in rotates the token, and a signed-in visit to `/login` now redirects without rendering. Read the token after any signed-in page, such as `/dashboard/`.
 
 - Requires quart-security 2.3.0. A signed-in user who opens `/login` is sent to the safe `next` target or the post-login view instead of seeing the form, as Devise and Flask-Security do. A form posted after its session expired goes to plain `/login`; before, its POST URL became `next` and sign-in landed there as a GET.
 
