@@ -45,7 +45,7 @@ def init(name, source):
 @click.option(
     "--reload/--no-reload",
     default=None,
-    help="Restart on code changes (default: on when QUART_DEBUG is set).",
+    help="Restart on code changes (default: on with STK_ENV=development or QUART_DEBUG).",
 )
 def run(host, port, reload):
     """Run a local development server (uvicorn, as in production)."""
@@ -55,13 +55,15 @@ def run(host, port, reload):
     from quart.helpers import get_debug_flag
 
     app = cli_app()
+    if reload is None:
+        reload = get_debug_flag() or app.config.get("STK_ENV") == "development"
     # Hypercorn, Quart's own runner, waits forever on open tabs at Ctrl+C. The
     # timeout ends long-lived streams (/ws, SSE); browsers reconnect.
     uvicorn.run(
         app_spec(),
         host=host,
         port=port,
-        reload=get_debug_flag() if reload is None else reload,
+        reload=reload,
         reload_dirs=[app.root_path, str(Path(stk.__file__).parent)],
         app_dir=str(app_root()),
         timeout_graceful_shutdown=3,

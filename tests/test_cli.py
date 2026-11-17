@@ -104,6 +104,52 @@ class RunCommandTest(unittest.TestCase):
         self.assertIn(f"port {port} is in use", result.output)
         self.assertIn(f"pid {os.getpid()}", result.output)
 
+    def run_reload(self, env, *args):
+        app = type("App", (), {"config": {"STK_ENV": env}, "root_path": "."})()
+        with (
+            patch("stk.cli.develop._require_free_port"),
+            patch("stk.cli.develop.cli_app", return_value=app),
+            patch("stk.cli.develop.app_spec", return_value="app:app"),
+            patch("stk.cli.develop.app_root", return_value="."),
+            patch("quart.helpers.get_debug_flag", return_value=False),
+            patch("uvicorn.run") as run,
+        ):
+            result = CliRunner().invoke(main, ["run", *args])
+        self.assertEqual(result.exit_code, 0, result.output)
+        return run.call_args.kwargs["reload"]
+
+    def test_run_reloads_by_default_only_in_development(self):
+        self.assertTrue(self.run_reload("development"))
+        self.assertFalse(self.run_reload("production"))
+        self.assertFalse(self.run_reload("development", "--no-reload"))
+
+
+class TemplateReloadTest(unittest.TestCase):
+    """Quart never reloads templates on its own, so stk turns it on in development."""
+
+    def app(self, env, **extra):
+        from stk import Stk
+
+        config = type(
+            "Config",
+            (),
+            {
+                "SECRET_KEY": "test-secret",
+                "SECURITY_PASSWORD_SALT": "test-salt",
+                "SQLALCHEMY_DATABASE_URI": "sqlite+aiosqlite:///:memory:",
+                "SESSION_TYPE": None,
+                "STK_ENV": env,
+                **extra,
+            },
+        )
+        return Stk(__name__, config=config)
+
+    def test_templates_reload_in_development_only(self):
+        self.assertTrue(self.app("development").jinja_env.auto_reload)
+        self.assertFalse(self.app("production").jinja_env.auto_reload)
+        explicit = self.app("development", TEMPLATES_AUTO_RELOAD=False)
+        self.assertFalse(explicit.jinja_env.auto_reload)
+
 
 async def _done():
     return None

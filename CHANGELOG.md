@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.14.1 (2026-11-17)
+
+No migration required. An app that restarted its dev server after every template edit can stop.
+
+- With `STK_ENV=development`, an edited template shows on the next page load. Quart, unlike Flask, never turns on Jinja's reload in debug mode, so the first version of a template was served until a restart. An app that sets `TEMPLATES_AUTO_RELOAD` itself keeps its value.
+- `stk run` restarts on Python changes by default with `STK_ENV=development`, not only with `QUART_DEBUG`.
+
 ## v17.14.0 (2026-11-17)
 
 No migration required. An app that overrides `security/verify.html` styles the new page; otherwise stk's version is used.

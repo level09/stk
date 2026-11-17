@@ -347,11 +347,14 @@ class ProductionSecurityTests(unittest.IsolatedAsyncioTestCase):
             factory = async_sessionmaker(engine, expire_on_commit=False)
             if ext.engine.dialect.name == "postgresql":
                 factory = ext.async_session_factory
-            outcomes = await asyncio.gather(
-                *(consume_limit(factory, "fixture", 3, 60) for _ in range(12))
-            )
-            self.assertEqual(sum(outcomes), 3)
-            self.assertFalse(await consume_limit(factory, "fixture", 3, 60))
+            # One fixed instant: a run that crossed a minute boundary started
+            # a new window and let the last call through.
+            with patch("stk.utils.ratelimit.time.time", return_value=1_800_000_000):
+                outcomes = await asyncio.gather(
+                    *(consume_limit(factory, "fixture", 3, 60) for _ in range(12))
+                )
+                self.assertEqual(sum(outcomes), 3)
+                self.assertFalse(await consume_limit(factory, "fixture", 3, 60))
             await engine.dispose()
 
     @unittest.skipUnless(

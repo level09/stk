@@ -62,6 +62,12 @@ class Stk(Quart):
             os.makedirs(self.instance_path, exist_ok=True)
             database = Path(self.instance_path) / "stk.db"
             self.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite+aiosqlite:///{database}"
+        # Quart, unlike Flask, never reloads templates in debug mode by itself,
+        # so an edited template kept serving its first version in development.
+        if self.config.get("TEMPLATES_AUTO_RELOAD") is None:
+            self.config["TEMPLATES_AUTO_RELOAD"] = (
+                self.config.get("STK_ENV") == "development"
+            )
 
         roots = [Path(self.root_path), *(Path(m.__path__[0]) for m in extensions)]
         self.template_folders = [

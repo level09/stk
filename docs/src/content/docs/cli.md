@@ -51,7 +51,7 @@ Run a local development server (uvicorn, as in production).
 |---|---|
 | `--host` | The interface to bind to. |
 | `-p, --port` | The port to bind to. |
-| `--reload, --no-reload` | Restart on code changes (default: on when QUART_DEBUG is set). |
+| `--reload, --no-reload` | Restart on code changes (default: on with STK_ENV=development or QUART_DEBUG). |
 
 ### `stk shell`
 
