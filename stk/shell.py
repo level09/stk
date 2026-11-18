@@ -116,9 +116,9 @@ def build_namespace(app, db) -> dict:
     return namespace
 
 
-def print_banner(models) -> None:
+def print_banner(app, models) -> None:
     console.print(f"\n[bold]stk shell[/] [dim]python {sys.version.split()[0]}[/]")
-    console.print(f"[dim]db:[/] {_masked_database_url()}")
+    console.print(f"[dim]db:[/] {_masked_database_url(app)}")
     console.print(f"[dim]models:[/] {', '.join(models)}")
     for name, description in BANNER_HELPERS:
         console.print(f"  [green]{name:22}[/] [dim]{description}[/]")
@@ -127,12 +127,12 @@ def print_banner(models) -> None:
     )
 
 
-def _masked_database_url() -> str:
+def _masked_database_url(app) -> str:
     from sqlalchemy.engine import make_url
 
-    from stk.settings import Config
-
-    return make_url(Config.SQLALCHEMY_DATABASE_URI).render_as_string(hide_password=True)
+    # The app's config, not the Config class: Stk fills in the default SQLite URL there.
+    url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    return url.render_as_string(hide_password=True)
 
 
 def _setup_readline(namespace, history: Path) -> None:
@@ -245,7 +245,7 @@ def run_shell(app, source: str | None = None) -> None:
             _run_source(build_awaiter(app, db, loop), namespace, source)
             return
 
-        print_banner(sorted(discover_models()))
+        print_banner(app, sorted(discover_models()))
         if _ptpython_usable():
             loop.run_until_complete(_run_ptpython(app, db, namespace))
             return

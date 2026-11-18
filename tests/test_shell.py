@@ -7,7 +7,12 @@ from contextlib import redirect_stdout
 
 from sqlalchemy.exc import PendingRollbackError
 
-from stk.shell import _run_source, build_namespace, discover_models
+from stk.shell import (
+    _masked_database_url,
+    _run_source,
+    build_namespace,
+    discover_models,
+)
 
 
 def _await(coro):
@@ -49,6 +54,15 @@ class RunSourceTest(unittest.TestCase):
         output, namespace = self.run_source("x = 5")
         self.assertEqual(output, "")
         self.assertEqual(namespace["x"], 5)
+
+
+class BannerTest(unittest.TestCase):
+    def test_database_url_comes_from_the_app_and_hides_the_password(self):
+        # A fresh app sets no SQLALCHEMY_DATABASE_URI: only app.config has the default.
+        class App:
+            config = {"SQLALCHEMY_DATABASE_URI": "postgresql+asyncpg://u:secret@db/x"}
+
+        self.assertEqual(_masked_database_url(App), "postgresql+asyncpg://u:***@db/x")
 
 
 class SessionRecoveryTest(unittest.TestCase):
