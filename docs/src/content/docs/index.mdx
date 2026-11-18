@@ -41,7 +41,7 @@ uv run stk smoke             # a real browser, before you ship
 		`stk inspect` reports routes, auth guards, models, and commands as JSON. `AGENTS.md` indexes these docs, which ship in the repo and fail `stk verify` when they drift.
 	</Card>
 	<Card title="A gate you can trust" icon="approve-check-circle">
-		`stk verify` and `stk smoke` check lint, migration drift, guarded routes, console errors, and text that renders invisible. Every failure names its fix.
+		`stk verify` checks lint, migration drift, guarded routes, and the frontend rules that fail silently. `stk smoke` opens every page in a real browser, light and dark, and fails one that returned 200 but never rendered. Every failure names its fix.
 	</Card>
 </CardGrid>
 
@@ -51,7 +51,9 @@ uv run stk smoke             # a real browser, before you ship
 	<LinkCard title="Quick start" description="Start an app and sign in" href="/getting-started/" />
 	<LinkCard title="The build loop" description="doctor, scaffold, watch, smoke" href="/build-loop/" />
 	<LinkCard title="Working with agents" description="How agents find the truth, and how it stays true" href="/ai-coding/" />
+	<LinkCard title="Background work" description="Durable jobs, notifications, WebSocket push" href="/background-work/" />
+	<LinkCard title="JSON APIs" description="Endpoints, webhooks, file uploads, MCP tools for agents" href="/api/" />
 	<LinkCard title="Deployment" description="One command to a hardened VPS, or Docker" href="/deployment/" />
 </CardGrid>
 
-Async all the way down: Quart, async SQLAlchemy, Alembic, and native WebSockets. SQLite by default, PostgreSQL and Redis when you want them. MIT licensed, [on GitHub](https://github.com/level09/stk).
+Async all the way down: Quart, async SQLAlchemy, Alembic, and native WebSockets. Durable jobs, notifications, file uploads, and MCP tools ship in the package. SQLite by default, PostgreSQL and Redis when you want them. MIT licensed, [on GitHub](https://github.com/level09/stk).
