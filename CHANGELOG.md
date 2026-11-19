@@ -1,5 +1,11 @@
 # Changelog
 
+## v17.15.1 (2026-11-19)
+
+No migration required.
+
+- `stk shell` opens on an app that leaves `SQLALCHEMY_DATABASE_URI` unset. The banner read the setting from the `Config` class, where it is empty, and crashed before the prompt. It now reads the app's config, which holds the default SQLite path. `stk shell -c` was not affected.
+
 ## v17.15.0 (2026-11-17)
 
 No migration required, but `stk verify` may now fail on an app that passed before. Each failure names a real problem: fix the file and line it prints. An app that uses MD2 classes such as `text-caption` or `text-body-1` gets one line per use; replace them with the MD3 names in the frontend docs (`text-body-small`, `text-body-large`).
