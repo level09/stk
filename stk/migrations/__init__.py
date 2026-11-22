@@ -145,9 +145,12 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
             with admin.connect() as connection:
                 connection.execute(text(f'create database "{name}"'))
         except ProgrammingError as exc:
+            if getattr(exc.orig, "pgcode", None) != "42501":  # insufficient_privilege
+                raise
             raise RuntimeError(
-                f"role {url.username!r} cannot create a throwaway database: grant it"
-                " CREATEDB, or run this check with a role that has it"
+                f"role {url.username!r} cannot create a throwaway database: run"
+                f' `ALTER ROLE "{url.username}" CREATEDB` as a superuser, or use'
+                " a role that has it"
             ) from exc
         try:
             yield _render(url.set(database=name), sync=sync)
@@ -156,3 +159,18 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
                 connection.execute(text(f'drop database "{name}" with (force)'))
     finally:
         admin.dispose()
+
+
+@contextmanager
+def migrated_database_url(app: str, database_url: str):
+    """Yield a throwaway database with stk's and the app's migrations applied.
+
+    For tests: pass the app's own configured URL, so they run on the engine it
+    runs on in production. The yielded URL keeps that URL's driver; SQLite is a
+    file, so a server the test starts can share it.
+    """
+    from alembic import command
+
+    with throwaway_database_url(database_url) as url:
+        command.upgrade(build_alembic_config(app, sync_url(url), quiet=True), "heads")
+        yield url

@@ -126,15 +126,31 @@ class Place(Base):
 
 Or add the check to the revision by hand. `stk db revision` warns about each column-level check in the columns it adds.
 
-A test that needs a migrated database builds the same config in code. `build_alembic_config` takes the app, or its import name plus a URL, so a test can migrate a throwaway database before it builds its app:
+A test that needs the database gets its own with `migrated_database_url`: a throwaway database of the configured engine with stk's and the app's migrations applied, dropped when the test ends. Pass the app's own configured URL, not `TestingConfig`'s in-memory SQLite, so a Postgres app tests on Postgres through its real migrations. Postgres needs a role with CREATEDB. The URL keeps the configured driver, and a server the test starts can share it:
 
 ```python
-from alembic import command
-from stk.migrations import build_alembic_config, throwaway_database_url
+from stk.migrations import migrated_database_url
+from stk.settings import TestingConfig
 
-with throwaway_database_url(Config.SQLALCHEMY_DATABASE_URI, sync=True) as url:
-    command.upgrade(build_alembic_config("myapp", url, quiet=True), "heads")
+from myapp.settings import Config
+
+
+class NoteTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        url = self.enterContext(
+            migrated_database_url("myapp", Config.SQLALCHEMY_DATABASE_URI)
+        )
+
+        class TestConfig(TestingConfig):
+            SQLALCHEMY_DATABASE_URI = url
+            STK_ENABLE_AGENT_LOGIN = True
+
+        self.config = TestConfig
 ```
+
+A browser test signs in with `create_agent_login_token(email, next_path)` from `stk.agent_login`, called inside the app context, then opens `/_test/login?token=<token>`. It works only with `STK_ENABLE_AGENT_LOGIN` on, for an active user whose email ends in `@example.com`, within `STK_AGENT_LOGIN_MAX_TTL_SECONDS`.
+
+`throwaway_database_url` and `build_alembic_config` are the parts underneath, for a check that migrates by hand (`build_alembic_config` takes the app, or its import name plus a sync URL).
 
 A Postgres extension (PostGIS, pgvector) must exist before a non-superuser role migrates: create it as the superuser, as the app's `postgres/init-db.sh` notes. Autogenerate never offers to drop `spatial_ref_sys`, the table PostGIS owns. Mark a model table that needs PostGIS with `info={"postgis": True}`, and `stk.migrations.portable_tables()` leaves it out when tests build tables on SQLite.
 

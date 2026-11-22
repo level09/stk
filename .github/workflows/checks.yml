@@ -100,7 +100,9 @@ jobs:
         env:
           STK_TEST_DATABASE_URL: postgresql+asyncpg://review:isolated-review-password@localhost/review
           STK_TEST_REDIS_URL: redis://localhost:6379/0
-        run: uv run python -m unittest discover -s tests -p test_production_security.py -v
+        run: |
+          uv run python -m unittest discover -s tests -p test_production_security.py -v
+          uv run python -m unittest tests.test_migration_drift.MigratedDatabaseTest -v
       - name: Dependency advisories
         run: |
           uv export --frozen --no-hashes --no-emit-project --extra full --extra asgi -o /tmp/runtime.txt

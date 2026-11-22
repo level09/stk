@@ -76,5 +76,49 @@ class MigrateByImportNameTest(unittest.TestCase):
         self.assertEqual(result.stdout.split(), ["True", "False"])
 
 
+# A test's database: migrated, same driver as the configured URL, dropped after.
+MIGRATED = """
+import sys
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine import make_url
+from stk.migrations import migrated_database_url, sync_url
+
+with migrated_database_url("minimal", sys.argv[1]) as url:
+    engine = create_engine(sync_url(url))
+    tables = inspect(engine).get_table_names()
+    engine.dispose()
+print(make_url(url).drivername, "note" in tables, "user" in tables)
+"""
+
+
+def migrated(database_url):
+    example = Path(__file__).resolve().parent.parent / "examples" / "minimal"
+    result = subprocess.run(
+        [sys.executable, "-c", MIGRATED, database_url],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "PYTHONPATH": str(example)},
+    )
+    return result.stdout.split()
+
+
+class MigratedDatabaseTest(unittest.TestCase):
+    def test_sqlite_app_gets_a_migrated_file(self):
+        self.assertEqual(
+            migrated("sqlite+aiosqlite:///unused.db"),
+            ["sqlite+aiosqlite", "True", "True"],
+        )
+
+    @unittest.skipUnless(
+        os.environ.get("STK_TEST_DATABASE_URL"), "set STK_TEST_DATABASE_URL"
+    )
+    def test_postgres_app_gets_a_migrated_postgres_database(self):
+        self.assertEqual(
+            migrated(os.environ["STK_TEST_DATABASE_URL"]),
+            ["postgresql+asyncpg", "True", "True"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
