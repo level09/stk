@@ -1,5 +1,12 @@
 # Changelog
 
+## v17.16.0 (2026-11-22)
+
+No migration required.
+
+- `stk.migrations.migrated_database_url(app, database_url)` gives a test its own throwaway database on the app's configured engine, with stk's and the app's migrations applied, and drops it after. A Postgres app now tests on Postgres through its real migrations instead of `create_all` on in-memory SQLite or hand-rolled setup. The models docs show it with `TestingConfig` and document the browser sign-in through `create_agent_login_token`.
+- A throwaway Postgres database reports a missing CREATEDB grant only when that is the error, with the `ALTER ROLE` command that fixes it. Other database errors were reported as missing CREATEDB before.
+
 ## v17.15.1 (2026-11-19)
 
 No migration required.
