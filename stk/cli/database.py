@@ -10,7 +10,8 @@ from stk.migrations import (
     app_versions,
     build_alembic_config,
     get_target_metadata,
-    throwaway_database_url,
+    migrated_database_url,
+    sync_url,
 )
 
 
@@ -57,11 +58,8 @@ def build_migration_drift_report(app=None, database_url=None):
 
     if database_url is None:
         database_url = app.config["SQLALCHEMY_DATABASE_URI"]
-    with throwaway_database_url(database_url, sync=True) as url:
-        config = build_alembic_config(app, url, quiet=True)
-        command.upgrade(config, "heads")
-
-        engine = create_engine(url)
+    with migrated_database_url(app, database_url) as url:
+        engine = create_engine(sync_url(url))
         try:
             with engine.connect() as connection:
                 context = MigrationContext.configure(

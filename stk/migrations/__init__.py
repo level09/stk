@@ -129,6 +129,7 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
     """
     from sqlalchemy import create_engine, text
     from sqlalchemy.exc import ProgrammingError
+    from sqlalchemy.pool import NullPool
 
     url = make_url(database_url)
     if url.get_backend_name() != "postgresql":
@@ -138,7 +139,9 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
 
     name = f"stk_tmp_{uuid.uuid4().hex[:12]}"
     admin = create_engine(
-        _render(url.set(database="postgres"), sync=True), isolation_level="AUTOCOMMIT"
+        _render(url.set(database="postgres"), sync=True),
+        isolation_level="AUTOCOMMIT",
+        poolclass=NullPool,  # no idle admin connection while the database is in use
     )
     try:
         try:
@@ -162,8 +165,10 @@ def throwaway_database_url(database_url: str, *, sync: bool = False):
 
 
 @contextmanager
-def migrated_database_url(app: str, database_url: str):
+def migrated_database_url(app, database_url: str):
     """Yield a throwaway database with stk's and the app's migrations applied.
+
+    `app` is the app, its import name, or None for stk's lineage alone.
 
     For tests: pass the app's own configured URL, so they run on the engine it
     runs on in production. The yielded URL keeps that URL's driver; SQLite is a

@@ -48,35 +48,8 @@ class MigrationDriftTest(unittest.TestCase):
         self.assertEqual(drift("probe"), ["add_table: drift_probe"])
 
 
-# Migrate by import name alone: the app module is never imported, so a test can
-# migrate before it builds its app.
-BY_NAME = """
-import sys
-from alembic import command
-from sqlalchemy import create_engine, inspect
-from stk.migrations import build_alembic_config, throwaway_database_url
-
-with throwaway_database_url("sqlite:///unused.db", sync=True) as url:
-    command.upgrade(build_alembic_config("minimal", url, quiet=True), "heads")
-    tables = inspect(create_engine(url)).get_table_names()
-print("note" in tables, "minimal.app" in sys.modules)
-"""
-
-
-class MigrateByImportNameTest(unittest.TestCase):
-    def test_app_lineage_migrates_without_an_app_object(self):
-        example = Path(__file__).resolve().parent.parent / "examples" / "minimal"
-        result = subprocess.run(
-            [sys.executable, "-c", BY_NAME],
-            capture_output=True,
-            text=True,
-            check=True,
-            env={**os.environ, "PYTHONPATH": str(example)},
-        )
-        self.assertEqual(result.stdout.split(), ["True", "False"])
-
-
 # A test's database: migrated, same driver as the configured URL, dropped after.
+# By import name alone, so a test can migrate before it builds its app.
 MIGRATED = """
 import sys
 from sqlalchemy import create_engine, inspect
@@ -87,7 +60,7 @@ with migrated_database_url("minimal", sys.argv[1]) as url:
     engine = create_engine(sync_url(url))
     tables = inspect(engine).get_table_names()
     engine.dispose()
-print(make_url(url).drivername, "note" in tables, "user" in tables)
+print(make_url(url).drivername, "note" in tables, "minimal.app" in sys.modules)
 """
 
 
@@ -107,7 +80,7 @@ class MigratedDatabaseTest(unittest.TestCase):
     def test_sqlite_app_gets_a_migrated_file(self):
         self.assertEqual(
             migrated("sqlite+aiosqlite:///unused.db"),
-            ["sqlite+aiosqlite", "True", "True"],
+            ["sqlite+aiosqlite", "True", "False"],
         )
 
     @unittest.skipUnless(
@@ -116,7 +89,7 @@ class MigratedDatabaseTest(unittest.TestCase):
     def test_postgres_app_gets_a_migrated_postgres_database(self):
         self.assertEqual(
             migrated(os.environ["STK_TEST_DATABASE_URL"]),
-            ["postgresql+asyncpg", "True", "True"],
+            ["postgresql+asyncpg", "True", "False"],
         )
 
 
